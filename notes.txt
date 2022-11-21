@@ -1,0 +1,15 @@
+ 6996  echo "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh" > README.md
+ 8184  rustup override set nightly
+ 8192  rustup default stable
+
+
+  8212  cargo watch -x run
+
+  https://tera.netlify.app/
+
+  https://api.rocket.rs/v0.5-rc/rocket_dyn_templates/index.html
+
+  https://rocket.rs/
+
+
+  
