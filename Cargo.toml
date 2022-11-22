@@ -18,3 +18,7 @@ rocket = "0.5.0-rc.2"
 [dependencies.rocket_dyn_templates]
 rocket_dyn_templates = "0.1.0-rc.2"
 features = ["tera"]
+
+[dependencies.rocket_db_pools]
+rocket = "0.5.0-rc.2"
+features = ["sqlx_sqlite"]

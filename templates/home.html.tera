@@ -1,0 +1,11 @@
+{% extends "default" %}
+{% block title %}Index{% endblock title %}
+
+{% block content %}
+  <h1>Index</h1>
+  <p class="important">
+    Welcome to my awesome homepage.
+  </p>
+
+  {% include "login" %}
+{% endblock content %}

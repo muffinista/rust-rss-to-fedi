@@ -12,4 +12,4 @@
   https://rocket.rs/
 
 
-  
+  https://github.com/launchbadge/sqlx
