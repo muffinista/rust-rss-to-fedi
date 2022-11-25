@@ -5,20 +5,36 @@
 extern crate rocket;
 
 use rocket_dyn_templates::{Template, tera::Tera, context};
+use rocket::response::Redirect;
 
-use rocket_db_pools::{sqlx, Database};
-
-#[derive(Database)]
-#[database("sqlite_logs")]
-struct Logs(sqlx::SqlitePool);
+use sqlx::sqlite::SqlitePool;
+// use crate::rocket::futures::TryFutureExt;
 
 use rocket::form::Form;
+use rocket::http::Status;
+
+use rocket::State;
 
 #[derive(FromForm)]
 struct LoginForm {
     email: String
 }
 
+#[derive(Debug)]
+pub struct User {
+    pub id: i64,
+    pub email: String,
+    pub login_token: String,
+    pub access_token: Option<String>
+}
+
+impl User {
+    pub async fn find_by_email(email: String, pool: &State<SqlitePool>) -> Result<User, sqlx::Error> {
+        sqlx::query_as!(User, "SELECT * FROM users WHERE email = ?", email)
+            .fetch_one(&**pool)
+            .await
+    }
+}
 
 #[get("/")]
 fn index() -> Template {
@@ -30,16 +46,15 @@ fn login() -> &'static str {
     "Hello, world!"
 }
 
-use rocket_db_pools::Connection;
-use rocket_db_pools::sqlx::Row;
-
 #[post("/login", data = "<form>")]
-async fn do_login(mut db: Connection<Logs>, form: Form<LoginForm>) -> &'static str {
-    // sqlx::query("SELECT * FROM users WHERE email = ?").bind(form.email)
-    //     .fetch_one(&mut *db).await
-    //     .and_then(|r| Ok(r.try_get(0)?))
-    //     .ok()
-    "Hello, world!"
+async fn do_login(db: &State<SqlitePool>, form: Form<LoginForm>) -> Result<Redirect, Status> {
+    let user = User::find_by_email((form.email).to_string(), db).await;
+
+    match user {
+        Ok(user) => Ok(Redirect::to("/")),
+        _ => Err(Status::NotFound)
+    }
+
 }
 
 
@@ -47,6 +62,7 @@ async fn do_login(mut db: Connection<Logs>, form: Form<LoginForm>) -> &'static s
 fn account() -> &'static str {
     "Hello, world!"
 }
+
 
 pub fn customize(tera: &mut Tera) {
     tera.add_raw_template("about.html", r#"
@@ -59,12 +75,33 @@ pub fn customize(tera: &mut Tera) {
     "#).expect("valid Tera template");
 }
 
+#[rocket::main]
+async fn main() -> Result<(), rocket::Error> {
+    let pool = SqlitePool::connect("sqlite::memory")
+        .await
+        .expect("Failed to create pool");
+    
+    let _rocket = rocket::build()
+        .manage(pool)
+        .mount("/", routes![index, login, do_login, account])
+        .attach(Template::custom(|engines| {
+            customize(&mut engines.tera);
+        }))
+        .launch()
+        .await?;
+
+    Ok(())
+}
+
+/*
 #[launch]
 fn rocket() -> _ {
+    let pool = SqlitePool::connect(&env::var("DATABASE_URL")?).await?;
     rocket::build()
-        .attach(Logs::init())
+        // .attach(Db::init())
         .mount("/", routes![index, login, do_login, account])
         .attach(Template::custom(|engines| {
             customize(&mut engines.tera);
         }))
 }
+*/
