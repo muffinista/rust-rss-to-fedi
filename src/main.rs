@@ -1,5 +1,4 @@
 #![feature(proc_macro_hygiene, decl_macro)]
-// #![feature(decl_macro)]
 
 #[macro_use]
 extern crate rocket;
@@ -7,71 +6,19 @@ extern crate rocket;
 use rocket_dyn_templates::{Template, tera::Tera, context};
 use rocket::response::Redirect;
 
-use sqlx::sqlite::SqlitePool;
-// use crate::rocket::futures::TryFutureExt;
-
 use rocket::form::Form;
 use rocket::http::Status;
 
 use rocket::State;
 
+use sqlx::sqlite::SqlitePool;
+
+mod user;
+use crate::user::User;
+
 #[derive(FromForm)]
 struct LoginForm {
     email: String
-}
-
-#[derive(Debug)]
-pub struct User {
-    pub id: i64,
-    pub email: String,
-    pub login_token: String,
-    pub access_token: Option<String>
-}
-
-impl User {
-    pub async fn find_by_email(email: String, pool: &SqlitePool) -> Result<User, sqlx::Error> {
-        sqlx::query_as!(User, "SELECT * FROM users WHERE email = ?", email)
-            .fetch_one(pool)
-            .await
-    }
-
-    pub async fn find(id: i64, pool: &SqlitePool) -> Result<User, sqlx::Error> {
-        sqlx::query_as!(User, "SELECT * FROM users WHERE id = ?", id)
-            .fetch_one(pool)
-            .await
-    }
-
-    pub async fn create_by_email(email: String, pool: &SqlitePool) -> Result<User, sqlx::Error> {    
-        let user_id = sqlx::query!(
-            "INSERT INTO users (email, login_token)
-                VALUES($1, '12345')", email)
-                .execute(pool)
-            .await?
-            .last_insert_rowid();
-
-        User::find(user_id, pool).await
-    }
-
-    pub async fn find_or_create_by_email(email: String, pool: &SqlitePool) -> Result<User, sqlx::Error> {
-        let user_check = sqlx::query_as!(User, "SELECT * FROM users WHERE email = ?", email)
-            .fetch_one(pool)
-            .await;
-
-        match user_check {
-            Ok(user) => return Ok(user),
-            _ => return User::create_by_email(email, pool).await
-        }
-    }
-}
-
-
-#[sqlx::test]
-async fn test_find_or_create_by_email(pool: SqlitePool) -> sqlx::Result<()> {
-    let user = User::find_or_create_by_email(("foo@bar.com").to_string(), &pool).await?;
-
-    assert_eq!(user.email, "foo@bar.com");
-    
-    Ok(())
 }
 
 #[get("/")]

@@ -14,7 +14,11 @@ liquid = "0.26.0"
 dotenvy = "0.15"
 rocket = { version = "0.5.0-rc.2", features = ["json"] }
 sqlx = { version = "~0.6.2", features = ["macros", "migrate", "sqlite", "runtime-tokio-rustls"] }
-
+# jsonwebtoken = "~8.1.1"
+# chrono = "~0.4.23"
+# serde = {version = "~1.0", features = ["derive"] }
+# thiserror = { version = "~1.0.37" }
+rand = { version = "~0.5.0" }
 
 #[dependencies.sqlx]
 #version = "0.6.0"
