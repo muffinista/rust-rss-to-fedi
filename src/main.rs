@@ -43,8 +43,8 @@ impl User {
 
     pub async fn create_by_email(email: String, pool: &SqlitePool) -> Result<User, sqlx::Error> {    
         let user_id = sqlx::query!(
-            "INSERT INTO users (email)
-                VALUES($1)", email)
+            "INSERT INTO users (email, login_token)
+                VALUES($1, '12345')", email)
                 .execute(pool)
             .await?
             .last_insert_rowid();
@@ -64,11 +64,15 @@ impl User {
     }
 }
 
-/*
+
 #[sqlx::test]
-async fn test_async_fn(pool: &State<SqlitePool>) {
-    tokio::task::yield_now().await;
-} */
+async fn test_find_or_create_by_email(pool: SqlitePool) -> sqlx::Result<()> {
+    let user = User::find_or_create_by_email(("foo@bar.com").to_string(), &pool).await?;
+
+    assert_eq!(user.email, "foo@bar.com");
+    
+    Ok(())
+}
 
 #[get("/")]
 fn index() -> Template {
