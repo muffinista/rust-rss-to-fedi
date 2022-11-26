@@ -29,32 +29,32 @@ pub struct User {
 }
 
 impl User {
-    pub async fn find_by_email(email: String, pool: &State<SqlitePool>) -> Result<User, sqlx::Error> {
+    pub async fn find_by_email(email: String, pool: &SqlitePool) -> Result<User, sqlx::Error> {
         sqlx::query_as!(User, "SELECT * FROM users WHERE email = ?", email)
-            .fetch_one(&**pool)
+            .fetch_one(pool)
             .await
     }
 
-    pub async fn find(id: i64, pool: &State<SqlitePool>) -> Result<User, sqlx::Error> {
+    pub async fn find(id: i64, pool: &SqlitePool) -> Result<User, sqlx::Error> {
         sqlx::query_as!(User, "SELECT * FROM users WHERE id = ?", id)
-            .fetch_one(&**pool)
+            .fetch_one(pool)
             .await
     }
 
-    pub async fn create_by_email(email: String, pool: &State<SqlitePool>) -> Result<User, sqlx::Error> {    
+    pub async fn create_by_email(email: String, pool: &SqlitePool) -> Result<User, sqlx::Error> {    
         let user_id = sqlx::query!(
             "INSERT INTO users (email)
                 VALUES($1)", email)
-                .execute(&**pool)
+                .execute(pool)
             .await?
             .last_insert_rowid();
 
         User::find(user_id, pool).await
     }
 
-    pub async fn find_or_create_by_email(email: String, pool: &State<SqlitePool>) -> Result<User, sqlx::Error> {
+    pub async fn find_or_create_by_email(email: String, pool: &SqlitePool) -> Result<User, sqlx::Error> {
         let user_check = sqlx::query_as!(User, "SELECT * FROM users WHERE email = ?", email)
-            .fetch_one(&**pool)
+            .fetch_one(pool)
             .await;
 
         match user_check {
@@ -63,6 +63,12 @@ impl User {
         }
     }
 }
+
+/*
+#[sqlx::test]
+async fn test_async_fn(pool: &State<SqlitePool>) {
+    tokio::task::yield_now().await;
+} */
 
 #[get("/")]
 fn index() -> Template {
@@ -76,13 +82,12 @@ fn login() -> &'static str {
 
 #[post("/login", data = "<form>")]
 async fn do_login(db: &State<SqlitePool>, form: Form<LoginForm>) -> Result<Redirect, Status> {
-    let user = User::find_by_email((form.email).to_string(), db).await;
+    let user = User::find_or_create_by_email((form.email).to_string(), &**db).await;
 
     match user {
         Ok(_user) => Ok(Redirect::to("/")),
         _ => Err(Status::NotFound)
     }
-
 }
 
 
