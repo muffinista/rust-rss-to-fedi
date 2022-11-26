@@ -34,6 +34,34 @@ impl User {
             .fetch_one(&**pool)
             .await
     }
+
+    pub async fn find(id: i64, pool: &State<SqlitePool>) -> Result<User, sqlx::Error> {
+        sqlx::query_as!(User, "SELECT * FROM users WHERE id = ?", id)
+            .fetch_one(&**pool)
+            .await
+    }
+
+    pub async fn create_by_email(email: String, pool: &State<SqlitePool>) -> Result<User, sqlx::Error> {    
+        let user_id = sqlx::query!(
+            "INSERT INTO users (email)
+                VALUES($1)", email)
+                .execute(&**pool)
+            .await?
+            .last_insert_rowid();
+
+        User::find(user_id, pool).await
+    }
+
+    pub async fn find_or_create_by_email(email: String, pool: &State<SqlitePool>) -> Result<User, sqlx::Error> {
+        let user_check = sqlx::query_as!(User, "SELECT * FROM users WHERE email = ?", email)
+            .fetch_one(&**pool)
+            .await;
+
+        match user_check {
+            Ok(user) => return Ok(user),
+            _ => return User::create_by_email(email, pool).await
+        }
+    }
 }
 
 #[get("/")]
@@ -51,7 +79,7 @@ async fn do_login(db: &State<SqlitePool>, form: Form<LoginForm>) -> Result<Redir
     let user = User::find_by_email((form.email).to_string(), db).await;
 
     match user {
-        Ok(user) => Ok(Redirect::to("/")),
+        Ok(_user) => Ok(Redirect::to("/")),
         _ => Err(Status::NotFound)
     }
 
