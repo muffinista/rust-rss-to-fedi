@@ -9,6 +9,12 @@ pub struct User {
     pub access_token: Option<String>
 }
 
+impl PartialEq for User {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
 impl User {
     pub async fn find(id: i64, pool: &SqlitePool) -> Result<User, sqlx::Error> {
         sqlx::query_as!(User, "SELECT * FROM users WHERE id = ?", id)
@@ -17,7 +23,7 @@ impl User {
     }
 
 
-    pub async fn find_by_email(email: String, pool: &SqlitePool) -> Result<User, sqlx::Error> {
+    pub async fn find_by_email(email: &String, pool: &SqlitePool) -> Result<User, sqlx::Error> {
         sqlx::query_as!(User, "SELECT * FROM users WHERE email = ?", email)
             .fetch_one(pool)
             .await
@@ -82,6 +88,39 @@ async fn test_find_or_create_by_email(pool: SqlitePool) -> sqlx::Result<()> {
     let user = User::find_or_create_by_email(("foo@bar.com").to_string(), &pool).await?;
 
     assert_eq!(user.email, "foo@bar.com");
+    
+    Ok(())
+}
+
+#[sqlx::test]
+async fn test_find_by_login_token(pool: SqlitePool) -> sqlx::Result<()> {
+    let user = User::find_or_create_by_email(("foo@bar.com").to_string(), &pool).await?;
+    let user_find = User::find_by_login(user.login_token.to_string(), &pool).await?;
+        
+    assert_eq!(user, user_find);
+    
+    Ok(())
+}
+
+#[sqlx::test]
+async fn test_find_by_email(pool: SqlitePool) -> sqlx::Result<()> {
+    let user = User::find_or_create_by_email(("foo@bar.com").to_string(), &pool).await?;
+    let user_find = User::find_by_email(&user.email, &pool).await?;
+        
+    assert_eq!(user, user_find);
+    
+    Ok(())
+}
+
+#[sqlx::test]
+async fn test_find_by_email_doesnt_exist(pool: SqlitePool) -> sqlx::Result<()> {
+    let lookup:String = ("bar@baz.com").to_string();
+    let user = User::find_by_email(&lookup, &pool).await;
+    
+    match user {
+        Ok(_user) => assert!(false),
+        Err(_why) => assert!(true)
+    }
     
     Ok(())
 }
