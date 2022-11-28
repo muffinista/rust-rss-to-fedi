@@ -7,7 +7,13 @@
     Welcome to my awesome homepage.
   </p>
 
-  {{ logged_in }}
+  {% if logged_in %}
+    {% for feed in feeds %}
+      {{loop.index}}. {{feed.url}} <a href="/feed/{{feed.id}}/delete">delete</a>
+    {% endfor %}
+    {% include "add-feed" %}
+  {% else %}
+    {% include "login" %}
+  {% endif %}
   
-  {% include "login" %}
 {% endblock content %}

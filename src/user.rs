@@ -98,17 +98,19 @@ impl User {
 
 #[sqlx::test]
 async fn test_find_or_create_by_email(pool: SqlitePool) -> sqlx::Result<()> {
-    let user = User::find_or_create_by_email(("foo@bar.com").to_string(), &pool).await?;
+    let email:String = "foo@bar.com".to_string();
+    let user = User::find_or_create_by_email(&email, &pool).await?;
 
-    assert_eq!(user.email, "foo@bar.com");
+    assert_eq!(user.email, email);
     
     Ok(())
 }
 
 #[sqlx::test]
 async fn test_find_by_login_token(pool: SqlitePool) -> sqlx::Result<()> {
-    let user = User::find_or_create_by_email(("foo@bar.com").to_string(), &pool).await?;
-    let user_find = User::find_by_login(user.login_token.to_string(), &pool).await?;
+    let email:String = "foo@bar.com".to_string();
+    let user = User::find_or_create_by_email(&email, &pool).await?;
+    let user_find = User::find_by_login(&user.login_token.to_string(), &pool).await?;
         
     assert_eq!(user, user_find);
     
@@ -117,7 +119,8 @@ async fn test_find_by_login_token(pool: SqlitePool) -> sqlx::Result<()> {
 
 #[sqlx::test]
 async fn test_find_by_email(pool: SqlitePool) -> sqlx::Result<()> {
-    let user = User::find_or_create_by_email(("foo@bar.com").to_string(), &pool).await?;
+    let email:String = "foo@bar.com".to_string();
+    let user = User::find_or_create_by_email(&email, &pool).await?;
     let user_find = User::find_by_email(&user.email, &pool).await?;
         
     assert_eq!(user, user_find);

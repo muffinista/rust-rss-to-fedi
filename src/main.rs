@@ -21,12 +21,18 @@ use std::env;
 mod user;
 use crate::user::User;
 
+mod feed;
+use crate::feed::Feed;
+
 #[derive(FromForm)]
 struct LoginForm {
     email: String
 }
 
-use crate::rocket::outcome::IntoOutcome;
+#[derive(FromForm)]
+struct FeedForm {
+    url: String
+}
 
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for User {
@@ -44,9 +50,6 @@ impl<'r> FromRequest<'r> for User {
                     Ok(user) => Outcome::Success(user),
                     Err(_why) => Outcome::Forward(())
                 }
-                //                    Outcome::Failure((Status::Unauthorized, Error::UnauthorizedError))
-              
-
             },
             None => {
                 return Outcome::Forward(())
@@ -57,8 +60,9 @@ impl<'r> FromRequest<'r> for User {
 
 
 #[get("/")]
-fn index_logged_in(user: User) -> Template {
-    Template::render("home", context! { logged_in: true })
+async fn index_logged_in(user: User, db: &State<SqlitePool>) -> Template {
+    let feeds = Feed::for_user(&user, &db).await.unwrap();
+    Template::render("home", context! { logged_in: true, feeds: feeds })
 }
 
 #[get("/", rank = 2)]
@@ -121,6 +125,37 @@ async fn do_login(db: &State<SqlitePool>, form: Form<LoginForm>) -> Result<Redir
 }
 
 
+#[post("/feed", data = "<form>")]
+async fn add_feed(user: User, db: &State<SqlitePool>, form: Form<FeedForm>) -> Result<Redirect, Status> {
+    let feed = Feed::create(&user, &form.url, &db).await;
+
+    match feed {
+        Ok(feed) => {
+            Ok(Redirect::to("/"))
+        },
+        Err(why) => {
+            print!("{}", why);
+            Err(Status::NotFound)
+        }
+    }
+}
+
+#[get("/feed/<id>/delete")]
+async fn delete_feed(user: User, id: i64, db: &State<SqlitePool>) -> Result<Redirect, Status> {
+    let feed = Feed::delete(&user, id, &db).await;
+    
+    match feed {
+        Ok(feed) => {
+            Ok(Redirect::to("/"))
+        },
+        Err(why) => {
+            print!("{}", why);
+            Err(Status::NotFound)
+        }
+    }
+}
+
+
 #[get("/account")]
 fn account() -> &'static str {
     "Hello, world!"
@@ -140,8 +175,6 @@ pub fn customize(tera: &mut Tera) {
 
 #[rocket::main]
 async fn main() -> Result<(), rocket::Error> {
-    //let pool = SqlitePool::connect("sqlite:db.sqlite")
-
     let db_uri = env::var("DATABASE_URL").expect("DATABASE_URL is not set");
     let pool = SqlitePool::connect(&db_uri)
         .await
@@ -153,7 +186,7 @@ async fn main() -> Result<(), rocket::Error> {
 
     let _rocket = rocket::build()
         .manage(pool)
-        .mount("/", routes![index, index_logged_in, login, do_login, attempt_login, account])
+        .mount("/", routes![index, index_logged_in, login, do_login, attempt_login, account, add_feed, delete_feed])
         .attach(Template::custom(|engines| {
             customize(&mut engines.tera);
         }))

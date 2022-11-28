@@ -1,0 +1,4 @@
+<form method="post" action="/feed">
+  Url: <input type="text" name="url" required />
+  <button type="submit">go</button>
+</form>
