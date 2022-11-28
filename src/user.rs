@@ -29,19 +29,32 @@ impl User {
             .await
     }
 
-    pub async fn find_by_login(token: String, pool: &SqlitePool) -> Result<User, sqlx::Error> {
+    pub async fn find_by_login(token: &String, pool: &SqlitePool) -> Result<User, sqlx::Error> {
         sqlx::query_as!(User, "SELECT * FROM users WHERE login_token = ?", token)
             .fetch_one(pool)
             .await
     }
 
-    pub async fn find_by_access(token: String, pool: &SqlitePool) -> Result<User, sqlx::Error> {
+    pub async fn find_by_access(token: &String, pool: &SqlitePool) -> Result<User, sqlx::Error> {
         sqlx::query_as!(User, "SELECT * FROM users WHERE access_token = ?", token)
             .fetch_one(pool)
             .await
     }
 
-    pub async fn create_by_email(email: String, pool: &SqlitePool) -> Result<User, sqlx::Error> {
+    pub async fn apply_access_token(user: User, pool: &SqlitePool) -> Result<String, sqlx::Error> {
+        let token = User::generate_access_token();
+        let query_check = sqlx::query!(
+            "UPDATE users SET access_token = $1 WHERE id = $2", token, user.id)
+                .execute(pool)
+            .await;
+
+        match query_check {
+            Ok(_q) => return Ok(token),
+            Err(why) => return Err(why)
+        }
+    }
+
+    pub async fn create_by_email(email: &String, pool: &SqlitePool) -> Result<User, sqlx::Error> {
         let token = User::generate_login_token();
         let user_id = sqlx::query!(
             "INSERT INTO users (email, login_token)
@@ -53,7 +66,7 @@ impl User {
         User::find(user_id, pool).await
     }
 
-    pub async fn find_or_create_by_email(email: String, pool: &SqlitePool) -> Result<User, sqlx::Error> {
+    pub async fn find_or_create_by_email(email: &String, pool: &SqlitePool) -> Result<User, sqlx::Error> {
         let user_check = sqlx::query_as!(User, "SELECT * FROM users WHERE email = ?", email)
             .fetch_one(pool)
             .await;

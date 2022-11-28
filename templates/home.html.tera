@@ -7,5 +7,7 @@
     Welcome to my awesome homepage.
   </p>
 
+  {{ logged_in }}
+  
   {% include "login" %}
 {% endblock content %}
