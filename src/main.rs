@@ -132,6 +132,7 @@ async fn add_feed(user: User, db: &State<SqlitePool>, form: Form<FeedForm>) -> R
 
     match feed {
         Ok(feed) => {
+            feed.load().await;
             Ok(Redirect::to("/"))
         },
         Err(why) => {

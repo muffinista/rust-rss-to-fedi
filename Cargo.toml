@@ -12,16 +12,17 @@ edition = "2021"
 native-tls = { version = "~0.2.11", features = ["vendored"] }
 openssl = { version = "~0.10.42", features = ["vendored"] }
 openssl-sys = "~0.9.78"
-# serde = { version = "1", features = ["derive"] }
 liquid = "0.26.0" 
 dotenvy = "0.15"
 rocket = { version = "0.5.0-rc.2", features = ["json", "secrets"] }
 sqlx = { version = "~0.6.2", features = ["macros", "migrate", "sqlite", "runtime-tokio-rustls"] }
-# jsonwebtoken = "~8.1.1"
-# chrono = "~0.4.23"
 serde = {version = "~1.0", features = ["derive"] }
-# thiserror = { version = "~1.0.37" }
 rand = { version = "~0.5.0" }
+feed-rs = "1.2"
+reqwest = { version = "0.11", features = ["json"] }
+
+# chrono = "~0.4.23"
+# thiserror = { version = "~1.0.37" }
 
 #[dependencies.sqlx]
 #version = "0.6.0"

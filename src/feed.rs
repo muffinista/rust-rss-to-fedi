@@ -1,6 +1,11 @@
 use sqlx::sqlite::SqlitePool;
 use serde::{Deserialize, Serialize};
 
+use reqwest;
+use feed_rs::parser;
+//use feed_rs::model::Feed;
+use feed_rs::parser::{ParseFeedError, ParseFeedResult};
+
 use crate::user::User;
 
 #[derive(Debug, Serialize)]
@@ -36,26 +41,63 @@ impl Feed {
   }
   
   pub async fn create(user: &User, url: &String, pool: &SqlitePool) -> Result<Feed, sqlx::Error> {
-    let feed_id = sqlx::query!(
-      "INSERT INTO feeds (user_id, url)
-      VALUES($1, $2)", user.id, url)
+    let feed_id = sqlx::query!("INSERT INTO feeds (user_id, url) VALUES($1, $2)", user.id, url)
       .execute(pool)
       .await?
       .last_insert_rowid();
       
-    Feed::find(feed_id, pool).await
+   Feed::find(feed_id, pool).await
   }
   
   pub async fn delete(user: &User, id: i64, pool: &SqlitePool) -> Result<Feed, sqlx::Error> {
     let old_feed = Feed::find(id, pool).await;
 
-    sqlx::query!(
-      "DELETE FROM feeds WHERE user_id = $1 AND id = $2", user.id, id)
+    sqlx::query!("DELETE FROM feeds WHERE user_id = $1 AND id = $2", user.id, id)
       .execute(pool)
       .await?;
       
     old_feed   
   }
+
+    pub async fn load(&self) -> Result<String, reqwest::Error> {
+        let res = reqwest::get(&self.url).await?;
+
+        // Response: HTTP/1.1 200 OK
+        // Headers: {
+        //     "date": "Tue, 29 Nov 2022 00:48:07 GMT",
+        //     "content-type": "application/xml",
+        //     "content-length": "68753",
+        //     "connection": "keep-alive",
+        //     "last-modified": "Tue, 08 Nov 2022 13:54:18 GMT",
+        //     "etag": "\"10c91-5ecf5e04f7680\"",
+        //     "accept-ranges": "bytes",
+        //     "strict-transport-security": "max-age=15724800; includeSubDomains",
+        // }
+        eprintln!("Response: {:?} {}", res.version(), res.status());
+        eprintln!("Headers: {:#?}\n", res.headers());
+
+        res.text().await
+    }
+
+    pub fn feed_to_entries(&self, data: feed_rs::model::Feed) -> Result<(), ParseFeedError> {
+        Ok(())
+    }
+    
+    pub async fn parse(&self, body: String) -> Result<(), ParseFeedError> {        
+        println!("{}", body);
+        let data = parser::parse(body.as_bytes());
+
+        match data {
+            Ok(data) => Feed::feed_to_entries(self, data),
+            Err(why) => return Err(why)
+        }
+
+        //println!("{:?}", data);
+
+        //data.entries
+
+        //Ok(())
+    }
 }
   
   
