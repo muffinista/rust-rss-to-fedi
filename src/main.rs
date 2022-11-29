@@ -115,7 +115,8 @@ async fn do_login(db: &State<SqlitePool>, form: Form<LoginForm>) -> Result<Redir
     match user {
         Ok(user) => {
             print!("/user/auth/{}", user.login_token);
-            Ok(Redirect::to("/"))
+            //Ok(Redirect::to("/"))
+                Ok(Redirect::to(format!("/user/auth/{}", user.login_token)))
         },
         Err(why) => {
             print!("{}", why);
