@@ -95,6 +95,33 @@ impl User {
     }
 }
 
+use rocket::request::{self, FromRequest, Request};
+use rocket::outcome::{Outcome};
+
+#[rocket::async_trait]
+impl<'r> FromRequest<'r> for User {
+    type Error = std::convert::Infallible;
+
+    async fn from_request(request: &'r Request<'_>) -> request::Outcome<User, Self::Error> {
+        let pool = request.rocket().state::<SqlitePool>().unwrap();
+        let cookie = request.cookies().get_private("access_token");
+
+        match cookie {
+            Some(cookie) => {
+                let access_token = cookie.value();
+                let user = User::find_by_access(&access_token.to_string(), &pool).await;
+                match user {
+                    Ok(user) => Outcome::Success(user),
+                    Err(_why) => Outcome::Forward(())
+                }
+            },
+            None => {
+                return Outcome::Forward(())
+            }
+        }
+    }
+}
+
 
 #[sqlx::test]
 async fn test_find_or_create_by_email(pool: SqlitePool) -> sqlx::Result<()> {

@@ -4,9 +4,7 @@
 extern crate rocket;
 
 use rocket_dyn_templates::{Template, tera::Tera, context};
-use rocket::request::{self, FromRequest, Request};
 use rocket::response::{Redirect};
-use rocket::outcome::{Outcome};
 use rocket::http::{Cookie, CookieJar};
 
 use rocket::form::Form;
@@ -18,11 +16,8 @@ use sqlx::sqlite::SqlitePool;
 
 use std::env;
 
-mod user;
-use crate::user::User;
-
-mod feed;
-use crate::feed::Feed;
+use rustypub::user::User;
+use rustypub::feed::Feed;
 
 #[derive(FromForm)]
 struct LoginForm {
@@ -32,30 +27,6 @@ struct LoginForm {
 #[derive(FromForm)]
 struct FeedForm {
     url: String
-}
-
-#[rocket::async_trait]
-impl<'r> FromRequest<'r> for User {
-    type Error = std::convert::Infallible;
-
-    async fn from_request(request: &'r Request<'_>) -> request::Outcome<User, Self::Error> {
-        let pool = request.rocket().state::<SqlitePool>().unwrap();
-        let cookie = request.cookies().get_private("access_token");
-
-        match cookie {
-            Some(cookie) => {
-                let access_token = cookie.value();
-                let user = User::find_by_access(&access_token.to_string(), &pool).await;
-                match user {
-                    Ok(user) => Outcome::Success(user),
-                    Err(_why) => Outcome::Forward(())
-                }
-            },
-            None => {
-                return Outcome::Forward(())
-            }
-        }
-    }
 }
 
 

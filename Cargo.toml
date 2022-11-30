@@ -1,7 +1,8 @@
 [package]
-name = "rust-activitypub"
+name = "rustypub"
 version = "0.1.0"
 edition = "2021"
+default-run = "server"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -20,6 +21,9 @@ serde = {version = "~1.0", features = ["derive"] }
 rand = { version = "~0.5.0" }
 feed-rs = "1.2"
 reqwest = { version = "0.11", features = ["json"] }
+
+# this is only here for the parser bin
+tokio = "1.22.0"
 
 # chrono = "~0.4.23"
 # thiserror = { version = "~1.0.37" }

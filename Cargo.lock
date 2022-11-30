@@ -2101,24 +2101,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rust-activitypub"
-version = "0.1.0"
-dependencies = [
- "dotenvy",
- "feed-rs",
- "liquid",
- "native-tls",
- "openssl",
- "openssl-sys",
- "rand 0.5.6",
- "reqwest",
- "rocket",
- "rocket_dyn_templates",
- "serde",
- "sqlx",
-]
-
-[[package]]
 name = "rustls"
 version = "0.20.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2144,6 +2126,25 @@ name = "rustversion"
 version = "1.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97477e48b4cf8603ad5f7aaf897467cf42ab4218a38ef76fb14c2d6773a6d6a8"
+
+[[package]]
+name = "rustypub"
+version = "0.1.0"
+dependencies = [
+ "dotenvy",
+ "feed-rs",
+ "liquid",
+ "native-tls",
+ "openssl",
+ "openssl-sys",
+ "rand 0.5.6",
+ "reqwest",
+ "rocket",
+ "rocket_dyn_templates",
+ "serde",
+ "sqlx",
+ "tokio",
+]
 
 [[package]]
 name = "ryu"
