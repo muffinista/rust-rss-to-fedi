@@ -21,8 +21,12 @@ async fn main() -> Result<(), reqwest::Error>  {
         .await
         .ok();
 
-    let feed = Feed::find(2, &pool).await.unwrap();
-    Feed::parse(&feed).await;
+    let email:String = "foo@bar.com".to_string();
+
+    // let feed = Feed::find(2, &pool).await.unwrap();
+    let user = User { id: 1, email: email, access_token: Some("".to_string()), login_token: "".to_string() };
+    let feed = Feed::create(&user, &"https://muffinlabs.com/atom.xml".to_string(), &pool).await.unwrap();
+    Feed::parse(&feed, &pool).await;
 
     Ok(())
 }
