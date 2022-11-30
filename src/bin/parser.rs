@@ -11,7 +11,7 @@ use rustypub::user::User;
 use rustypub::feed::Feed;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), reqwest::Error>  {
     let db_uri = env::var("DATABASE_URL").expect("DATABASE_URL is not set");
     let pool = SqlitePool::connect(&db_uri)
         .await
@@ -20,4 +20,9 @@ async fn main() {
         .run(&pool)
         .await
         .ok();
+
+    let feed = Feed::find(2, &pool).await.unwrap();
+    Feed::parse(&feed).await;
+
+    Ok(())
 }

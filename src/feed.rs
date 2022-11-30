@@ -6,6 +6,8 @@ use feed_rs::parser;
 //use feed_rs::model::Feed;
 use feed_rs::parser::{ParseFeedError, ParseFeedResult};
 
+use std::{error::Error, fmt};
+
 use crate::user::User;
 
 #[derive(Debug, Serialize)]
@@ -19,6 +21,16 @@ impl PartialEq for Feed {
   fn eq(&self, other: &Self) -> bool {
     self.id == other.id
   }
+}
+
+#[derive(Debug)]
+pub struct FeedError;
+
+impl Error for FeedError {}
+impl fmt::Display for FeedError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Oh no, something bad went down")
+    }
 }
 
 impl Feed {
@@ -79,20 +91,40 @@ impl Feed {
         res.text().await
     }
 
-    pub fn feed_to_entries(&self, data: feed_rs::model::Feed) -> Result<(), ParseFeedError> {
+    pub fn feed_to_entries(&self, data: feed_rs::model::Feed) -> Result<(), FeedError> {
+        for entry in data.entries.iter() {
+            println!("Got: {:?}", entry);
+        }
         Ok(())
     }
     
-    pub async fn parse(&self, body: String) -> Result<(), ParseFeedError> {        
-        println!("{}", body);
+    pub async fn parse_data(&self, body: String) -> Result<(), FeedError> {        
+        // println!("{}", body);
         let data = parser::parse(body.as_bytes());
 
         match data {
             Ok(data) => Feed::feed_to_entries(self, data),
-            Err(why) => return Err(why)
+            Err(why) => return Err(FeedError)
         }
+    }
 
-        //println!("{:?}", data);
+    pub async fn parse(&self) -> Result<(), FeedError> {        
+        let body = Feed::load(self).await;
+        match body {
+            Ok(body) => {
+                // println!("{}", body);
+                let data = parser::parse(body.as_bytes());
+                
+                match data {
+                    Ok(data) => Feed::feed_to_entries(self, data),
+                    Err(why) => return Err(FeedError)
+                }
+            },
+            Err(why) => return Err(FeedError)
+        }
+            
+
+
 
         //data.entries
 
