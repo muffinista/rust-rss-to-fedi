@@ -1,9 +1,8 @@
 use sqlx::sqlite::SqlitePool;
-use serde::{Deserialize, Serialize};
+use serde::{Serialize};
 
 use reqwest;
 use feed_rs::parser;
-use feed_rs::parser::{ParseFeedError, ParseFeedResult};
 
 use std::{error::Error, fmt};
 
@@ -76,146 +75,163 @@ impl Feed {
     
     // Response: HTTP/1.1 200 OK
     // Headers: {
-      //     "date": "Tue, 29 Nov 2022 00:48:07 GMT",
-      //     "content-type": "application/xml",
-      //     "content-length": "68753",
-      //     "connection": "keep-alive",
-      //     "last-modified": "Tue, 08 Nov 2022 13:54:18 GMT",
-      //     "etag": "\"10c91-5ecf5e04f7680\"",
-      //     "accept-ranges": "bytes",
-      //     "strict-transport-security": "max-age=15724800; includeSubDomains",
-      // }
-      eprintln!("Response: {:?} {}", res.version(), res.status());
-      eprintln!("Headers: {:#?}\n", res.headers());
+    //     "date": "Tue, 29 Nov 2022 00:48:07 GMT",
+    //     "content-type": "application/xml",
+    //     "content-length": "68753",
+    //     "connection": "keep-alive",
+    //     "last-modified": "Tue, 08 Nov 2022 13:54:18 GMT",
+    //     "etag": "\"10c91-5ecf5e04f7680\"",
+    //     "accept-ranges": "bytes",
+    //     "strict-transport-security": "max-age=15724800; includeSubDomains",
+    // }
+    eprintln!("Response: {:?} {}", res.version(), res.status());
+    eprintln!("Headers: {:#?}\n", res.headers());
       
-      res.text().await
-    }
+    res.text().await
+  }
     
-    pub async fn feed_to_entries(&self, data: feed_rs::model::Feed, pool: &SqlitePool) -> Result<(Vec<Item>), FeedError> {
-        let mut result: Vec<Item> = Vec::new();
-      for entry in data.entries.iter() {
-        // println!("Got: {:?}", entry);
+  pub async fn feed_to_entries(&self, data: feed_rs::model::Feed, pool: &SqlitePool) -> Result<Vec<Item>, FeedError> {
+    let mut result: Vec<Item> = Vec::new();
+    for entry in data.entries.iter() {
+      let exists = Item::exists_by_guid(&entry.id, &self, pool).await.unwrap();
+
+      // only create new items
+      // @todo update changed items
+      if ! exists {
         let item = Item::create_from_entry(&entry, &self, pool).await;
         match item {
           Ok(item) => result.push(item),
-          Err(why) => return Err(FeedError)
+          Err(_why) => return Err(FeedError)
         }
       }
-      Ok(result)
     }
-    
-    // pub async fn parse_data(&self, body: String, pool: &SqlitePool) -> Result<(), FeedError> {        
-    //   // println!("{}", body);
-    //   let data = parser::parse(body.as_bytes());
+    Ok(result)
+  }
       
-    //   match data {
-    //     Ok(data) => Feed::feed_to_entries(self, data, pool),
-    //     Err(why) => return Err(FeedError)
-    //   }
-    // }
-    
-    pub async fn parse(&self, pool: &SqlitePool) -> Result<(Vec<Item>), FeedError> {        
-      let body = Feed::load(self).await;
-      match body {
-        Ok(body) => {
-          // println!("{}", body);
-          let data = parser::parse(body.as_bytes());
-          
-          match data {
-            Ok(data) => {
-              let result = Feed::feed_to_entries(self, data, pool).await;
-              match result {
-                Ok(result) => Ok(result),
-                Err(why) => return Err(FeedError)
-              }
-            },
-            Err(why) => return Err(FeedError)
-          }
-        },
-        Err(why) => return Err(FeedError)
-      }
+  pub async fn parse(&self, pool: &SqlitePool) -> Result<Vec<Item>, FeedError> {        
+    let body = Feed::load(self).await;
+    match body {
+      Ok(body) => {
+        let data = parser::parse(body.as_bytes());
+        
+        match data {
+          Ok(data) => {
+            let result = Feed::feed_to_entries(self, data, pool).await;
+            match result {
+              Ok(result) => Ok(result),
+              Err(_why) => return Err(FeedError)
+            }
+          },
+          Err(_why) => return Err(FeedError)
+        }
+      },
+      Err(_why) => return Err(FeedError)
     }
   }
+}
+
   
+#[sqlx::test]
+async fn test_create(pool: SqlitePool) -> sqlx::Result<()> {
+  let email:String = "foo@bar.com".to_string();
+  let user = User::find_or_create_by_email(&email, &pool).await?;
   
-  #[sqlx::test]
-  async fn test_create(pool: SqlitePool) -> sqlx::Result<()> {
-    let email:String = "foo@bar.com".to_string();
-    let user = User::find_or_create_by_email(&email, &pool).await?;
-    
-    let url:String = "https://foo.com/rss.xml".to_string();
-    let feed = Feed::create(&user, &url, &pool).await?;
-    
-    assert_eq!(feed.url, url);
-    assert_eq!(feed.user_id, user.id);
-    
-    Ok(())
-  }
+  let url:String = "https://foo.com/rss.xml".to_string();
+  let feed = Feed::create(&user, &url, &pool).await?;
   
+  assert_eq!(feed.url, url);
+  assert_eq!(feed.user_id, user.id);
   
-  #[sqlx::test]
-  async fn test_find_by_url(pool: SqlitePool) -> sqlx::Result<()> {
-    let email:String = "foo@bar.com".to_string();
-    let user = User::find_or_create_by_email(&email, &pool).await?;
-    
-    let url:String = "https://foo.com/rss.xml".to_string();
-    let feed = Feed::create(&user, &url, &pool).await?;
-    
-    let feed2 = Feed::find_by_url(&url, &pool).await?;
-    
-    assert_eq!(feed, feed2);
-    assert_eq!(feed2.url, url);
-    
-    Ok(())
-  }
+  Ok(())
+}
   
-  #[sqlx::test]
-  async fn test_find(pool: SqlitePool) -> sqlx::Result<()> {
-    let email:String = "foo@bar.com".to_string();
-    let user = User::find_or_create_by_email(&email, &pool).await?;
-    
-    let url:String = "https://foo.com/rss.xml".to_string();
-    let feed = Feed::create(&user, &url, &pool).await?;
-    
-    let feed2 = Feed::find(feed.id, &pool).await?;
-    
-    assert_eq!(feed, feed2);
-    assert_eq!(feed2.url, url);
-    
-    Ok(())
-  }
+#[sqlx::test]
+async fn test_find_by_url(pool: SqlitePool) -> sqlx::Result<()> {
+  let email:String = "foo@bar.com".to_string();
+  let user = User::find_or_create_by_email(&email, &pool).await?;
   
-  #[sqlx::test]
-  async fn test_for_user(pool: SqlitePool) -> sqlx::Result<()> {
-    let email:String = "foo@bar.com".to_string();
-    let user = User::find_or_create_by_email(&email, &pool).await?;
-    
-    let url:String = "https://foo.com/rss.xml".to_string();
-    let _feed = Feed::create(&user, &url, &pool).await?;
-    
-    let url2:String = "https://foofoo.com/rss.xml".to_string();
-    let _feed2 = Feed::create(&user, &url2, &pool).await?;
-    
-    let feeds = Feed::for_user(&user, &pool).await?; 
-    assert_eq!(feeds.len(), 2);
-    
-    Ok(())
-  }
+  let url:String = "https://foo.com/rss.xml".to_string();
+  let feed = Feed::create(&user, &url, &pool).await?;
   
-  #[sqlx::test]
-  async fn test_delete(pool: SqlitePool) -> sqlx::Result<()> {
-    let email:String = "foo@bar.com".to_string();
-    let user = User::find_or_create_by_email(&email, &pool).await?;
-    
-    let url:String = "https://foo.com/rss.xml".to_string();
-    let feed = Feed::create(&user, &url, &pool).await?;
-    
-    let deleted_feed = Feed::delete(&user, feed.id, &pool).await?;
-    assert_eq!(feed, deleted_feed);
-    
-    let feeds = Feed::for_user(&user, &pool).await?; 
-    assert_eq!(feeds.len(), 0);
-    
-    Ok(())
-  }
+  let feed2 = Feed::find_by_url(&url, &pool).await?;
   
+  assert_eq!(feed, feed2);
+  assert_eq!(feed2.url, url);
+  
+  Ok(())
+}
+
+#[sqlx::test]
+async fn test_find(pool: SqlitePool) -> sqlx::Result<()> {
+  let email:String = "foo@bar.com".to_string();
+  let user = User::find_or_create_by_email(&email, &pool).await?;
+  
+  let url:String = "https://foo.com/rss.xml".to_string();
+  let feed = Feed::create(&user, &url, &pool).await?;
+  
+  let feed2 = Feed::find(feed.id, &pool).await?;
+  
+  assert_eq!(feed, feed2);
+  assert_eq!(feed2.url, url);
+  
+  Ok(())
+}
+
+#[sqlx::test]
+async fn test_for_user(pool: SqlitePool) -> sqlx::Result<()> {
+  let email:String = "foo@bar.com".to_string();
+  let user = User::find_or_create_by_email(&email, &pool).await?;
+  
+  let url:String = "https://foo.com/rss.xml".to_string();
+  let _feed = Feed::create(&user, &url, &pool).await?;
+  
+  let url2:String = "https://foofoo.com/rss.xml".to_string();
+  let _feed2 = Feed::create(&user, &url2, &pool).await?;
+  
+  let feeds = Feed::for_user(&user, &pool).await?; 
+  assert_eq!(feeds.len(), 2);
+  
+  Ok(())
+}
+
+#[sqlx::test]
+async fn test_delete(pool: SqlitePool) -> sqlx::Result<()> {
+  let email:String = "foo@bar.com".to_string();
+  let user = User::find_or_create_by_email(&email, &pool).await?;
+  
+  let url:String = "https://foo.com/rss.xml".to_string();
+  let feed = Feed::create(&user, &url, &pool).await?;
+  
+  let deleted_feed = Feed::delete(&user, feed.id, &pool).await?;
+  assert_eq!(feed, deleted_feed);
+  
+  let feeds = Feed::for_user(&user, &pool).await?; 
+  assert_eq!(feeds.len(), 0);
+  
+  Ok(())
+}
+
+#[sqlx::test]
+async fn test_feed_to_entries(pool: SqlitePool) -> sqlx::Result<()> {
+  use std::fs;
+  let feed:Feed = Feed {
+    id: 1,
+    user_id: 1,
+    url: "https://foo.com/rss.xml".to_string()
+  };
+
+  let path = "fixtures/test_feed_to_entries.xml";
+  let data = parser::parse(fs::read_to_string(path).unwrap().as_bytes()).unwrap();
+
+  let result = Feed::feed_to_entries(&feed, data, &pool).await.unwrap();
+
+  assert_eq!(result.len(), 49);
+
+  // check that reloading the same feed doesn't create more records
+  let data2 = parser::parse(fs::read_to_string(path).unwrap().as_bytes()).unwrap();
+  let result2 = Feed::feed_to_entries(&feed, data2, &pool).await.unwrap();
+
+  assert_eq!(result2.len(), 0);
+
+  Ok(())
+}

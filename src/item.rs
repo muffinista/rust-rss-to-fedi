@@ -1,7 +1,5 @@
 use sqlx::sqlite::SqlitePool;
-use serde::{Deserialize, Serialize};
-
-use std::{error::Error, fmt};
+use serde::{Serialize};
 
 use feed_rs::model::Entry;
 
@@ -41,12 +39,23 @@ impl Item {
     .fetch_one(pool)
     .await
   }
-  
+
+  pub async fn exists_by_guid(guid: &String, feed: &Feed, pool: &SqlitePool) -> Result<bool, sqlx::Error> {
+    let result = sqlx::query!("SELECT COUNT(1) AS tally FROM items WHERE feed_id = ? AND guid = ?", feed.id, guid)
+    .fetch_one(pool)
+    .await;
+
+    match result {
+      Ok(result) => Ok(result.tally > 0),
+      Err(why) => Err(why)
+    }
+  }
+
   pub async fn create_from_entry(entry: &Entry, feed: &Feed, pool: &SqlitePool) -> Result<Item, sqlx::Error> {
     let title = &entry.title.as_ref().unwrap().content;
     let body = &entry.content.as_ref().unwrap().body;
   
-    println!("Got: {:?}", entry.id);
+    println!("Create: {:?}", entry.id);
 
     let item_id = sqlx::query!("INSERT INTO items (feed_id, guid, title, content) VALUES($1, $2, $3, $4)",
       feed.id,
@@ -68,18 +77,4 @@ impl Item {
     
   //   old_item   
   // }
-}
-
-#[sqlx::test]
-async fn test_create(pool: SqlitePool) -> sqlx::Result<()> {
-  let item:Item = Item {
-    feed_id: 1,
-    guid: Some("abcde".to_string()),
-    title: Some("hello".to_string()),
-    content: Some("hi there".to_string())
-  };
-
-  Item::save(&item, &pool).await?;
-    
-  Ok(())
 }
