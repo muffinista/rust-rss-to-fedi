@@ -91,16 +91,17 @@ impl Feed {
       res.text().await
     }
     
-    pub async fn feed_to_entries(&self, data: feed_rs::model::Feed, pool: &SqlitePool) -> Result<(), FeedError> {
+    pub async fn feed_to_entries(&self, data: feed_rs::model::Feed, pool: &SqlitePool) -> Result<(Vec<Item>), FeedError> {
+        let mut result: Vec<Item> = Vec::new();
       for entry in data.entries.iter() {
         // println!("Got: {:?}", entry);
         let item = Item::create_from_entry(&entry, &self, pool).await;
         match item {
-          Ok(item) => (),
+          Ok(item) => result.push(item),
           Err(why) => return Err(FeedError)
         }
       }
-      Ok(())
+      Ok(result)
     }
     
     // pub async fn parse_data(&self, body: String, pool: &SqlitePool) -> Result<(), FeedError> {        
@@ -113,7 +114,7 @@ impl Feed {
     //   }
     // }
     
-    pub async fn parse(&self, pool: &SqlitePool) -> Result<(), FeedError> {        
+    pub async fn parse(&self, pool: &SqlitePool) -> Result<(Vec<Item>), FeedError> {        
       let body = Feed::load(self).await;
       match body {
         Ok(body) => {
