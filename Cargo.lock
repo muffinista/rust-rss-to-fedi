@@ -2131,6 +2131,7 @@ checksum = "97477e48b4cf8603ad5f7aaf897467cf42ab4218a38ef76fb14c2d6773a6d6a8"
 name = "rustypub"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "dotenvy",
  "feed-rs",
  "liquid",
@@ -2142,8 +2143,10 @@ dependencies = [
  "rocket",
  "rocket_dyn_templates",
  "serde",
+ "serde_json",
  "sqlx",
  "tokio",
+ "webfinger",
 ]
 
 [[package]]
@@ -2244,9 +2247,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.88"
+version = "1.0.89"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e8b3801309262e8184d9687fb697586833e939767aea0dda89f5a8e650e8bd7"
+checksum = "020ff22c755c2ed3f8cf162dbb41a7268d934702f3ed3631656ea597e08fc3db"
 dependencies = [
  "itoa",
  "ryu",
@@ -3081,6 +3084,17 @@ checksum = "bcda906d8be16e728fd5adc5b729afad4e444e106ab28cd1c7256e54fa61510f"
 dependencies = [
  "js-sys",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "webfinger"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f395336b42f1be22490390830ccfe7a735725eef086cd0574bf8759408ecb3af"
+dependencies = [
+ "async-trait",
+ "reqwest",
+ "serde",
 ]
 
 [[package]]

@@ -1,4 +1,5 @@
 #![feature(proc_macro_hygiene, decl_macro)]
+#![feature(async_fn_in_trait)]
 
 #[macro_use]
 extern crate rocket;
@@ -18,6 +19,9 @@ use std::env;
 
 use rustypub::user::User;
 use rustypub::feed::Feed;
+
+use webfinger::*;
+use serde_json::to_string;
 
 #[derive(FromForm)]
 struct LoginForm {
@@ -131,6 +135,61 @@ fn account() -> &'static str {
   "Hello, world!"
 }
 
+pub struct WebfingerResolver<'a> {
+  db: &'a SqlitePool
+}
+
+#[async_trait::async_trait]
+impl AsyncResolver for WebfingerResolver<'_> {
+    type Repo = &'static str;
+
+    async fn instance_domain<'a>(&self) -> &'a str {
+        "instance.tld"
+    }
+
+    async fn find(
+        &self,
+        prefix: Prefix,
+        acct: String,
+        resource_repo: &'static str,
+    ) -> Result<Webfinger, ResolverError> {
+        //        let feed = Feed::find(1, &self.db).await;
+        // print!("{:?} {:?} {:?}", acct, resource_repo, prefix);
+
+        if true || acct == resource_repo && prefix == Prefix::Acct {
+            Ok(Webfinger {
+                subject: acct.clone(),
+                aliases: vec![acct.clone()],
+                links: vec![Link {
+                    rel: "http://webfinger.net/rel/profile-page".to_string(),
+                    mime_type: None,
+                    href: Some(format!("https://instance.tld/@{}/", acct)),
+                    template: None,
+                }],
+            })
+        } else {
+            Err(ResolverError::NotFound)
+        }
+    }
+}
+
+
+#[get("/.well-known/webfinger")]
+async fn lookup_webfinger(db: &State<SqlitePool>) -> Result<String, Status> {
+  let r = WebfingerResolver {db: db};
+  let result = r.endpoint("acct:test@instance.tld", "admin").await;
+  match result {
+    Ok(result) => {
+      print!("{:?}", result);
+      Ok( serde_json::to_string(&result).unwrap())
+    },
+    Err(why) => {
+      // print!("{}", why);
+      Err(Status::NotFound)
+    }
+  }
+}
+
 
 pub fn customize(tera: &mut Tera) {
   tera.add_raw_template("about.html", r#"
@@ -156,7 +215,7 @@ async fn main() -> Result<(), rocket::Error> {
   
   let _rocket = rocket::build()
     .manage(pool)
-    .mount("/", routes![index, index_logged_in, login, do_login, attempt_login, account, add_feed, delete_feed])
+    .mount("/", routes![index, index_logged_in, login, do_login, attempt_login, account, add_feed, delete_feed, lookup_webfinger])
     .attach(Template::custom(|engines| {
       customize(&mut engines.tera);
     }))
