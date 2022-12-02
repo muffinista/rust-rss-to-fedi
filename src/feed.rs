@@ -9,6 +9,17 @@ use std::{error::Error, fmt};
 use crate::user::User;
 use crate::item::Item;
 
+use activitystreams::{
+  context
+};
+
+use activitystreams::base::BaseExt;
+use activitystreams::{actor::{ApActor, ApActorExt, AsApActor, Service}, iri};
+
+
+use anyhow::Error as AnyError;
+
+
 #[derive(Debug, Serialize)]
 pub struct Feed {
   pub id: i64,
@@ -134,6 +145,24 @@ impl Feed {
       },
       Err(_why) => return Err(FeedError)
     }
+  }
+
+  // @todo we might not need the db here?
+  pub fn to_activity_pub(&self, domain: &String, pool: &SqlitePool) -> Result<ApActor<Service>, AnyError> {
+
+    let mut svc:ApActor<Service> = ApActor::new(
+      iri!("https://example.com/inbox"),
+      Service::new(),
+    );
+
+    svc
+      .set_context(context())
+      .set_id(iri!(format!("https://{}/users/{}/feed", domain, self.name)))
+      .set_inbox(iri!(format!("https://{}/users/{}/inbox", domain, self.name)))
+      .set_outbox(iri!(format!("https://{}/users/{}/outbox", domain, self.name)))
+      ;
+
+    Ok(svc)
   }
 }
 

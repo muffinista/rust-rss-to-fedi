@@ -21,6 +21,8 @@ use rustypub::user::User;
 use rustypub::feed::Feed;
 
 use webfinger::*;
+// use activitystreams::actor::Service;
+// use activitystreams::object::properties::ObjectProperties;
 
 #[derive(FromForm)]
 struct LoginForm {
@@ -129,10 +131,23 @@ async fn delete_feed(user: User, id: i64, db: &State<SqlitePool>) -> Result<Redi
   }
 }
 
+#[get("/feed/<username>")]
+async fn render_feed(username: &str, db: &State<SqlitePool>) -> Result<String, Status> {
+  let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
+  let feed = Feed::find_by_name(&username.to_string(), db).await;
 
-#[get("/account")]
-fn account() -> &'static str {
-  "Hello, world!"
+  match feed {
+    Ok(feed) => {
+      // @todo we might not need the db here?
+      let ap = feed.to_activity_pub(&instance_domain, &db);
+      match ap {
+        Ok(ap) => Ok(serde_json::to_string(&ap).unwrap()),
+        Err(_why) => Err(Status::NotFound)
+      }
+      
+    },
+    Err(_why) => Err(Status::NotFound)
+  }
 }
 
 // GET /.well-known/webfinger?resource=acct:crimeduo@botsin.space
@@ -142,7 +157,7 @@ async fn lookup_webfinger(resource: &str, db: &State<SqlitePool>) -> Result<Stri
   
   // https://github.com/Plume-org/webfinger/blob/main/src/async_resolver.rs
   let mut parsed_query = resource.splitn(2, ':');
-  let res_prefix = Prefix::from(parsed_query.next().ok_or(Status::NotFound)?);
+  let _res_prefix = Prefix::from(parsed_query.next().ok_or(Status::NotFound)?);
   let res = parsed_query.next().ok_or(Status::NotFound)?;
   
   let mut parsed_res = res.splitn(2, '@');
@@ -162,13 +177,12 @@ async fn lookup_webfinger(resource: &str, db: &State<SqlitePool>) -> Result<Stri
         links: vec![Link {
           rel: "http://webfinger.net/rel/profile-page".to_string(),
           mime_type: None,
-          href: Some(format!("https://{}/@{}/", instance_domain, userstr)),
+          href: Some(format!("https://{}/feed/{}/", instance_domain, userstr)),
           template: None,
         }],
       }).unwrap()),
       Err(_why) => Err(Status::NotFound)
     }
-    
   }
 }
 
@@ -193,9 +207,9 @@ async fn main() -> Result<(), rocket::Error> {
       login,
       do_login,
       attempt_login,
-      account,
       add_feed,
       delete_feed,
+      render_feed,
       lookup_webfinger
       ])
     .attach(Template::fairing())
