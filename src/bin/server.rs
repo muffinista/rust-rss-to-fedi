@@ -172,17 +172,6 @@ async fn lookup_webfinger(resource: &str, db: &State<SqlitePool>) -> Result<Stri
   }
 }
 
-pub fn customize(tera: &mut Tera) {
-  tera.add_raw_template("about.html", r#"
-  {% extends "base" %}
-  {% block content %}
-  <section id="about">
-  <h1>About - Here's another page!</h1>
-  </section>
-  {% endblock content %}
-  "#).expect("valid Tera template");
-}
-
 #[rocket::main]
 async fn main() -> Result<(), rocket::Error> {
   let db_uri = env::var("DATABASE_URL").expect("DATABASE_URL is not set");
@@ -199,9 +188,7 @@ async fn main() -> Result<(), rocket::Error> {
   let _rocket = rocket::build()
     .manage(pool)
     .mount("/", routes![index, index_logged_in, login, do_login, attempt_login, account, add_feed, delete_feed, lookup_webfinger])
-    .attach(Template::custom(|engines| {
-      customize(&mut engines.tera);
-    }))
+    .attach(Template::fairing())
     .launch()
     .await?;
   
