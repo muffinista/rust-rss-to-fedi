@@ -3,6 +3,7 @@
 CREATE TABLE feeds (
   id INTEGER PRIMARY KEY,
   user_id INTEGER NOT NULL,
+  name VARCHAR NOT NULL,
   url VARCHAR NOT NULL
 );
 

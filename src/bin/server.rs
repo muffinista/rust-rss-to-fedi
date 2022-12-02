@@ -1,5 +1,5 @@
 #![feature(proc_macro_hygiene, decl_macro)]
-#![feature(async_fn_in_trait)]
+//#![feature(async_fn_in_trait)]
 
 #[macro_use]
 extern crate rocket;
@@ -21,7 +21,6 @@ use rustypub::user::User;
 use rustypub::feed::Feed;
 
 use webfinger::*;
-use serde_json::to_string;
 
 #[derive(FromForm)]
 struct LoginForm {
@@ -30,6 +29,7 @@ struct LoginForm {
 
 #[derive(FromForm)]
 struct FeedForm {
+  name: String,
   url: String
 }
 
@@ -101,7 +101,7 @@ async fn do_login(db: &State<SqlitePool>, form: Form<LoginForm>) -> Result<Redir
 
 #[post("/feed", data = "<form>")]
 async fn add_feed(user: User, db: &State<SqlitePool>, form: Form<FeedForm>) -> Result<Redirect, Status> {
-  let feed = Feed::create(&user, &form.url, &db).await;
+  let feed = Feed::create(&user, &form.url, &form.name, &db).await;
   
   match feed {
     Ok(_feed) => {
@@ -135,61 +135,42 @@ fn account() -> &'static str {
   "Hello, world!"
 }
 
-pub struct WebfingerResolver<'a> {
-  db: &'a SqlitePool
-}
-
-#[async_trait::async_trait]
-impl AsyncResolver for WebfingerResolver<'_> {
-    type Repo = &'static str;
-
-    async fn instance_domain<'a>(&self) -> &'a str {
-        "instance.tld"
+// GET /.well-known/webfinger?resource=acct:crimeduo@botsin.space
+#[get("/.well-known/webfinger?<resource>")]
+async fn lookup_webfinger(resource: &str, db: &State<SqlitePool>) -> Result<String, Status> {
+  let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
+  
+  // https://github.com/Plume-org/webfinger/blob/main/src/async_resolver.rs
+  let mut parsed_query = resource.splitn(2, ':');
+  let res_prefix = Prefix::from(parsed_query.next().ok_or(Status::NotFound)?);
+  let res = parsed_query.next().ok_or(Status::NotFound)?;
+  
+  let mut parsed_res = res.splitn(2, '@');
+  let user = parsed_res.next().ok_or(Status::NotFound)?;
+  let domain = parsed_res.next().ok_or(Status::NotFound)?;
+  if domain != instance_domain {
+    Err(Status::NotFound)
+  } else {
+    let userstr = user.to_string();
+    print!("{}", userstr);
+  
+    let feed = Feed::find_by_name(&userstr, db).await;
+    match feed {
+      Ok(_feed) => Ok(serde_json::to_string(&Webfinger {
+        subject: userstr.clone(),
+        aliases: vec![userstr.clone()],
+        links: vec![Link {
+          rel: "http://webfinger.net/rel/profile-page".to_string(),
+          mime_type: None,
+          href: Some(format!("https://{}/@{}/", instance_domain, userstr)),
+          template: None,
+        }],
+      }).unwrap()),
+      Err(_why) => Err(Status::NotFound)
     }
-
-    async fn find(
-        &self,
-        prefix: Prefix,
-        acct: String,
-        resource_repo: &'static str,
-    ) -> Result<Webfinger, ResolverError> {
-        //        let feed = Feed::find(1, &self.db).await;
-        // print!("{:?} {:?} {:?}", acct, resource_repo, prefix);
-
-        if true || acct == resource_repo && prefix == Prefix::Acct {
-            Ok(Webfinger {
-                subject: acct.clone(),
-                aliases: vec![acct.clone()],
-                links: vec![Link {
-                    rel: "http://webfinger.net/rel/profile-page".to_string(),
-                    mime_type: None,
-                    href: Some(format!("https://instance.tld/@{}/", acct)),
-                    template: None,
-                }],
-            })
-        } else {
-            Err(ResolverError::NotFound)
-        }
-    }
-}
-
-
-#[get("/.well-known/webfinger")]
-async fn lookup_webfinger(db: &State<SqlitePool>) -> Result<String, Status> {
-  let r = WebfingerResolver {db: db};
-  let result = r.endpoint("acct:test@instance.tld", "admin").await;
-  match result {
-    Ok(result) => {
-      print!("{:?}", result);
-      Ok( serde_json::to_string(&result).unwrap())
-    },
-    Err(why) => {
-      // print!("{}", why);
-      Err(Status::NotFound)
-    }
+    
   }
 }
-
 
 pub fn customize(tera: &mut Tera) {
   tera.add_raw_template("about.html", r#"
@@ -205,6 +186,8 @@ pub fn customize(tera: &mut Tera) {
 #[rocket::main]
 async fn main() -> Result<(), rocket::Error> {
   let db_uri = env::var("DATABASE_URL").expect("DATABASE_URL is not set");
+  let _domain_name = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
+
   let pool = SqlitePool::connect(&db_uri)
     .await
     .expect("Failed to create pool");
