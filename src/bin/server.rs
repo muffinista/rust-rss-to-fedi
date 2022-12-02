@@ -187,7 +187,17 @@ async fn main() -> Result<(), rocket::Error> {
   
   let _rocket = rocket::build()
     .manage(pool)
-    .mount("/", routes![index, index_logged_in, login, do_login, attempt_login, account, add_feed, delete_feed, lookup_webfinger])
+    .mount("/", routes![
+      index,
+      index_logged_in,
+      login,
+      do_login,
+      attempt_login,
+      account,
+      add_feed,
+      delete_feed,
+      lookup_webfinger
+      ])
     .attach(Template::fairing())
     .launch()
     .await?;
