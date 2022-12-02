@@ -159,8 +159,32 @@ impl Feed {
       .set_context(context())
       .set_id(iri!(format!("https://{}/users/{}/feed", domain, self.name)))
       .set_inbox(iri!(format!("https://{}/users/{}/inbox", domain, self.name)))
-      .set_outbox(iri!(format!("https://{}/users/{}/outbox", domain, self.name)))
-      ;
+      .set_outbox(iri!(format!("https://{}/users/{}/outbox", domain, self.name)));
+
+      // "following": "https://botsin.space/users/crimeduo/following",
+      // "followers": "https://botsin.space/users/crimeduo/followers",
+      // "inbox": "https://botsin.space/users/crimeduo/inbox",
+      // "outbox": "https://botsin.space/users/crimeduo/outbox",
+      // "preferredUsername": "crimeduo",
+      // "name": "They fight crime!",
+      // "publicKey": {
+      //   "id": "https://botsin.space/users/crimeduo#main-key",
+      //   "owner": "https://botsin.space/users/crimeduo",
+      //   "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA+1ikYWHk8JypXZHCJnI5\nuBIX5dosGJHhzu1neA0vMNknk7h1SVu1rSCkA0dl6RmAAxr7Ohv7Sy2zyaQA9N0v\nmRal0+G7OGTjbV57Qr1b9+BvG710zhSh9l3kAw/2Ml8WLZFVBMWvnlVK8h0Pbnk7\n111fsHF45hotl+QmNGMkkrJfDQ/p+tSKhrSGn5CObu4EsO0hNpMjvGdba1PqCbd3\nNvNdo9cbQ4QKsClxgmCoLpQB9sxw5jzRjIIKp8F1nond/T4T6wsm7mj64yeskCca\n9TKxQA89x8uQ4mQfNuWKRmvQJR2aQKqYT4+hTzTYZ+zGRDAl1BhgQD0b9pgjkSEv\nAQIDAQAB\n-----END PUBLIC KEY-----\n"
+      // },
+      // "icon": {
+      //   "type": "Image",
+      //   "mediaType": "image/jpeg",
+      //   "url": "https://files.botsin.space/accounts/avatars/109/282/037/155/191/435/original/1884a0545a6fc1bd.jpeg"
+      // },
+      // "image": {
+      //   "type": "Image",
+      //   "mediaType": "image/jpeg",
+      //   "url": "https://files.botsin.space/accounts/headers/109/282/037/155/191/435/original/372509d3e7032272.jpg"
+      // }
+      
+      
+
 
     Ok(svc)
   }
