@@ -18,18 +18,12 @@ use std::env;
 
 use rustypub::user::User;
 use rustypub::feed::Feed;
-use rustypub::routes::*;
 
 #[derive(FromForm)]
 struct LoginForm {
   email: String
 }
 
-#[derive(FromForm)]
-struct FeedForm {
-  name: String,
-  url: String
-}
 
 #[get("/")]
 async fn index_logged_in(user: User, db: &State<SqlitePool>) -> Template {
@@ -91,54 +85,6 @@ async fn do_login(db: &State<SqlitePool>, form: Form<LoginForm>) -> Result<Redir
 }
 
 
-#[post("/feed", data = "<form>")]
-async fn add_feed(user: User, db: &State<SqlitePool>, form: Form<FeedForm>) -> Result<Redirect, Status> {
-  let feed = Feed::create(&user, &form.url, &form.name, &db).await;
-  
-  match feed {
-    Ok(_feed) => {
-      Ok(Redirect::to("/"))
-    },
-    Err(why) => {
-      print!("{}", why);
-      Err(Status::NotFound)
-    }
-  }
-}
-
-#[get("/feed/<id>/delete")]
-async fn delete_feed(user: User, id: i64, db: &State<SqlitePool>) -> Result<Redirect, Status> {
-  let feed = Feed::delete(&user, id, &db).await;
-  
-  match feed {
-    Ok(_feed) => {
-      Ok(Redirect::to("/"))
-    },
-    Err(why) => {
-      print!("{}", why);
-      Err(Status::NotFound)
-    }
-  }
-}
-
-#[get("/feed/<username>")]
-async fn render_feed(username: &str, db: &State<SqlitePool>) -> Result<String, Status> {
-  let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
-  let feed = Feed::find_by_name(&username.to_string(), db).await;
-
-  match feed {
-    Ok(feed) => {
-      let ap = feed.to_activity_pub(&instance_domain);
-      match ap {
-        Ok(ap) => Ok(serde_json::to_string(&ap).unwrap()),
-        Err(_why) => Err(Status::NotFound)
-      }
-      
-    },
-    Err(_why) => Err(Status::NotFound)
-  }
-}
-
 #[rocket::main]
 async fn main() -> Result<(), rocket::Error> {
   let db_uri = env::var("DATABASE_URL").expect("DATABASE_URL is not set");
@@ -159,9 +105,9 @@ async fn main() -> Result<(), rocket::Error> {
       index_logged_in,
       do_login,
       attempt_login,
-      add_feed,
-      delete_feed,
-      render_feed,
+      rustypub::routes::feeds::add_feed,
+      rustypub::routes::feeds::delete_feed,
+      rustypub::routes::feeds::render_feed,
       rustypub::routes::webfinger::lookup_webfinger
       ])
     .attach(Template::fairing())

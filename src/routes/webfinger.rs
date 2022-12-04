@@ -1,11 +1,10 @@
+use std::env;
+
 use rocket::get;
 use rocket::http::Status;
 use rocket::State;
 
-
 use sqlx::sqlite::SqlitePool;
-
-use std::env;
 
 use crate::feed::Feed;
 
