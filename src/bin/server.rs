@@ -1,10 +1,9 @@
 #![feature(proc_macro_hygiene, decl_macro)]
-//#![feature(async_fn_in_trait)]
 
 #[macro_use]
 extern crate rocket;
 
-use rocket_dyn_templates::{Template, tera::Tera, context};
+use rocket_dyn_templates::{Template, context};
 use rocket::response::{Redirect};
 use rocket::http::{Cookie, CookieJar};
 
@@ -138,8 +137,7 @@ async fn render_feed(username: &str, db: &State<SqlitePool>) -> Result<String, S
 
   match feed {
     Ok(feed) => {
-      // @todo we might not need the db here?
-      let ap = feed.to_activity_pub(&instance_domain, &db);
+      let ap = feed.to_activity_pub(&instance_domain);
       match ap {
         Ok(ap) => Ok(serde_json::to_string(&ap).unwrap()),
         Err(_why) => Err(Status::NotFound)

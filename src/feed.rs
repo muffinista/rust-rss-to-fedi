@@ -14,18 +14,27 @@ use activitystreams::{
 };
 
 use activitystreams::base::BaseExt;
-use activitystreams::{actor::{ApActor, ApActorExt, AsApActor, Service}, iri};
+use activitystreams::{actor::{ApActor, ApActorExt, Service}, iri};
+use activitystreams::unparsed::*;
 
+use activitystreams::{
+  prelude::*,
+  security,
+  iri_string::types::IriString,
+};
 
 use anyhow::Error as AnyError;
 
+use openssl::{pkey::PKey, rsa::Rsa};
 
 #[derive(Debug, Serialize)]
 pub struct Feed {
   pub id: i64,
   pub user_id: i64,
   pub name: String,
-  pub url: String
+  pub url: String,
+  pub private_key: String,
+  pub public_key: String
 }
 
 impl PartialEq for Feed {
@@ -43,6 +52,43 @@ impl fmt::Display for FeedError {
     write!(f, "Oh no, something bad went down")
   }
 }
+
+use activitystreams_ext::{Ext1, UnparsedExtension};
+
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PublicKey {
+    public_key: PublicKeyInner,
+}
+
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PublicKeyInner {
+    id: IriString,
+    owner: IriString,
+    public_key_pem: String,
+}
+
+impl<U> UnparsedExtension<U> for PublicKey
+where
+    U: UnparsedMutExt,
+{
+    type Error = serde_json::Error;
+
+    fn try_from_unparsed(unparsed_mut: &mut U) -> Result<Self, Self::Error> {
+        Ok(PublicKey {
+            public_key: unparsed_mut.remove("publicKey")?,
+        })
+    }
+
+    fn try_into_unparsed(self, unparsed_mut: &mut U) -> Result<(), Self::Error> {
+        unparsed_mut.insert("publicKey", self.public_key)?;
+        Ok(())
+    }
+}
+
+pub type ExtendedService = Ext1<ApActor<Service>, PublicKey>;
+
 
 impl Feed {
   pub async fn find(id: i64, pool: &SqlitePool) -> Result<Feed, sqlx::Error> {
@@ -70,7 +116,25 @@ impl Feed {
   }
   
   pub async fn create(user: &User, url: &String, name: &String, pool: &SqlitePool) -> Result<Feed, sqlx::Error> {
-    let feed_id = sqlx::query!("INSERT INTO feeds (user_id, url, name) VALUES($1, $2, $3)", user.id, url, name)
+    // generate keypair used for signing AP requests
+    let rsa = Rsa::generate(2048).unwrap();
+    let pkey = PKey::from_rsa(rsa).unwrap();
+    let public_key = pkey.public_key_to_pem().unwrap();
+    let private_key = pkey.private_key_to_pem_pkcs8().unwrap();
+    // let key_to_string = |key| match String::from_utf8(key) {
+    //   Ok(s) => Ok(s),
+    //   Err(e) => Err(Error::new(
+    //     ErrorKind::Other,
+    //     format!("Failed converting key to string: {}", e),
+    //   )),
+    // };
+
+    let private_key_str = String::from_utf8(private_key).unwrap();
+    let public_key_str = String::from_utf8(public_key).unwrap();
+
+    let feed_id = sqlx::query!("INSERT INTO feeds (user_id, url, name, private_key, public_key)
+                                VALUES($1, $2, $3, $4, $5)",
+                               user.id, url, name, private_key_str, public_key_str)
       .execute(pool)
       .await?
       .last_insert_rowid();
@@ -147,31 +211,32 @@ impl Feed {
     }
   }
 
-  // @todo we might not need the db here?
-  pub fn to_activity_pub(&self, domain: &String, pool: &SqlitePool) -> Result<ApActor<Service>, AnyError> {
-
-    let mut svc:ApActor<Service> = ApActor::new(
-      iri!("https://example.com/inbox"),
-      Service::new(),
+  // Return an object here instead of JSON so we can manipulate it if needed
+  pub fn to_activity_pub(&self, domain: &String) -> Result<ExtendedService, AnyError> {    
+    let mut svc = Ext1::new(
+        ApActor::new(
+          iri!("https://example.com/inbox"),
+          Service::new(),
+        ),
+        PublicKey {
+            public_key: PublicKeyInner {
+                id: iri!(format!("https://{}/users/{}/feed#main-key", domain, self.name)),
+                owner: iri!(format!("https://{}/users/{}/feed", domain, self.name)),
+                public_key_pem: self.public_key.to_owned(),
+            },
+        },
     );
-
+    
     svc
       .set_context(context())
+      .add_context(security())
       .set_id(iri!(format!("https://{}/users/{}/feed", domain, self.name)))
+      .set_name(self.name.clone())
+      .set_preferred_username(self.name.clone())
       .set_inbox(iri!(format!("https://{}/users/{}/inbox", domain, self.name)))
-      .set_outbox(iri!(format!("https://{}/users/{}/outbox", domain, self.name)));
-
-      // "following": "https://botsin.space/users/crimeduo/following",
-      // "followers": "https://botsin.space/users/crimeduo/followers",
-      // "inbox": "https://botsin.space/users/crimeduo/inbox",
-      // "outbox": "https://botsin.space/users/crimeduo/outbox",
-      // "preferredUsername": "crimeduo",
-      // "name": "They fight crime!",
-      // "publicKey": {
-      //   "id": "https://botsin.space/users/crimeduo#main-key",
-      //   "owner": "https://botsin.space/users/crimeduo",
-      //   "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA+1ikYWHk8JypXZHCJnI5\nuBIX5dosGJHhzu1neA0vMNknk7h1SVu1rSCkA0dl6RmAAxr7Ohv7Sy2zyaQA9N0v\nmRal0+G7OGTjbV57Qr1b9+BvG710zhSh9l3kAw/2Ml8WLZFVBMWvnlVK8h0Pbnk7\n111fsHF45hotl+QmNGMkkrJfDQ/p+tSKhrSGn5CObu4EsO0hNpMjvGdba1PqCbd3\nNvNdo9cbQ4QKsClxgmCoLpQB9sxw5jzRjIIKp8F1nond/T4T6wsm7mj64yeskCca\n9TKxQA89x8uQ4mQfNuWKRmvQJR2aQKqYT4+hTzTYZ+zGRDAl1BhgQD0b9pgjkSEv\nAQIDAQAB\n-----END PUBLIC KEY-----\n"
-      // },
+      .set_outbox(iri!(format!("https://{}/users/{}/outbox", domain, self.name)))
+      .set_followers(iri!(format!("https://{}/users/{}/followers", domain, self.name)))
+      .set_following(iri!(format!("https://{}/users/{}/following", domain, self.name)));
       // "icon": {
       //   "type": "Image",
       //   "mediaType": "image/jpeg",
@@ -182,19 +247,32 @@ impl Feed {
       //   "mediaType": "image/jpeg",
       //   "url": "https://files.botsin.space/accounts/headers/109/282/037/155/191/435/original/372509d3e7032272.jpg"
       // }
-      
-      
 
+    let any_base = svc.into_any_base();
 
-    Ok(svc)
+    match any_base {
+      Ok(any_base) => {
+        println!("any_base: {:#?}", any_base);
+        let x = ExtendedService::from_any_base(any_base).unwrap();
+
+        match x {
+          Some(x) => Ok(x),
+          None => todo!()
+        //  None => Err(anyhow::Error)
+        }
+      },
+      Err(_) => todo!()
+      //Err(_why) => Err(anyhow::Error)
+    }
+
+    //Ok(out)
   }
 }
 
   
 #[sqlx::test]
 async fn test_create(pool: SqlitePool) -> sqlx::Result<()> {
-  let email:String = "foo@bar.com".to_string();
-  let user = User::find_or_create_by_email(&email, &pool).await?;
+  let user = User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()) };
   
   let url:String = "https://foo.com/rss.xml".to_string();
   let name:String = "testfeed".to_string();
@@ -209,12 +287,11 @@ async fn test_create(pool: SqlitePool) -> sqlx::Result<()> {
   
 #[sqlx::test]
 async fn test_find_by_url(pool: SqlitePool) -> sqlx::Result<()> {
-  let email:String = "foo@bar.com".to_string();
-  let user = User::find_or_create_by_email(&email, &pool).await?;
-  
-  let url:String = "https://foo.com/rss.xml".to_string();
-  let feed = Feed::create(&user, &url, &pool).await?;
-  
+  let user = User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()) };
+  let url: String = "https://foo.com/rss.xml".to_string();
+  let name: String = "testfeed".to_string();
+
+  let feed = Feed::create(&user, &url, &name, &pool).await?;
   let feed2 = Feed::find_by_url(&url, &pool).await?;
   
   assert_eq!(feed, feed2);
@@ -224,12 +301,12 @@ async fn test_find_by_url(pool: SqlitePool) -> sqlx::Result<()> {
 }
 #[sqlx::test]
 async fn test_find_by_name(pool: SqlitePool) -> sqlx::Result<()> {
-  let email:String = "foo@bar.com".to_string();
-  let user = User::find_or_create_by_email(&email, &pool).await?;
-  
-  let url:String = "https://foo.com/rss.xml".to_string();
-  let feed = Feed::create(&user, &url, &pool).await?;
-  
+  let user = User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()) };
+
+  let url: String = "https://foo.com/rss.xml".to_string();
+  let name: String = "testfeed".to_string();
+
+  let feed = Feed::create(&user, &url, &name, &pool).await?;
   let feed2 = Feed::find_by_url(&url, &pool).await?;
   
   assert_eq!(feed, feed2);
@@ -240,11 +317,12 @@ async fn test_find_by_name(pool: SqlitePool) -> sqlx::Result<()> {
 
 #[sqlx::test]
 async fn test_find(pool: SqlitePool) -> sqlx::Result<()> {
-  let email:String = "foo@bar.com".to_string();
-  let user = User::find_or_create_by_email(&email, &pool).await?;
+  let user = User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()) };
   
-  let url:String = "https://foo.com/rss.xml".to_string();
-  let feed = Feed::create(&user, &url, &pool).await?;
+  let url: String = "https://foo.com/rss.xml".to_string();
+  let name: String = "testfeed".to_string();
+  
+  let feed = Feed::create(&user, &url, &name, &pool).await?;
   
   let feed2 = Feed::find(feed.id, &pool).await?;
   
@@ -256,14 +334,15 @@ async fn test_find(pool: SqlitePool) -> sqlx::Result<()> {
 
 #[sqlx::test]
 async fn test_for_user(pool: SqlitePool) -> sqlx::Result<()> {
-  let email:String = "foo@bar.com".to_string();
-  let user = User::find_or_create_by_email(&email, &pool).await?;
+  let user = User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()) };
   
-  let url:String = "https://foo.com/rss.xml".to_string();
-  let _feed = Feed::create(&user, &url, &pool).await?;
+  let url: String = "https://foo.com/rss.xml".to_string();
+  let name: String = "testfeed".to_string();
+  let _feed = Feed::create(&user, &url, &name, &pool).await?;
   
-  let url2:String = "https://foofoo.com/rss.xml".to_string();
-  let _feed2 = Feed::create(&user, &url2, &pool).await?;
+  let url2: String = "https://foofoo.com/rss.xml".to_string();
+  let name2: String = "testfeed2".to_string();
+  let _feed2 = Feed::create(&user, &url2, &name2, &pool).await?;
   
   let feeds = Feed::for_user(&user, &pool).await?; 
   assert_eq!(feeds.len(), 2);
@@ -273,11 +352,11 @@ async fn test_for_user(pool: SqlitePool) -> sqlx::Result<()> {
 
 #[sqlx::test]
 async fn test_delete(pool: SqlitePool) -> sqlx::Result<()> {
-  let email:String = "foo@bar.com".to_string();
-  let user = User::find_or_create_by_email(&email, &pool).await?;
-  
-  let url:String = "https://foo.com/rss.xml".to_string();
-  let feed = Feed::create(&user, &url, &pool).await?;
+  let user = User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()) };
+
+  let url: String = "https://foo.com/rss.xml".to_string();
+  let name: String = "testfeed".to_string();
+  let feed = Feed::create(&user, &url, &name, &pool).await?;
   
   let deleted_feed = Feed::delete(&user, feed.id, &pool).await?;
   assert_eq!(feed, deleted_feed);
@@ -294,7 +373,10 @@ async fn test_feed_to_entries(pool: SqlitePool) -> sqlx::Result<()> {
   let feed:Feed = Feed {
     id: 1,
     user_id: 1,
-    url: "https://foo.com/rss.xml".to_string()
+    name: "testfeed".to_string(),
+    url: "https://foo.com/rss.xml".to_string(),
+    private_key: "pk".to_string(),
+    public_key: "pk".to_string()
   };
 
   let path = "fixtures/test_feed_to_entries.xml";
@@ -311,4 +393,29 @@ async fn test_feed_to_entries(pool: SqlitePool) -> sqlx::Result<()> {
   assert_eq!(result2.len(), 0);
 
   Ok(())
+}
+
+#[test]
+fn test_feed_to_activity_pub() {
+  use serde_json::Value;
+
+  let feed:Feed = Feed {
+    id: 1,
+    user_id: 1,
+    name: "testfeed".to_string(),
+    url: "https://foo.com/rss.xml".to_string(),
+    private_key: "private key".to_string(),
+    public_key: "public key".to_string()
+  };
+
+  let result = feed.to_activity_pub(&"test.com".to_string()).unwrap();
+  let output = serde_json::to_string(&result).unwrap();
+
+  println!("{}", output);
+
+  let v: Value = serde_json::from_str(&output).unwrap();
+  assert_eq!(v["name"], "testfeed");
+  assert_eq!(v["publicKey"]["id"], "https://test.com/users/testfeed/feed#main-key");
+  assert_eq!(v["publicKey"]["publicKeyPem"], "public key");  
+
 }
