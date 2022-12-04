@@ -18,10 +18,7 @@ use std::env;
 
 use rustypub::user::User;
 use rustypub::feed::Feed;
-
-use webfinger::*;
-// use activitystreams::actor::Service;
-// use activitystreams::object::properties::ObjectProperties;
+use rustypub::routes::*;
 
 #[derive(FromForm)]
 struct LoginForm {
@@ -34,7 +31,6 @@ struct FeedForm {
   url: String
 }
 
-
 #[get("/")]
 async fn index_logged_in(user: User, db: &State<SqlitePool>) -> Template {
   let feeds = Feed::for_user(&user, &db).await.unwrap();
@@ -44,11 +40,6 @@ async fn index_logged_in(user: User, db: &State<SqlitePool>) -> Template {
 #[get("/", rank = 2)]
 fn index() -> Template {
   Template::render("home", context! { logged_in: false })
-}
-
-#[get("/login")]
-fn login() -> &'static str {
-  "Hello, world!"
 }
 
 #[get("/user/auth/<login_token>")]
@@ -148,42 +139,6 @@ async fn render_feed(username: &str, db: &State<SqlitePool>) -> Result<String, S
   }
 }
 
-// GET /.well-known/webfinger?resource=acct:crimeduo@botsin.space
-#[get("/.well-known/webfinger?<resource>")]
-async fn lookup_webfinger(resource: &str, db: &State<SqlitePool>) -> Result<String, Status> {
-  let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
-  
-  // https://github.com/Plume-org/webfinger/blob/main/src/async_resolver.rs
-  let mut parsed_query = resource.splitn(2, ':');
-  let _res_prefix = Prefix::from(parsed_query.next().ok_or(Status::NotFound)?);
-  let res = parsed_query.next().ok_or(Status::NotFound)?;
-  
-  let mut parsed_res = res.splitn(2, '@');
-  let user = parsed_res.next().ok_or(Status::NotFound)?;
-  let domain = parsed_res.next().ok_or(Status::NotFound)?;
-  if domain != instance_domain {
-    Err(Status::NotFound)
-  } else {
-    let userstr = user.to_string();
-    print!("{}", userstr);
-  
-    let feed = Feed::find_by_name(&userstr, db).await;
-    match feed {
-      Ok(_feed) => Ok(serde_json::to_string(&Webfinger {
-        subject: userstr.clone(),
-        aliases: vec![userstr.clone()],
-        links: vec![Link {
-          rel: "http://webfinger.net/rel/profile-page".to_string(),
-          mime_type: None,
-          href: Some(format!("https://{}/feed/{}/", instance_domain, userstr)),
-          template: None,
-        }],
-      }).unwrap()),
-      Err(_why) => Err(Status::NotFound)
-    }
-  }
-}
-
 #[rocket::main]
 async fn main() -> Result<(), rocket::Error> {
   let db_uri = env::var("DATABASE_URL").expect("DATABASE_URL is not set");
@@ -202,13 +157,12 @@ async fn main() -> Result<(), rocket::Error> {
     .mount("/", routes![
       index,
       index_logged_in,
-      login,
       do_login,
       attempt_login,
       add_feed,
       delete_feed,
       render_feed,
-      lookup_webfinger
+      rustypub::routes::webfinger::lookup_webfinger
       ])
     .attach(Template::fairing())
     .launch()

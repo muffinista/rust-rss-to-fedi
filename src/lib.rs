@@ -6,3 +6,5 @@ pub mod item;
 pub use user::User;
 pub use feed::Feed;
 pub use item::Item;
+
+pub mod routes;
