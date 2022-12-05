@@ -55,7 +55,7 @@ impl Item {
     let title = &entry.title.as_ref().unwrap().content;
     let body = &entry.content.as_ref().unwrap().body;
   
-    println!("Create: {:?}", entry.id);
+    // println!("Create: {:?}", entry.id);
 
     let item_id = sqlx::query!("INSERT INTO items (feed_id, guid, title, content) VALUES($1, $2, $3, $4)",
       feed.id,

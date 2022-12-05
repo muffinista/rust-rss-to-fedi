@@ -14,7 +14,10 @@ use activitystreams::{
 };
 
 use activitystreams::base::BaseExt;
+
 use activitystreams::collection::OrderedCollection;
+use activitystreams::collection::OrderedCollectionPage;
+use activitystreams::object::ApObject;
 use activitystreams::{actor::{ApActor, ApActorExt, Service}, iri};
 use activitystreams::unparsed::*;
 
@@ -126,6 +129,7 @@ pub enum AcceptedTypes {
 
 pub type AcceptedActivity = ActorAndObject<AcceptedTypes>;
 
+const PER_PAGE:u32 = 10;
 
 impl Feed {
   pub async fn find(id: i64, pool: &SqlitePool) -> Result<Feed, sqlx::Error> {
@@ -332,23 +336,74 @@ impl Feed {
     }
   }
 
-  pub async fn followers(&self, pool: &SqlitePool)  -> Result<OrderedCollection, sqlx::Error>{
-    let result = sqlx::query_as!(Follower, "SELECT * FROM followers WHERE feed_id = ?", self.id)
-      .fetch_all(pool)
+  pub async fn follower_count(&self, pool: &SqlitePool)  -> Result<u64, AnyError>{
+    let result = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = ?", self.id)
+      .fetch_one(pool)
       .await;
 
-      let v: Vec<String> = result
-        .into_iter()
-        .flat_map(|o| o.into_iter())
-        .filter_map(|follower| Some(follower.actor))
-        .collect();
-
-      let mut collection = OrderedCollection::new();
-      collection.set_many_items(v);
-
-      Ok(collection)
+    match result {
+      Ok(result) => Ok(result.tally as u64),
+      Err(_why) => todo!()
     }
+  }
+  
+  pub async fn followers(&self, domain: &String, pool: &SqlitePool)  -> Result<ApObject<OrderedCollection>, AnyError>{
+    let count = self.follower_count(pool).await?;
+        
+    let mut collection: ApObject<OrderedCollection> = ApObject::new(OrderedCollection::new());
+
+    // The first, next, prev, last, and current properties are used to reference other CollectionPage instances that contain additional subsets of items from the parent collection. 
+
+    // in theory we can drop the first page of data in here
+    // however, it's not required (mastodon doesn't do it)
+    // and activitystreams might not be wired for it
+    collection
+      .set_context(context())
+      .set_id(iri!(format!("https://{}/users/{}/feed", domain, self.name)))
+      .set_total_items(count)
+      .set_summary("A list of followers".to_string())
+      .set_first(iri!(format!("https://{}/users/{}/feed?page=1", domain, self.name)));
+    
+        
+    Ok(collection)
+  }
+
+  pub async fn followers_paged(&self, page: u32, domain: &String, pool: &SqlitePool)  -> Result<ApObject<OrderedCollectionPage>, AnyError>{
+    // let count = self.follower_count(pool).await?;
+
+    // @todo handle page <= 0 and page > count
+    
+    let offset = (page - 1) * PER_PAGE;
+    let result = sqlx::query_as!(Follower, "SELECT * FROM followers WHERE feed_id = ? LIMIT ? OFFSET ?", self.id, PER_PAGE, offset )
+      .fetch_all(pool)
+      .await;
+  
+    match result {
+      Ok(result) => {
+        let v: Vec<String> = result
+          .into_iter()
+          .filter_map(|follower| Some(follower.actor))
+          .collect();
+      
+        let mut collection: ApObject<OrderedCollectionPage> = ApObject::new(OrderedCollectionPage::new());
+        
+        // The first, next, prev, last, and current properties are used to reference other CollectionPage instances that contain additional subsets of items from the parent collection. 
+        
+        collection
+          .set_context(context())
+          .set_id(iri!(format!("https://{}/users/{}/feed?page={}", domain, self.name, page)))
+          .set_summary("A list of followers".to_string())
+          .set_part_of(iri!(format!("https://{}/users/{}/feed", domain, self.name)))
+          .set_many_items(v);
+        
+        Ok(collection)
+          
+      },
+      Err(_why) => todo!()
+    }
+  }
 }
+
 
   
 #[sqlx::test]
@@ -478,6 +533,7 @@ async fn test_feed_to_entries(pool: SqlitePool) -> sqlx::Result<()> {
 
 #[test]
 fn test_feed_to_activity_pub() {
+  use serde_json::Value;
   let feed:Feed = Feed {
     id: 1,
     user_id: 1,
@@ -566,5 +622,36 @@ async fn test_unfollow(pool: SqlitePool) -> sqlx::Result<()> {
   };
 
     
+  Ok(())
+}
+
+
+#[sqlx::test]
+async fn test_followers(pool: SqlitePool) -> sqlx::Result<()> {
+  let url:String = "https://foo.com/rss.xml".to_string();
+  let name:String = "testfeed".to_string();
+  let pk:String = "pk".to_string();
+  let pubk:String = "pk".to_string();
+  let feed = Feed { id: 1, user_id: 1, name: name, url: url, private_key: pk, public_key: pubk };
+  let domain:String = "domain.com".to_string();
+
+  sqlx::query!("INSERT INTO followers (feed_id, actor) VALUES($1, $2)", feed.id, "https://activitypub.pizza/users/colin1")
+    .execute(&pool)
+    .await?;
+  sqlx::query!("INSERT INTO followers (feed_id, actor) VALUES($1, $2)", feed.id, "https://activitypub.pizza/users/colin2")
+  .execute(&pool)
+  .await?;
+  sqlx::query!("INSERT INTO followers (feed_id, actor) VALUES($1, $2)", feed.id, "https://activitypub.pizza/users/colin3")
+  .execute(&pool)
+  .await?;
+
+  let result = feed.followers(&domain, &pool).await;
+  match result {
+    Ok(result) => {
+      let s = serde_json::to_string(&result).unwrap();
+      println!("{:?}", s);
+    },
+    Err(_why) => todo!()
+  }
   Ok(())
 }
