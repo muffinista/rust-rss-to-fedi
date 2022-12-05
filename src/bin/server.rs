@@ -35,6 +35,7 @@ async fn main() -> Result<(), rocket::Error> {
   let pool = SqlitePool::connect(&db_uri)
     .await
     .expect("Failed to create pool");
+
   sqlx::migrate!("./migrations")
     .run(&pool)
     .await
@@ -50,7 +51,8 @@ async fn main() -> Result<(), rocket::Error> {
       rustypub::routes::feeds::add_feed,
       rustypub::routes::feeds::delete_feed,
       rustypub::routes::feeds::render_feed,
-      rustypub::routes::webfinger::lookup_webfinger
+      rustypub::routes::webfinger::lookup_webfinger,
+      rustypub::routes::ap::outbox::user_outbox      
       ])
     .attach(Template::fairing())
     .launch()

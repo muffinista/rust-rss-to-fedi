@@ -14,6 +14,7 @@ use activitystreams::{
 };
 
 use activitystreams::base::BaseExt;
+use activitystreams::collection::OrderedCollection;
 use activitystreams::{actor::{ApActor, ApActorExt, Service}, iri};
 use activitystreams::unparsed::*;
 
@@ -43,6 +44,20 @@ impl PartialEq for Feed {
     self.id == other.id
   }
 }
+
+#[derive(Debug, Serialize)]
+pub struct Follower {
+  pub id: i64,
+  pub feed_id: i64,
+  pub actor: String
+}
+
+impl PartialEq for Follower {
+  fn eq(&self, other: &Self) -> bool {
+    self.id == other.id
+  }
+}
+
 
 #[derive(Debug)]
 pub struct FeedError;
@@ -89,6 +104,27 @@ where
 }
 
 pub type ExtendedService = Ext1<ApActor<Service>, PublicKey>;
+
+// https://docs.rs/activitystreams/0.7.0-alpha.20/activitystreams/index.html#parse
+// also examples/handle_incoming.rs
+
+use activitystreams::activity::ActorAndObject;
+// use activitystreams::activity::ActorAndObjectRef;
+// use activitystreams::activity::ActorAndObjectRefExt;
+
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+pub enum AcceptedTypes {
+    // Accept,
+    // Announce,
+    // Create,
+    // Delete,
+    Follow,
+  // Reject,
+  //  Update,
+    Undo,
+}
+
+pub type AcceptedActivity = ActorAndObject<AcceptedTypes>;
 
 
 impl Feed {
@@ -259,15 +295,59 @@ impl Feed {
         match x {
           Some(x) => Ok(x),
           None => todo!()
-        //  None => Err(anyhow::Error)
         }
       },
       Err(_) => todo!()
-      //Err(_why) => Err(anyhow::Error)
     }
-
-    //Ok(out)
   }
+
+  async fn follow(&self, pool: &SqlitePool, actor: &str) -> Result<(), sqlx::Error> {
+    sqlx::query!("INSERT INTO followers (feed_id, actor)
+                                VALUES($1, $2)",
+                               self.id, actor)
+      .execute(pool)
+      .await?;
+
+    Ok(())
+  }
+
+  async fn unfollow(&self, pool: &SqlitePool, actor: &str) -> Result<(), sqlx::Error>  {
+    sqlx::query!("DELETE FROM followers WHERE feed_id = ? AND actor = ?",
+                               self.id, actor)
+      .execute(pool)
+      .await?;
+
+    Ok(())
+  }
+
+  pub async fn handle_activity(&self, pool: &SqlitePool, activity: &AcceptedActivity)  -> Result<(), sqlx::Error>{
+    let (actor, _object, act) = activity.clone().into_parts();
+
+    let actor_id = actor.as_single_id().unwrap().to_string();
+    
+    match act.kind() {
+      Some(AcceptedTypes::Follow) => self.follow(pool, &actor_id).await,
+      Some(AcceptedTypes::Undo) => self.unfollow(pool, &actor_id).await,
+      None => Ok(())
+    }
+  }
+
+  pub async fn followers(&self, pool: &SqlitePool)  -> Result<OrderedCollection, sqlx::Error>{
+    let result = sqlx::query_as!(Follower, "SELECT * FROM followers WHERE feed_id = ?", self.id)
+      .fetch_all(pool)
+      .await;
+
+      let v: Vec<String> = result
+        .into_iter()
+        .flat_map(|o| o.into_iter())
+        .filter_map(|follower| Some(follower.actor))
+        .collect();
+
+      let mut collection = OrderedCollection::new();
+      collection.set_many_items(v);
+
+      Ok(collection)
+    }
 }
 
   
@@ -398,8 +478,6 @@ async fn test_feed_to_entries(pool: SqlitePool) -> sqlx::Result<()> {
 
 #[test]
 fn test_feed_to_activity_pub() {
-  use serde_json::Value;
-
   let feed:Feed = Feed {
     id: 1,
     user_id: 1,
@@ -418,5 +496,75 @@ fn test_feed_to_activity_pub() {
   assert_eq!(v["name"], "testfeed");
   assert_eq!(v["publicKey"]["id"], "https://test.com/users/testfeed/feed#main-key");
   assert_eq!(v["publicKey"]["publicKeyPem"], "public key");  
+}
 
+
+#[sqlx::test]
+async fn test_follow(pool: SqlitePool) -> sqlx::Result<()> {
+  use serde_json::Value;
+  let json: &str = r#"{"actor":"https://activitypub.pizza/users/colin","object":"https://activitypub.pizza/users/colin/feed","type":"Follow"}"#;
+  let act:AcceptedActivity = serde_json::from_str(json).unwrap();
+
+  let user = User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()) };
+  
+  let url:String = "https://foo.com/rss.xml".to_string();
+  let name:String = "testfeed".to_string();
+  let feed = Feed::create(&user, &url, &name, &pool).await?;
+
+  let actor = "https://activitypub.pizza/users/colin".to_string();
+
+  let result = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = ? AND actor = ?", feed.id, actor).fetch_one(&pool).await;
+
+  match result {
+    Ok(result) => Ok(result.tally == 0),
+    Err(why) => Err(why)
+  };
+
+  feed.handle_activity(&pool, &act).await;
+
+  let result2 = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = ? AND actor = ?", feed.id, actor).fetch_one(&pool).await;
+
+  match result2 {
+    Ok(result) => Ok(result.tally > 0),
+    Err(why) => Err(why)
+  };
+    
+  Ok(())
+}
+
+#[sqlx::test]
+async fn test_unfollow(pool: SqlitePool) -> sqlx::Result<()> {
+  use serde_json::Value;
+  let json: &str = r#"{"actor":"https://activitypub.pizza/users/colin","object":"https://activitypub.pizza/users/colin/feed","type":"Follow"}"#;
+  let act:AcceptedActivity = serde_json::from_str(json).unwrap();
+
+  let user = User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()) };
+  
+  let url:String = "https://foo.com/rss.xml".to_string();
+  let name:String = "testfeed".to_string();
+  let feed = Feed::create(&user, &url, &name, &pool).await?;
+
+  let actor = "https://activitypub.pizza/users/colin".to_string();
+
+  sqlx::query!("INSERT INTO followers (feed_id, actor) VALUES($1, $2)", feed.id, actor)
+    .execute(&pool)
+    .await?;
+
+  let result = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = ? AND actor = ?", feed.id, actor).fetch_one(&pool).await;
+  match result {
+    Ok(result) => Ok(result.tally > 0),
+    Err(why) => Err(why)
+  };
+
+
+  feed.handle_activity(&pool, &act).await;
+
+  let result2 = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = ? AND actor = ?", feed.id, actor).fetch_one(&pool).await;
+  match result2 {
+    Ok(result) => Ok(result.tally == 0),
+    Err(why) => Err(why)
+  };
+
+    
+  Ok(())
 }

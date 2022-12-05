@@ -64,3 +64,20 @@ pub async fn render_feed(username: &str, db: &State<SqlitePool>) -> Result<Strin
     Err(_why) => Err(Status::NotFound)
   }
 }
+
+// #[get("/feed/<username>/followers")]
+// pub async fn render_feed_followers(username: &str, db: &State<SqlitePool>) -> Result<String, Status> {
+//   let feed = Feed::find_by_name(&username.to_string(), db).await;
+
+//   match feed {
+//     Ok(feed) => {
+//       let ap = feed.followers(db);
+//       match ap {
+//         Ok(ap) => Ok(serde_json::to_string(&ap).unwrap()),
+//         Err(_why) => Err(Status::NotFound)
+//       }
+      
+//     },
+//     Err(_why) => Err(Status::NotFound)
+//   }
+// }
