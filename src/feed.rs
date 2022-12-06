@@ -117,7 +117,7 @@ use activitystreams::activity::ActorAndObject;
 
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
 pub enum AcceptedTypes {
-    // Accept,
+    Accept,
     // Announce,
     // Create,
     // Delete,
@@ -332,6 +332,8 @@ impl Feed {
     match act.kind() {
       Some(AcceptedTypes::Follow) => self.follow(pool, &actor_id).await,
       Some(AcceptedTypes::Undo) => self.unfollow(pool, &actor_id).await,
+      // we don't need to handle this but if we receive it, just move on
+      Some(AcceptedTypes::Accept) => Ok(()),
       None => Ok(())
     }
   }
@@ -553,7 +555,6 @@ fn test_feed_to_activity_pub() {
   assert_eq!(v["publicKey"]["id"], "https://test.com/users/testfeed/feed#main-key");
   assert_eq!(v["publicKey"]["publicKeyPem"], "public key");  
 }
-
 
 #[sqlx::test]
 async fn test_follow(pool: SqlitePool) -> sqlx::Result<()> {
