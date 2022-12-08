@@ -1,12 +1,7 @@
 use http_signature_normalization_reqwest::prelude::*;
 use reqwest::Request;
-use reqwest_middleware::RequestBuilder;
-use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
-use reqwest::header::HeaderValue;
-use reqwest::header::HeaderMap;
-use reqwest::header::HeaderName;
-
-
+use reqwest_middleware::{ClientBuilder, RequestBuilder};
+use reqwest::header::{HeaderValue, HeaderMap, HeaderName};
 
 use webfinger::resolve;
 use webfinger::WebfingerError;
@@ -14,7 +9,6 @@ use webfinger::WebfingerError;
 use openssl::{
   hash::MessageDigest,
   pkey::PKey,
-  rsa::Rsa,
   sign::{Signer, Verifier},
 };
 
@@ -49,7 +43,7 @@ pub async fn find_inbox(actor: &str) -> Result<Url, WebfingerError> {
 
 
 /// deliver a payload to an inbox
-pub async fn deliver_to_inbox(actor: &str, key_id: &str, private_key: &str, json: &str) -> Result<(), anyhow::Error> {
+pub async fn deliver_to_inbox(actor: &str, private_key: &str, json: &str) -> Result<(), anyhow::Error> {
   let webfinger = find_inbox(actor).await;
   match webfinger {
     Ok(webfinger) => {
@@ -79,7 +73,7 @@ pub async fn deliver_to_inbox(actor: &str, key_id: &str, private_key: &str, json
       let response = client.execute(request).await;
       match response {
         // @todo check response code/etc
-        Ok(response) => Ok(()),
+        Ok(_response) => Ok(()),
         Err(_why) => todo!()
       }
     },

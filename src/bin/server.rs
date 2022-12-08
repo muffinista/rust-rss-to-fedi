@@ -51,6 +51,7 @@ async fn main() -> Result<(), rocket::Error> {
       rustypub::routes::feeds::add_feed,
       rustypub::routes::feeds::delete_feed,
       rustypub::routes::feeds::render_feed,
+      rustypub::routes::feeds::show_feed,
       rustypub::routes::webfinger::lookup_webfinger,
       rustypub::routes::ap::outbox::user_outbox      
       ])

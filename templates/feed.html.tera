@@ -1,0 +1,15 @@
+{% extends "default" %}
+{% block title %}Feed{% endblock title %}
+
+{% block content %}
+  <h1>Index</h1>
+  <p class="important">
+    Welcome to the feed page.
+  </p>
+
+  {% if logged_in %}
+  {% else %}
+    {% include "login" %}
+  {% endif %}
+  
+{% endblock content %}
