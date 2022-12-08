@@ -3,29 +3,11 @@
 #[macro_use]
 extern crate rocket;
 
-use rocket_dyn_templates::{Template, context};
-
-use rocket::State;
-
 use sqlx::sqlite::SqlitePool;
 
 use std::env;
 
-use rustypub::user::User;
-use rustypub::feed::Feed;
-
-
-#[get("/")]
-async fn index_logged_in(user: User, db: &State<SqlitePool>) -> Template {
-  let feeds = Feed::for_user(&user, &db).await.unwrap();
-  Template::render("home", context! { logged_in: true, feeds: feeds })
-}
-
-#[get("/", rank = 2)]
-fn index() -> Template {
-  Template::render("home", context! { logged_in: false })
-}
-
+use rocket_dyn_templates::Template;
 
 #[rocket::main]
 async fn main() -> Result<(), rocket::Error> {
@@ -44,8 +26,8 @@ async fn main() -> Result<(), rocket::Error> {
   let _rocket = rocket::build()
     .manage(pool)
     .mount("/", routes![
-      index,
-      index_logged_in,
+      rustypub::routes::index::index,
+      rustypub::routes::index::index_logged_in,
       rustypub::routes::login::do_login,
       rustypub::routes::login::attempt_login,
       rustypub::routes::feeds::add_feed,
