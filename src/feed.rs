@@ -39,7 +39,9 @@ pub struct Feed {
   pub name: String,
   pub url: String,
   pub private_key: String,
-  pub public_key: String
+  pub public_key: String,
+  pub image_url: Option<String>,
+  pub icon_url: Option<String>,
 }
 
 impl PartialEq for Feed {
@@ -539,7 +541,9 @@ async fn test_feed_to_entries(pool: SqlitePool) -> sqlx::Result<()> {
     name: "testfeed".to_string(),
     url: "https://foo.com/rss.xml".to_string(),
     private_key: "pk".to_string(),
-    public_key: "pk".to_string()
+    public_key: "pk".to_string(),
+    image_url: Some("image".to_string()),
+    icon_url: Some("icon".to_string())
   };
 
   let path = "fixtures/test_feed_to_entries.xml";
@@ -567,7 +571,9 @@ fn test_feed_to_activity_pub() {
     name: "testfeed".to_string(),
     url: "https://foo.com/rss.xml".to_string(),
     private_key: "private key".to_string(),
-    public_key: "public key".to_string()
+    public_key: "public key".to_string(),
+    image_url: Some("image".to_string()),
+    icon_url: Some("icon".to_string())
   };
 
   let result = feed.to_activity_pub(&"test.com".to_string()).unwrap();
@@ -651,7 +657,9 @@ async fn test_followers(pool: SqlitePool) -> Result<(), String> {
   let name:String = "testfeed".to_string();
   let pk:String = "pk".to_string();
   let pubk:String = "pk".to_string();
-  let feed = Feed { id: 1, user_id: 1, name: name, url: url, private_key: pk, public_key: pubk };
+  let feed = Feed { id: 1, user_id: 1, name: name, url: url, private_key: pk, public_key: pubk,
+    image_url: Some("image".to_string()),
+    icon_url: Some("icon".to_string()) };
   let domain:String = "domain.com".to_string();
 
   sqlx::query!("INSERT INTO followers (feed_id, actor) VALUES($1, $2)", feed.id, "https://activitypub.pizza/users/colin1")
@@ -687,7 +695,9 @@ async fn test_followers_paged(pool: SqlitePool) -> Result<(), String> {
   let name:String = "testfeed".to_string();
   let pk:String = "pk".to_string();
   let pubk:String = "pk".to_string();
-  let feed = Feed { id: 1, user_id: 1, name: name, url: url, private_key: pk, public_key: pubk };
+  let feed = Feed { id: 1, user_id: 1, name: name, url: url, private_key: pk, public_key: pubk,
+    image_url: Some("image".to_string()),
+    icon_url: Some("icon".to_string()) };
   let domain:String = "domain.com".to_string();
 
   for i in 1..35 {
@@ -725,7 +735,9 @@ async fn test_follower_count(pool: SqlitePool) -> Result<(), String> {
   let name:String = "testfeed".to_string();
   let pk:String = "pk".to_string();
   let pubk:String = "pk".to_string();
-  let feed = Feed { id: 1, user_id: 1, name: name, url: url, private_key: pk, public_key: pubk };
+  let feed = Feed { id: 1, user_id: 1, name: name, url: url, private_key: pk, public_key: pubk,
+    image_url: Some("image".to_string()),
+    icon_url: Some("icon".to_string()) };
 
   for i in 1..36{
     let actor = format!("https://activitypub.pizza/users/colin{}", i);

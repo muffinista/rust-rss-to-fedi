@@ -6,7 +6,9 @@ CREATE TABLE feeds (
   name VARCHAR NOT NULL,
   url VARCHAR NOT NULL,
   public_key VARCHAR NOT NULL,
-  private_key VARCHAR NOT NULL
+  private_key VARCHAR NOT NULL,
+  image_url VARCHAR,
+  icon_url VARCHAR
 );
 
 --   login_token_expires_at DATETIME
