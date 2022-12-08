@@ -9,7 +9,7 @@ use webfinger::WebfingerError;
 use openssl::{
   hash::MessageDigest,
   pkey::PKey,
-  sign::{Signer, Verifier},
+  sign::Signer
 };
 
 use url::Url;

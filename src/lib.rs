@@ -1,4 +1,3 @@
-
 pub mod user;
 pub mod feed;
 pub mod item;
@@ -9,3 +8,4 @@ pub use feed::Feed;
 pub use item::Item;
 
 pub mod routes;
+pub mod server;

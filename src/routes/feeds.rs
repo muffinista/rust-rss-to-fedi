@@ -32,17 +32,7 @@ pub async fn add_feed(user: User, db: &State<SqlitePool>, form: Form<FeedForm>) 
     }
   }
 }
-#[get("/feed/<id>")]
-pub async fn show_feed(user: User, id: i64, db: &State<SqlitePool>) -> Result<Template, Status> {
-  let feed = Feed::find(id, &db).await;
 
-  match feed {
-    Ok(feed) => Ok(Template::render("feed", context! { logged_in: true, owned_by: feed.user_id == user.id, feed: feed })),
-    Err(_why) => {
-      Err(Status::NotFound)
-    }
-  }
-}
 
 #[get("/feed/<id>/delete")]
 pub async fn delete_feed(user: User, id: i64, db: &State<SqlitePool>) -> Result<Redirect, Status> {
@@ -60,6 +50,27 @@ pub async fn delete_feed(user: User, id: i64, db: &State<SqlitePool>) -> Result<
 }
 
 #[get("/feed/<username>")]
+pub async fn show_feed(user: Option<User>, username: &str, db: &State<SqlitePool>) -> Result<Template, Status> {
+  let feed = Feed::find_by_name(&username.to_string(), db).await;
+
+  match feed {
+    Ok(feed) => {
+      let logged_in = user.is_some();
+      let owned_by = logged_in && user.unwrap().id == feed.user_id;
+      
+      Ok(Template::render("feed", context! {
+        logged_in: logged_in,
+        owned_by: owned_by,
+        feed: feed
+      }))
+    },
+    Err(_why) => {
+      Err(Status::NotFound)
+    }
+  }
+}
+
+#[get("/feed/<username>", format = "json", rank = 2)]
 pub async fn render_feed(username: &str, db: &State<SqlitePool>) -> Result<String, Status> {
   let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
   let feed = Feed::find_by_name(&username.to_string(), db).await;
