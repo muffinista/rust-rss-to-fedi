@@ -384,11 +384,12 @@ impl Feed {
 
     collection
       .set_context(context())
-      .set_id(iri!(format!("https://{}/users/{}/feed?page={}", domain, self.name, page)))
       .set_summary("A list of followers".to_string())
       .set_part_of(iri!(format!("https://{}/users/{}/feed", domain, self.name)))
       .set_first(iri!(format!("https://{}/users/{}/feed?page={}", domain, self.name, 1)))
-      .set_last(iri!(format!("https://{}/users/{}/feed?page={}", domain, self.name, total_pages)));
+      .set_last(iri!(format!("https://{}/users/{}/feed?page={}", domain, self.name, total_pages)))
+      .set_current(iri!(format!("https://{}/users/{}/feed?page={}", domain, self.name, page)));
+
 
     if page > 1 {
       collection.set_prev(iri!(format!("https://{}/users/{}/feed?page={}", domain, self.name, page - 1)));
@@ -690,30 +691,29 @@ async fn test_followers_paged(pool: SqlitePool) -> Result<(), String> {
   let feed = Feed { id: 1, user_id: 1, name: name, url: url, private_key: pk, public_key: pubk };
   let domain:String = "domain.com".to_string();
 
-  sqlx::query!("INSERT INTO followers (feed_id, actor) VALUES($1, $2)", feed.id, "https://activitypub.pizza/users/colin1")
-    .execute(&pool)
-    .await
-    .unwrap();
-  sqlx::query!("INSERT INTO followers (feed_id, actor) VALUES($1, $2)", feed.id, "https://activitypub.pizza/users/colin2")
-    .execute(&pool)
-    .await
-    .unwrap();
-  sqlx::query!("INSERT INTO followers (feed_id, actor) VALUES($1, $2)", feed.id, "https://activitypub.pizza/users/colin3")
-    .execute(&pool)
-    .await
-    .unwrap();
+  for i in 1..35 {
+    let actor = format!("https://activitypub.pizza/users/colin{}", i);
+    sqlx::query!("INSERT INTO followers (feed_id, actor) VALUES($1, $2)", feed.id, actor)
+      .execute(&pool)
+      .await
+      .unwrap();
+  }
   
-  let result = feed.followers_paged(1, &domain, &pool).await;
+  let result = feed.followers_paged(2, &domain, &pool).await;
   match result {
     Ok(result) => {
       let s = serde_json::to_string(&result).unwrap();
       println!("{:?}", s);
 
-      assert!(s.contains("/colin1"));
-      assert!(s.contains("/colin2"));
-      assert!(s.contains("/colin3"));
-      assert!(s.contains("?page=1"));
       assert!(s.contains("OrderedCollectionPage"));
+      assert!(s.contains("/colin11"));
+      assert!(s.contains("/colin12"));
+      assert!(s.contains("/colin13"));
+      assert!(s.contains(r#"first":"https://domain.com/users/testfeed/feed?page=1"#));
+      assert!(s.contains(r#"prev":"https://domain.com/users/testfeed/feed?page=1"#));
+      assert!(s.contains(r#"next":"https://domain.com/users/testfeed/feed?page=3"#));
+      assert!(s.contains(r#"last":"https://domain.com/users/testfeed/feed?page=4"#));
+      assert!(s.contains(r#"current":"https://domain.com/users/testfeed/feed?page=2"#));
       Ok(())
     },
 
