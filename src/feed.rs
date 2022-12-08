@@ -662,18 +662,13 @@ async fn test_followers(pool: SqlitePool) -> Result<(), String> {
     icon_url: Some("icon".to_string()) };
   let domain:String = "domain.com".to_string();
 
-  sqlx::query!("INSERT INTO followers (feed_id, actor) VALUES($1, $2)", feed.id, "https://activitypub.pizza/users/colin1")
-    .execute(&pool)
-    .await
-    .unwrap();
-  sqlx::query!("INSERT INTO followers (feed_id, actor) VALUES($1, $2)", feed.id, "https://activitypub.pizza/users/colin2")
-    .execute(&pool)
-    .await
-    .unwrap();
-  sqlx::query!("INSERT INTO followers (feed_id, actor) VALUES($1, $2)", feed.id, "https://activitypub.pizza/users/colin3")
-    .execute(&pool)
-    .await
-    .unwrap();
+  for i in 1..4 {
+    let actor = format!("https://activitypub.pizza/users/colin{}", i);
+    sqlx::query!("INSERT INTO followers (feed_id, actor) VALUES($1, $2)", feed.id, actor)
+      .execute(&pool)
+      .await
+      .unwrap();
+  }
   
   let result = feed.followers(&domain, &pool).await;
   match result {
