@@ -432,7 +432,6 @@ impl Feed {
   }
 }
 
-
   
 #[sqlx::test]
 async fn test_create(pool: SqlitePool) -> sqlx::Result<()> {
@@ -716,7 +715,32 @@ async fn test_followers_paged(pool: SqlitePool) -> Result<(), String> {
       assert!(s.contains(r#"current":"https://domain.com/users/testfeed/feed?page=2"#));
       Ok(())
     },
+    Err(why) => Err(why.to_string())
+  }
+}
 
+#[sqlx::test]
+async fn test_follower_count(pool: SqlitePool) -> Result<(), String> {
+  let url:String = "https://foo.com/rss.xml".to_string();
+  let name:String = "testfeed".to_string();
+  let pk:String = "pk".to_string();
+  let pubk:String = "pk".to_string();
+  let feed = Feed { id: 1, user_id: 1, name: name, url: url, private_key: pk, public_key: pubk };
+
+  for i in 1..36{
+    let actor = format!("https://activitypub.pizza/users/colin{}", i);
+    sqlx::query!("INSERT INTO followers (feed_id, actor) VALUES($1, $2)", feed.id, actor)
+      .execute(&pool)
+      .await
+      .unwrap();
+  }
+  
+  let result = feed.follower_count(&pool).await;
+  match result {
+    Ok(result) => { 
+      assert_eq!(35, result);
+      Ok(())
+    }
     Err(why) => Err(why.to_string())
   }
 }
