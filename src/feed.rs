@@ -129,7 +129,7 @@ pub enum AcceptedTypes {
 
 pub type AcceptedActivity = ActorAndObject<AcceptedTypes>;
 
-const PER_PAGE:u32 = 10;
+const PER_PAGE:u32 = 10u32;
 
 impl Feed {
   pub async fn find(id: i64, pool: &SqlitePool) -> Result<Feed, sqlx::Error> {
@@ -316,10 +316,12 @@ impl Feed {
   }
 
   async fn unfollow(&self, pool: &SqlitePool, actor: &str) -> Result<(), sqlx::Error>  {
-    sqlx::query!("DELETE FROM followers WHERE feed_id = ? AND actor = ?",
+    println!("unfollow {:?}", actor);
+    let result = sqlx::query!("DELETE FROM followers WHERE feed_id = ? AND actor = ?",
                                self.id, actor)
       .execute(pool)
       .await?;
+    println!("unfollow result {:?}", result);
 
     Ok(())
   }
@@ -351,10 +353,13 @@ impl Feed {
   
   pub async fn followers(&self, domain: &String, pool: &SqlitePool)  -> Result<ApObject<OrderedCollection>, AnyError>{
     let count = self.follower_count(pool).await?;
-        
+    let total_pages = ((count / PER_PAGE as u64) + 1 ) as u32;
+
     let mut collection: ApObject<OrderedCollection> = ApObject::new(OrderedCollection::new());
 
-    // The first, next, prev, last, and current properties are used to reference other CollectionPage instances that contain additional subsets of items from the parent collection. 
+    // The first, next, prev, last, and current properties are used
+    // to reference other CollectionPage instances that contain 
+    // additional subsets of items from the parent collection. 
 
     // in theory we can drop the first page of data in here
     // however, it's not required (mastodon doesn't do it)
@@ -363,6 +368,8 @@ impl Feed {
       .set_context(context())
       .set_id(iri!(format!("https://{}/users/{}/feed", domain, self.name)))
       .set_total_items(count)
+      .set_first(iri!(format!("https://{}/users/{}/feed?page={}", domain, self.name, 1)))
+      .set_last(iri!(format!("https://{}/users/{}/feed?page={}", domain, self.name, total_pages)))
       .set_summary("A list of followers".to_string())
       .set_first(iri!(format!("https://{}/users/{}/feed?page=1", domain, self.name)));
     
@@ -371,7 +378,30 @@ impl Feed {
   }
 
   pub async fn followers_paged(&self, page: u32, domain: &String, pool: &SqlitePool)  -> Result<ApObject<OrderedCollectionPage>, AnyError>{
-    // let count = self.follower_count(pool).await?;
+    let count = self.follower_count(pool).await?;
+    let total_pages = ((count / PER_PAGE as u64) + 1 ) as u32;
+    let mut collection: ApObject<OrderedCollectionPage> = ApObject::new(OrderedCollectionPage::new());
+
+    collection
+      .set_context(context())
+      .set_id(iri!(format!("https://{}/users/{}/feed?page={}", domain, self.name, page)))
+      .set_summary("A list of followers".to_string())
+      .set_part_of(iri!(format!("https://{}/users/{}/feed", domain, self.name)))
+      .set_first(iri!(format!("https://{}/users/{}/feed?page={}", domain, self.name, 1)))
+      .set_last(iri!(format!("https://{}/users/{}/feed?page={}", domain, self.name, total_pages)));
+
+    if page > 1 {
+      collection.set_prev(iri!(format!("https://{}/users/{}/feed?page={}", domain, self.name, page - 1)));
+    }
+
+    if page < total_pages {
+      collection.set_next(iri!(format!("https://{}/users/{}/feed?page={}", domain, self.name, page + 1)));
+    }
+
+    // return empty collection for invalid pages
+    if page == 0 || page > total_pages {
+      return Ok(collection)
+    }
 
     // @todo handle page <= 0 and page > count
     
@@ -386,17 +416,12 @@ impl Feed {
           .into_iter()
           .filter_map(|follower| Some(follower.actor))
           .collect();
-      
-        let mut collection: ApObject<OrderedCollectionPage> = ApObject::new(OrderedCollectionPage::new());
+              
+        // The first, next, prev, last, and current properties are used to 
+        // reference other CollectionPage instances that contain additional 
+        // subsets of items from the parent collection. 
         
-        // The first, next, prev, last, and current properties are used to reference other CollectionPage instances that contain additional subsets of items from the parent collection. 
-        
-        collection
-          .set_context(context())
-          .set_id(iri!(format!("https://{}/users/{}/feed?page={}", domain, self.name, page)))
-          .set_summary("A list of followers".to_string())
-          .set_part_of(iri!(format!("https://{}/users/{}/feed", domain, self.name)))
-          .set_many_items(v);
+        collection.set_many_items(v);
         
         Ok(collection)
           
@@ -548,8 +573,6 @@ fn test_feed_to_activity_pub() {
   let result = feed.to_activity_pub(&"test.com".to_string()).unwrap();
   let output = serde_json::to_string(&result).unwrap();
 
-  println!("{}", output);
-
   let v: Value = serde_json::from_str(&output).unwrap();
   assert_eq!(v["name"], "testfeed");
   assert_eq!(v["publicKey"]["id"], "https://test.com/users/testfeed/feed#main-key");
@@ -558,9 +581,9 @@ fn test_feed_to_activity_pub() {
 
 #[sqlx::test]
 async fn test_follow(pool: SqlitePool) -> sqlx::Result<()> {
-  use serde_json::Value;
-  let json: &str = r#"{"actor":"https://activitypub.pizza/users/colin","object":"https://activitypub.pizza/users/colin/feed","type":"Follow"}"#;
-  let act:AcceptedActivity = serde_json::from_str(json).unwrap();
+  let actor = "https://activitypub.pizza/users/colin".to_string();
+  let json = format!(r#"{{"actor":"{}","object":"{}/feed","type":"Follow"}}"#, actor, actor).to_string();
+  let act:AcceptedActivity = serde_json::from_str(&json).unwrap();
 
   let user = User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()) };
   
@@ -568,32 +591,30 @@ async fn test_follow(pool: SqlitePool) -> sqlx::Result<()> {
   let name:String = "testfeed".to_string();
   let feed = Feed::create(&user, &url, &name, &pool).await?;
 
-  let actor = "https://activitypub.pizza/users/colin".to_string();
+  let result = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = ? AND actor = ?", feed.id, actor)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
 
-  let result = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = ? AND actor = ?", feed.id, actor).fetch_one(&pool).await;
+  assert!(result.tally == 0);
 
-  match result {
-    Ok(result) => Ok(result.tally == 0),
-    Err(why) => Err(why)
-  };
+  feed.handle_activity(&pool, &act).await?;
 
-  feed.handle_activity(&pool, &act).await;
+  let result2 = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = ? AND actor = ?", feed.id, actor)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
 
-  let result2 = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = ? AND actor = ?", feed.id, actor).fetch_one(&pool).await;
-
-  match result2 {
-    Ok(result) => Ok(result.tally > 0),
-    Err(why) => Err(why)
-  };
+  assert!(result2.tally > 0);
     
   Ok(())
 }
 
 #[sqlx::test]
 async fn test_unfollow(pool: SqlitePool) -> sqlx::Result<()> {
-  use serde_json::Value;
-  let json: &str = r#"{"actor":"https://activitypub.pizza/users/colin","object":"https://activitypub.pizza/users/colin/feed","type":"Follow"}"#;
-  let act:AcceptedActivity = serde_json::from_str(json).unwrap();
+  let actor = "https://activitypub.pizza/users/colin".to_string();
+  let json = format!(r#"{{"actor":"{}","object":"{}/feed","type":"Undo"}}"#, actor, actor).to_string();
+  let act:AcceptedActivity = serde_json::from_str(&json).unwrap();
 
   let user = User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()) };
   
@@ -601,34 +622,31 @@ async fn test_unfollow(pool: SqlitePool) -> sqlx::Result<()> {
   let name:String = "testfeed".to_string();
   let feed = Feed::create(&user, &url, &name, &pool).await?;
 
-  let actor = "https://activitypub.pizza/users/colin".to_string();
-
   sqlx::query!("INSERT INTO followers (feed_id, actor) VALUES($1, $2)", feed.id, actor)
     .execute(&pool)
     .await?;
 
-  let result = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = ? AND actor = ?", feed.id, actor).fetch_one(&pool).await;
-  match result {
-    Ok(result) => Ok(result.tally > 0),
-    Err(why) => Err(why)
-  };
+  let result = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = ? AND actor = ?", feed.id, actor)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
 
+  assert!(result.tally == 1);
 
-  feed.handle_activity(&pool, &act).await;
+  feed.handle_activity(&pool, &act).await?;
 
-  let result2 = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = ? AND actor = ?", feed.id, actor).fetch_one(&pool).await;
-  match result2 {
-    Ok(result) => Ok(result.tally == 0),
-    Err(why) => Err(why)
-  };
+  let post_result = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = ? AND actor = ?", feed.id, actor)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
 
+  assert!(post_result.tally == 0);
     
   Ok(())
 }
 
-
 #[sqlx::test]
-async fn test_followers(pool: SqlitePool) -> sqlx::Result<()> {
+async fn test_followers(pool: SqlitePool) -> Result<(), String> {
   let url:String = "https://foo.com/rss.xml".to_string();
   let name:String = "testfeed".to_string();
   let pk:String = "pk".to_string();
@@ -638,21 +656,67 @@ async fn test_followers(pool: SqlitePool) -> sqlx::Result<()> {
 
   sqlx::query!("INSERT INTO followers (feed_id, actor) VALUES($1, $2)", feed.id, "https://activitypub.pizza/users/colin1")
     .execute(&pool)
-    .await?;
+    .await
+    .unwrap();
   sqlx::query!("INSERT INTO followers (feed_id, actor) VALUES($1, $2)", feed.id, "https://activitypub.pizza/users/colin2")
-  .execute(&pool)
-  .await?;
+    .execute(&pool)
+    .await
+    .unwrap();
   sqlx::query!("INSERT INTO followers (feed_id, actor) VALUES($1, $2)", feed.id, "https://activitypub.pizza/users/colin3")
-  .execute(&pool)
-  .await?;
-
+    .execute(&pool)
+    .await
+    .unwrap();
+  
   let result = feed.followers(&domain, &pool).await;
   match result {
     Ok(result) => {
       let s = serde_json::to_string(&result).unwrap();
       println!("{:?}", s);
+
+      assert!(s.contains("A list of followers"));
+      Ok(())
     },
-    Err(_why) => todo!()
+
+    Err(why) => Err(why.to_string())
   }
-  Ok(())
+}
+
+#[sqlx::test]
+async fn test_followers_paged(pool: SqlitePool) -> Result<(), String> {
+  let url:String = "https://foo.com/rss.xml".to_string();
+  let name:String = "testfeed".to_string();
+  let pk:String = "pk".to_string();
+  let pubk:String = "pk".to_string();
+  let feed = Feed { id: 1, user_id: 1, name: name, url: url, private_key: pk, public_key: pubk };
+  let domain:String = "domain.com".to_string();
+
+  sqlx::query!("INSERT INTO followers (feed_id, actor) VALUES($1, $2)", feed.id, "https://activitypub.pizza/users/colin1")
+    .execute(&pool)
+    .await
+    .unwrap();
+  sqlx::query!("INSERT INTO followers (feed_id, actor) VALUES($1, $2)", feed.id, "https://activitypub.pizza/users/colin2")
+    .execute(&pool)
+    .await
+    .unwrap();
+  sqlx::query!("INSERT INTO followers (feed_id, actor) VALUES($1, $2)", feed.id, "https://activitypub.pizza/users/colin3")
+    .execute(&pool)
+    .await
+    .unwrap();
+  
+  let result = feed.followers_paged(1, &domain, &pool).await;
+  match result {
+    Ok(result) => {
+      let s = serde_json::to_string(&result).unwrap();
+      println!("{:?}", s);
+
+      assert!(s.contains("/colin1"));
+      assert!(s.contains("/colin2"));
+      assert!(s.contains("/colin3"));
+      assert!(s.contains("?page=1"));
+      assert!(s.contains("OrderedCollectionPage"));
+      Ok(())
+    },
+
+    Err(why) => Err(why.to_string())
+  }
 }

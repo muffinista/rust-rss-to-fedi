@@ -6,9 +6,9 @@ use std::env;
 
 use rocket_dyn_templates::Template;
 
-use rocket::{Rocket, Ignite};
+use rocket::{Rocket, Build};
 
-pub async fn boot_server() -> Result<Rocket<Ignite>, rocket::Error> {
+pub async fn build_server() -> Rocket<Build> {
   let db_uri = env::var("DATABASE_URL").expect("DATABASE_URL is not set");
   let _domain_name = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
 
@@ -36,6 +36,4 @@ pub async fn boot_server() -> Result<Rocket<Ignite>, rocket::Error> {
       crate::routes::ap::outbox::user_outbox    
     ])
     .attach(Template::fairing())
-    .launch()
-    .await
 }

@@ -21,26 +21,29 @@ pub fn index() -> Template {
 
 #[cfg(test)]
 mod test {
-  use crate::server::boot_server;
-  use rocket::local::blocking::Client;
+  use crate::server::build_server;
+  use rocket::local::asynchronous::Client;
   use rocket::http::Status;
   use rocket::uri;
+  use rocket::{Rocket, Build};
   
-  #[sqlx::test]
-  async fn index() {
-    let server = boot_server().await;
+  #[rocket::async_test]
+  async fn index_not_logged_in() {
+    let server:Rocket<Build> = build_server().await;
+    let client = Client::tracked(server).await.unwrap();
 
-    match server {
-      Ok(server) => {    
-        let client = Client::tracked(server).expect("valid rocket instance");
-        let mut response = client.get(uri!(super::index)).dispatch();
-        assert_eq!(response.status(), Status::Ok);
-        assert_eq!(response.into_string().unwrap(), "Hello, world!");
-      }
-      Err(_why) => {
-        println!("{:?}", _why);
-        todo!()
-      }
+    let req = client.get(uri!(super::index));
+    let response = req.dispatch().await;
+
+
+    // running multiple requests:
+    // let (r1, r2) = rocket::tokio::join!(req.clone().dispatch(), req.dispatch());
+
+    assert_eq!(response.status(), Status::Ok);
+    let output = response.into_string().await;
+    match output {
+      Some(output) => assert!(output.contains("Email:")),
+      None => panic!()
     }
   }
 }
