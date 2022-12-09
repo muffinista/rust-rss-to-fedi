@@ -3,13 +3,16 @@ use std::env;
 use rocket::get;
 use rocket::http::Status;
 use rocket::State;
+use rocket::uri;
 
 use sqlx::sqlite::SqlitePool;
 
 use crate::feed::Feed;
 
 use webfinger::*;
+use crate::routes::feeds::*;
 
+use crate::utils::*;
 
 #[get("/.well-known/webfinger?<resource>")]
 pub async fn lookup_webfinger(resource: &str, db: &State<SqlitePool>) -> Result<String, Status> {
@@ -34,13 +37,15 @@ pub async fn lookup_webfinger(resource: &str, db: &State<SqlitePool>) -> Result<
   let feed_exists = Feed::exists_by_name(&userstr, db).await;
 
   if feed_exists.is_ok() && feed_exists.unwrap() {
+    let href = path_to_url(&uri!(render_feed(&userstr)).to_string());
     Ok(serde_json::to_string(&Webfinger {
       subject: userstr.clone(),
       aliases: vec![userstr.clone()],
       links: vec![Link {
         rel: "http://webfinger.net/rel/profile-page".to_string(),
         mime_type: None,
-        href: Some(format!("https://{}/feed/{}/", instance_domain, userstr)),
+        //href: Some(format!("https://{}/feed/{}/", instance_domain, userstr)),
+        href: Some(href),
         template: None,
       }],
     }).unwrap())
@@ -91,6 +96,9 @@ mod test {
     let response = req.dispatch().await;
 
     assert_eq!(response.status(), Status::Ok);
+    
+    let body = response.into_string().await.unwrap();
+    assert!(body.contains(r#"href":"https://test.com/feed/testfeed"#));
 
     Ok(())
   }

@@ -1,3 +1,5 @@
+pub mod utils;
+
 pub mod user;
 pub mod feed;
 pub mod item;
