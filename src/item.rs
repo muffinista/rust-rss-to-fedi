@@ -42,8 +42,8 @@ impl Item {
 
   pub async fn exists_by_guid(guid: &String, feed: &Feed, pool: &SqlitePool) -> Result<bool, sqlx::Error> {
     let result = sqlx::query!("SELECT COUNT(1) AS tally FROM items WHERE feed_id = ? AND guid = ?", feed.id, guid)
-    .fetch_one(pool)
-    .await;
+      .fetch_one(pool)
+      .await;
 
     match result {
       Ok(result) => Ok(result.tally > 0),

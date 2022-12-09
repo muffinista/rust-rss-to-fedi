@@ -11,7 +11,6 @@ use crate::feed::Feed;
 use webfinger::*;
 
 
-// GET /.well-known/webfinger?resource=acct:crimeduo@botsin.space
 #[get("/.well-known/webfinger?<resource>")]
 pub async fn lookup_webfinger(resource: &str, db: &State<SqlitePool>) -> Result<String, Status> {
   let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
@@ -26,32 +25,28 @@ pub async fn lookup_webfinger(resource: &str, db: &State<SqlitePool>) -> Result<
   let domain = parsed_res.next().ok_or(Status::NotFound)?;
 
   if domain != instance_domain {
-    Err(Status::NotFound)
-  } else {
-    let userstr = user.to_string();
+    return Err(Status::NotFound)
+  }
+  
+  let userstr = user.to_string();
 
-    let feed_lookup = Feed::find_by_name(&userstr, db).await;
-    println!("{:?}", feed_lookup);
-    match feed_lookup {
-      Ok(feed_lookup) => {
-        match feed_lookup {
-          Some(_feed) => {
-            Ok(serde_json::to_string(&Webfinger {
-              subject: userstr.clone(),
-              aliases: vec![userstr.clone()],
-              links: vec![Link {
-                rel: "http://webfinger.net/rel/profile-page".to_string(),
-                mime_type: None,
-                href: Some(format!("https://{}/feed/{}/", instance_domain, userstr)),
-                template: None,
-              }],
-            }).unwrap())
-          },
-          None => Err(Status::NotFound)
-        }
-      },
-      Err(_why) => Err(Status::InternalServerError)
-    }
+  // ensure feed exists
+  let feed_exists = Feed::exists_by_name(&userstr, db).await;
+
+  if feed_exists.is_ok() && feed_exists.unwrap() {
+    Ok(serde_json::to_string(&Webfinger {
+      subject: userstr.clone(),
+      aliases: vec![userstr.clone()],
+      links: vec![Link {
+        rel: "http://webfinger.net/rel/profile-page".to_string(),
+        mime_type: None,
+        href: Some(format!("https://{}/feed/{}/", instance_domain, userstr)),
+        template: None,
+      }],
+    }).unwrap())
+  }
+  else {
+    Err(Status::NotFound)
   }
 }
 
@@ -68,7 +63,6 @@ mod test {
   use sqlx::sqlite::SqlitePool;
   use std::env;
   
-  //#[rocket::async_test]
   #[sqlx::test]
   async fn test_lookup_webfinger_404(pool: SqlitePool) {
     let server:Rocket<Build> = build_server(pool).await;
@@ -80,7 +74,6 @@ mod test {
     assert_eq!(response.status(), Status::NotFound);
   }
   
-  //#[rocket::async_test]
   #[sqlx::test]
   async fn test_lookup_webfinger_valid(pool: SqlitePool) -> sqlx::Result<()> {
     let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
