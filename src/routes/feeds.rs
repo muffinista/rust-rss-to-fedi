@@ -33,6 +33,7 @@ pub async fn add_feed(user: User, db: &State<SqlitePool>, form: Form<FeedForm>) 
 }
 
 
+// @todo use proper verb
 #[get("/feed/<id>/delete")]
 pub async fn delete_feed(user: User, id: i64, db: &State<SqlitePool>) -> Result<Redirect, Status> {
   let feed = Feed::delete(&user, id, &db).await;
@@ -48,7 +49,28 @@ pub async fn delete_feed(user: User, id: i64, db: &State<SqlitePool>) -> Result<
   }
 }
 
-#[get("/feed/<username>")]
+#[get("/feed/<username>", format = "application/activity+json")]
+pub async fn render_feed(username: &str, db: &State<SqlitePool>) -> Result<String, Status> {
+  let feed_lookup = Feed::find_by_name(&username.to_string(), db).await;
+
+  match feed_lookup {
+    Ok(feed_lookup) => {
+      match feed_lookup {
+        Some(feed) => {
+          let ap = feed.to_activity_pub();
+          match ap {
+            Ok(ap) => Ok(serde_json::to_string(&ap).unwrap()),
+            Err(_why) => Err(Status::NotFound)
+          }
+        },
+        None => Err(Status::NotFound)
+      }
+    },
+    Err(_why) => Err(Status::NotFound)
+  }
+}
+
+#[get("/feed/<username>", format = "text/html", rank = 2)]
 pub async fn show_feed(user: Option<User>, username: &str, db: &State<SqlitePool>) -> Result<Template, Status> {
   let feed_lookup = Feed::find_by_name(&username.to_string(), db).await;
 
@@ -64,27 +86,6 @@ pub async fn show_feed(user: Option<User>, username: &str, db: &State<SqlitePool
             owned_by: owned_by,
             feed: feed
           }))
-        },
-        None => Err(Status::NotFound)
-      }
-    },
-    Err(_why) => Err(Status::NotFound)
-  }
-}
-
-#[get("/feed/<username>", format = "json", rank = 2)]
-pub async fn render_feed(username: &str, db: &State<SqlitePool>) -> Result<String, Status> {
-  let feed_lookup = Feed::find_by_name(&username.to_string(), db).await;
-
-  match feed_lookup {
-    Ok(feed_lookup) => {
-      match feed_lookup {
-        Some(feed) => {
-          let ap = feed.to_activity_pub();
-          match ap {
-            Ok(ap) => Ok(serde_json::to_string(&ap).unwrap()),
-            Err(_why) => Err(Status::NotFound)
-          }
         },
         None => Err(Status::NotFound)
       }
@@ -127,4 +128,115 @@ pub async fn render_feed_followers(username: &str, page: Option<u32>, db: &State
     },
     Err(_why) => Err(Status::NotFound)
   }
+}
+
+#[cfg(test)]
+mod test {
+  use crate::server::build_server;
+  use rocket::local::asynchronous::Client;
+  use rocket::http::ContentType;
+  use rocket::http::{Header, Status};
+  use rocket::uri;
+  use rocket::{Rocket, Build};
+  use crate::user::User;
+  use crate::feed::Feed;
+  use sqlx::sqlite::SqlitePool;
+  use std::env;
+  
+  // #[sqlx::test]
+  // async fn test_add_feed(pool: SqlitePool) {
+  // }
+  
+  // #[sqlx::test]
+  // async fn test_delete_feed(pool: SqlitePool) {
+  // }
+
+  #[sqlx::test]
+  async fn test_show_feed(pool: SqlitePool) -> sqlx::Result<()> {
+    let user = User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()) };
+
+    let url: String = "https://foo.com/rss.xml".to_string();
+    let name: String = "testfeed".to_string();
+
+    Feed::create(&user, &url, &name, &pool).await?;
+
+    let server:Rocket<Build> = build_server(pool).await;
+    let client = Client::tracked(server).await.unwrap();
+
+    let req = client.get(uri!(super::show_feed(&name))).header(Header::new("Accept", "text/html"));
+    let response = req.dispatch().await;
+
+    assert_eq!(response.status(), Status::Ok);
+    
+    let body = response.into_string().await.unwrap();
+    println!("{:?}", body);
+    assert!(body.contains("Welcome to the feed page"));
+    assert!(body.contains(&name));
+
+    Ok(())
+  }
+
+  // https://api.rocket.rs/v0.5-rc/rocket/local/blocking/struct.LocalRequest.html
+
+  #[sqlx::test]
+  async fn test_render_feed(pool: SqlitePool) -> sqlx::Result<()> {
+    let user = User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()) };
+
+    let url: String = "https://foo.com/rss.xml".to_string();
+    let name: String = "testfeed".to_string();
+
+    Feed::create(&user, &url, &name, &pool).await?;
+
+    let server:Rocket<Build> = build_server(pool).await;
+    let client = Client::tracked(server).await.unwrap();
+
+    let req = client.get(uri!(super::render_feed(&name))).header(Header::new("Accept", "application/activity+json"));
+    //.header(ContentType::JSON);
+    let response = req.dispatch().await;
+
+    assert_eq!(response.status(), Status::Ok);
+
+    let body = response.into_string().await.unwrap();
+    println!("{:?}", body);
+    assert!(body.contains("-----BEGIN PUBLIC KEY-----"));
+    assert!(body.contains(&name));
+
+    Ok(())
+  }
+
+  // #[sqlx::test]
+  // async fn test_render_feed_followers(pool: SqlitePool) {
+  //   let server:Rocket<Build> = build_server(pool).await;
+  //   let client = Client::tracked(server).await.unwrap();
+
+  //   let req = client.get(uri!(super::render_feed_followers("acct:foo@bar.com")));
+  //   let response = req.dispatch().await;
+
+  //   assert_eq!(response.status(), Status::NotFound);
+  // }
+
+  // #[sqlx::test]
+  // async fn test_lookup_webfinger_valid(pool: SqlitePool) -> sqlx::Result<()> {
+  //   let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
+
+  //   let user = User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()) };
+
+  //   let url: String = "https://foo.com/rss.xml".to_string();
+  //   let name: String = "testfeed".to_string();
+
+  //   Feed::create(&user, &url, &name, &pool).await?;
+    
+  //   let server: Rocket<Build> = build_server(pool).await;
+  //   let client = Client::tracked(server).await.unwrap();
+    
+  //   let req = client.get(uri!(super::lookup_webfinger(format!("acct:{}@{}", name, instance_domain))));
+  //   let response = req.dispatch().await;
+
+  //   assert_eq!(response.status(), Status::Ok);
+    
+  //   let body = response.into_string().await.unwrap();
+  //   assert!(body.contains(r#"href":"https://test.com/feed/testfeed"#));
+
+  //   Ok(())
+  // }
 }

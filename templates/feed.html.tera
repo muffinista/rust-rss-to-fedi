@@ -7,6 +7,10 @@
     Welcome to the feed page.
   </p>
 
+  {{feed.name}}
+
+  {{feed.url}}
+
   {% if logged_in %}
   {% else %}
     {% include "login" %}

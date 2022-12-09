@@ -4,7 +4,7 @@ use serde::{Serialize};
 use reqwest;
 use feed_rs::parser;
 
-use std::{error::Error, fmt};
+use std::{env, error::Error, fmt};
 
 use crate::user::User;
 use crate::item::Item;
@@ -575,6 +575,8 @@ async fn test_feed_to_entries(pool: SqlitePool) -> sqlx::Result<()> {
 
 #[test]
 fn test_feed_to_activity_pub() {
+  let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
+
   use serde_json::Value;
   let feed:Feed = Feed {
     id: 1,
@@ -583,8 +585,8 @@ fn test_feed_to_activity_pub() {
     url: "https://foo.com/rss.xml".to_string(),
     private_key: "private key".to_string(),
     public_key: "public key".to_string(),
-    image_url: Some("image".to_string()),
-    icon_url: Some("icon".to_string())
+    image_url: Some("http://foo.com/image.png".to_string()),
+    icon_url: Some("http://foo.com/icon.png".to_string())
   };
 
   let result = feed.to_activity_pub().unwrap();
@@ -592,7 +594,7 @@ fn test_feed_to_activity_pub() {
 
   let v: Value = serde_json::from_str(&output).unwrap();
   assert_eq!(v["name"], "testfeed");
-  assert_eq!(v["publicKey"]["id"], "https://test.com/users/testfeed/feed#main-key");
+  assert_eq!(v["publicKey"]["id"], format!("https://{}/feed/testfeed#main-key", instance_domain));
   assert_eq!(v["publicKey"]["publicKeyPem"], "public key");  
 }
 
