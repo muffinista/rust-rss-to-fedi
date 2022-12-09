@@ -2,19 +2,12 @@ use rocket::routes;
 
 use sqlx::sqlite::SqlitePool;
 
-use std::env;
 
 use rocket_dyn_templates::Template;
 
 use rocket::{Rocket, Build};
 
-pub async fn build_server() -> Rocket<Build> {
-  let db_uri = env::var("DATABASE_URL").expect("DATABASE_URL is not set");
-  let _domain_name = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
-
-  let pool = SqlitePool::connect(&db_uri)
-    .await
-    .expect("Failed to create pool");
+pub async fn build_server(pool: SqlitePool) -> Rocket<Build> {
 
   sqlx::migrate!("./migrations")
     .run(&pool)

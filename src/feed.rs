@@ -134,6 +134,7 @@ pub type AcceptedActivity = ActorAndObject<AcceptedTypes>;
 const PER_PAGE:u32 = 10u32;
 
 impl Feed {
+  // let req = client.get(uri!(super::lookup_webfinger(format!("acct:{}@{}", name, instance_domain))));
   pub async fn find(id: i64, pool: &SqlitePool) -> Result<Feed, sqlx::Error> {
     sqlx::query_as!(Feed, "SELECT * FROM feeds WHERE id = ?", id)
     .fetch_one(pool)
@@ -152,10 +153,10 @@ impl Feed {
     .await
   }
   
-  pub async fn find_by_name(name: &String, pool: &SqlitePool) -> Result<Feed, sqlx::Error> {
+  pub async fn find_by_name(name: &String, pool: &SqlitePool) -> Result<Option<Feed>, sqlx::Error> {
     sqlx::query_as!(Feed, "SELECT * FROM feeds WHERE name = ?", name)
-    .fetch_one(pool)
-    .await
+      .fetch_optional(pool)
+      .await
   }
   
   pub async fn create(user: &User, url: &String, name: &String, pool: &SqlitePool) -> Result<Feed, sqlx::Error> {

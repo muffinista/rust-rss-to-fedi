@@ -26,15 +26,15 @@ mod test {
   use rocket::http::Status;
   use rocket::uri;
   use rocket::{Rocket, Build};
+  use sqlx::sqlite::SqlitePool;
   
-  #[rocket::async_test]
-  async fn index_not_logged_in() {
-    let server:Rocket<Build> = build_server().await;
+  #[sqlx::test]
+  async fn index_not_logged_in(pool: SqlitePool) {
+    let server:Rocket<Build> = build_server(pool).await;
     let client = Client::tracked(server).await.unwrap();
 
     let req = client.get(uri!(super::index));
     let response = req.dispatch().await;
-
 
     // running multiple requests:
     // let (r1, r2) = rocket::tokio::join!(req.clone().dispatch(), req.dispatch());
