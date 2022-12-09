@@ -37,14 +37,13 @@ pub async fn lookup_webfinger(resource: &str, db: &State<SqlitePool>) -> Result<
   let feed_exists = Feed::exists_by_name(&userstr, db).await;
 
   if feed_exists.is_ok() && feed_exists.unwrap() {
-    let href = path_to_url(&uri!(render_feed(&userstr)).to_string());
+    let href = path_to_url(&uri!(render_feed(&userstr)));
     Ok(serde_json::to_string(&Webfinger {
       subject: userstr.clone(),
       aliases: vec![userstr.clone()],
       links: vec![Link {
         rel: "http://webfinger.net/rel/profile-page".to_string(),
         mime_type: None,
-        //href: Some(format!("https://{}/feed/{}/", instance_domain, userstr)),
         href: Some(href),
         template: None,
       }],
@@ -87,9 +86,10 @@ mod test {
 
     let url: String = "https://foo.com/rss.xml".to_string();
     let name: String = "testfeed".to_string();
+
     Feed::create(&user, &url, &name, &pool).await?;
     
-    let server:Rocket<Build> = build_server(pool).await;
+    let server: Rocket<Build> = build_server(pool).await;
     let client = Client::tracked(server).await.unwrap();
     
     let req = client.get(uri!(super::lookup_webfinger(format!("acct:{}@{}", name, instance_domain))));

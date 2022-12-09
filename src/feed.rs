@@ -31,6 +31,10 @@ use anyhow::Error as AnyError;
 
 use openssl::{pkey::PKey, rsa::Rsa};
 
+use rocket::uri;
+use crate::utils::*;
+use crate::routes::feeds::*;
+use crate::routes::ap::outbox::*;
 
 #[derive(Debug, Serialize)]
 pub struct Feed {
@@ -266,41 +270,39 @@ impl Feed {
   }
 
   // Return an object here instead of JSON so we can manipulate it if needed
-  pub fn to_activity_pub(&self, domain: &String) -> Result<ExtendedService, AnyError> {    
+  pub fn to_activity_pub(&self) -> Result<ExtendedService, AnyError> {    
     let mut svc = Ext1::new(
-        ApActor::new(
-          iri!("https://example.com/inbox"),
-          Service::new(),
-        ),
-        PublicKey {
-            public_key: PublicKeyInner {
-                id: iri!(format!("https://{}/users/{}/feed#main-key", domain, self.name)),
-                owner: iri!(format!("https://{}/users/{}/feed", domain, self.name)),
-                public_key_pem: self.public_key.to_owned(),
-            },
+      ApActor::new(
+        iri!("https://example.com/inbox"),
+        Service::new(),
+      ),
+      PublicKey {
+        public_key: PublicKeyInner {
+          id: iri!(format!("{}#main-key", path_to_url(&uri!(render_feed(&self.name))))),
+          owner: iri!(path_to_url(&uri!(render_feed(&self.name)))),
+          public_key_pem: self.public_key.to_owned(),
         },
+      },
     );
     
     svc
       .set_context(context())
       .add_context(security())
-      .set_id(iri!(format!("https://{}/users/{}/feed", domain, self.name)))
+      .set_id(iri!(path_to_url(&uri!(render_feed(&self.name)))))
       .set_name(self.name.clone())
       .set_preferred_username(self.name.clone())
-      .set_inbox(iri!(format!("https://{}/users/{}/inbox", domain, self.name)))
-      .set_outbox(iri!(format!("https://{}/users/{}/outbox", domain, self.name)))
-      .set_followers(iri!(format!("https://{}/users/{}/followers", domain, self.name)))
-      .set_following(iri!(format!("https://{}/users/{}/following", domain, self.name)));
-      // "icon": {
-      //   "type": "Image",
-      //   "mediaType": "image/jpeg",
-      //   "url": "https://files.botsin.space/accounts/avatars/109/282/037/155/191/435/original/1884a0545a6fc1bd.jpeg"
-      // },
-      // "image": {
-      //   "type": "Image",
-      //   "mediaType": "image/jpeg",
-      //   "url": "https://files.botsin.space/accounts/headers/109/282/037/155/191/435/original/372509d3e7032272.jpg"
-      // }
+      .set_outbox(iri!(path_to_url(&uri!(user_outbox(&self.name)))))
+      .set_followers(iri!(path_to_url(&uri!(render_feed_followers(&self.name, None::<u32>)))));
+
+    if self.image_url.is_some() {
+      svc.set_image(iri!(&self.image_url.clone().unwrap()));
+    }
+    if self.icon_url.is_some() {
+      svc.set_icon(iri!(&self.icon_url.clone().unwrap()));
+    }
+    
+    //.set_inbox(iri!(format!("https://{}/users/{}/inbox", domain, self.name)))
+    //.set_following(iri!(format!("https://{}/users/{}/following", domain, self.name)));
 
     let any_base = svc.into_any_base();
 
@@ -364,7 +366,7 @@ impl Feed {
     }
   }
   
-  pub async fn followers(&self, domain: &String, pool: &SqlitePool)  -> Result<ApObject<OrderedCollection>, AnyError>{
+  pub async fn followers(&self, pool: &SqlitePool)  -> Result<ApObject<OrderedCollection>, AnyError>{
     let count = self.follower_count(pool).await?;
     let total_pages = ((count / PER_PAGE as u64) + 1 ) as u32;
 
@@ -374,23 +376,22 @@ impl Feed {
     // to reference other CollectionPage instances that contain 
     // additional subsets of items from the parent collection. 
 
+    
     // in theory we can drop the first page of data in here
     // however, it's not required (mastodon doesn't do it)
     // and activitystreams might not be wired for it
     collection
       .set_context(context())
-      .set_id(iri!(format!("https://{}/users/{}/feed", domain, self.name)))
-      .set_total_items(count)
-      .set_first(iri!(format!("https://{}/users/{}/feed?page={}", domain, self.name, 1)))
-      .set_last(iri!(format!("https://{}/users/{}/feed?page={}", domain, self.name, total_pages)))
+      .set_id(iri!(path_to_url(&uri!(render_feed(&self.name)))))
       .set_summary("A list of followers".to_string())
-      .set_first(iri!(format!("https://{}/users/{}/feed?page=1", domain, self.name)));
-    
-        
+      .set_total_items(count)
+      .set_first(iri!(path_to_url(&uri!(render_feed_followers(&self.name, Some(1))))))
+      .set_last(iri!(path_to_url(&uri!(render_feed_followers(&self.name, Some(total_pages))))));
+
     Ok(collection)
   }
 
-  pub async fn followers_paged(&self, page: u32, domain: &String, pool: &SqlitePool)  -> Result<ApObject<OrderedCollectionPage>, AnyError>{
+  pub async fn followers_paged(&self, page: u32, pool: &SqlitePool)  -> Result<ApObject<OrderedCollectionPage>, AnyError>{
     let count = self.follower_count(pool).await?;
     let total_pages = ((count / PER_PAGE as u64) + 1 ) as u32;
     let mut collection: ApObject<OrderedCollectionPage> = ApObject::new(OrderedCollectionPage::new());
@@ -398,18 +399,17 @@ impl Feed {
     collection
       .set_context(context())
       .set_summary("A list of followers".to_string())
-      .set_part_of(iri!(format!("https://{}/users/{}/feed", domain, self.name)))
-      .set_first(iri!(format!("https://{}/users/{}/feed?page={}", domain, self.name, 1)))
-      .set_last(iri!(format!("https://{}/users/{}/feed?page={}", domain, self.name, total_pages)))
-      .set_current(iri!(format!("https://{}/users/{}/feed?page={}", domain, self.name, page)));
-
+      .set_part_of(iri!(path_to_url(&uri!(render_feed(&self.name)))))
+      .set_first(iri!(path_to_url(&uri!(render_feed_followers(&self.name, Some(1))))))
+      .set_last(iri!(path_to_url(&uri!(render_feed_followers(&self.name, Some(total_pages))))))
+      .set_current(iri!(path_to_url(&uri!(render_feed_followers(&self.name, Some(page))))));
 
     if page > 1 {
-      collection.set_prev(iri!(format!("https://{}/users/{}/feed?page={}", domain, self.name, page - 1)));
+      collection.set_prev(iri!(path_to_url(&uri!(render_feed_followers(&self.name, Some(page - 1))))));
     }
 
     if page < total_pages {
-      collection.set_next(iri!(format!("https://{}/users/{}/feed?page={}", domain, self.name, page + 1)));
+      collection.set_next(iri!(path_to_url(&uri!(render_feed_followers(&self.name, Some(page + 1))))));
     }
 
     // return empty collection for invalid pages
@@ -587,7 +587,7 @@ fn test_feed_to_activity_pub() {
     icon_url: Some("icon".to_string())
   };
 
-  let result = feed.to_activity_pub(&"test.com".to_string()).unwrap();
+  let result = feed.to_activity_pub().unwrap();
   let output = serde_json::to_string(&result).unwrap();
 
   let v: Value = serde_json::from_str(&output).unwrap();
@@ -671,7 +671,6 @@ async fn test_followers(pool: SqlitePool) -> Result<(), String> {
   let feed = Feed { id: 1, user_id: 1, name: name, url: url, private_key: pk, public_key: pubk,
     image_url: Some("image".to_string()),
     icon_url: Some("icon".to_string()) };
-  let domain:String = "domain.com".to_string();
 
   for i in 1..4 {
     let actor = format!("https://activitypub.pizza/users/colin{}", i);
@@ -681,7 +680,7 @@ async fn test_followers(pool: SqlitePool) -> Result<(), String> {
       .unwrap();
   }
   
-  let result = feed.followers(&domain, &pool).await;
+  let result = feed.followers(&pool).await;
   match result {
     Ok(result) => {
       let s = serde_json::to_string(&result).unwrap();
@@ -704,7 +703,6 @@ async fn test_followers_paged(pool: SqlitePool) -> Result<(), String> {
   let feed = Feed { id: 1, user_id: 1, name: name, url: url, private_key: pk, public_key: pubk,
     image_url: Some("image".to_string()),
     icon_url: Some("icon".to_string()) };
-  let domain:String = "domain.com".to_string();
 
   for i in 1..35 {
     let actor = format!("https://activitypub.pizza/users/colin{}", i);
@@ -714,7 +712,7 @@ async fn test_followers_paged(pool: SqlitePool) -> Result<(), String> {
       .unwrap();
   }
   
-  let result = feed.followers_paged(2, &domain, &pool).await;
+  let result = feed.followers_paged(2, &pool).await;
   match result {
     Ok(result) => {
       let s = serde_json::to_string(&result).unwrap();

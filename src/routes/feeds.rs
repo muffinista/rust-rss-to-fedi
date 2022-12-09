@@ -1,4 +1,3 @@
-use std::env;
 
 use rocket::{FromForm, get, post};
 use rocket::form::Form;
@@ -75,14 +74,13 @@ pub async fn show_feed(user: Option<User>, username: &str, db: &State<SqlitePool
 
 #[get("/feed/<username>", format = "json", rank = 2)]
 pub async fn render_feed(username: &str, db: &State<SqlitePool>) -> Result<String, Status> {
-  let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
   let feed_lookup = Feed::find_by_name(&username.to_string(), db).await;
 
   match feed_lookup {
     Ok(feed_lookup) => {
       match feed_lookup {
         Some(feed) => {
-          let ap = feed.to_activity_pub(&instance_domain);
+          let ap = feed.to_activity_pub();
           match ap {
             Ok(ap) => Ok(serde_json::to_string(&ap).unwrap()),
             Err(_why) => Err(Status::NotFound)
@@ -97,7 +95,6 @@ pub async fn render_feed(username: &str, db: &State<SqlitePool>) -> Result<Strin
 
 #[get("/feed/<username>/followers?<page>")]
 pub async fn render_feed_followers(username: &str, page: Option<u32>, db: &State<SqlitePool>) -> Result<String, Status> {
-  let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
   let feed_lookup = Feed::find_by_name(&username.to_string(), db).await;
 
   match feed_lookup {
@@ -108,14 +105,14 @@ pub async fn render_feed_followers(username: &str, page: Option<u32>, db: &State
           // otherwise, return the summary
           let json = match page {
             Some(page) => {
-              let result = feed.followers_paged(page, &instance_domain, db).await;
+              let result = feed.followers_paged(page, db).await;
               match result {
                 Ok(result) => Ok(serde_json::to_string(&result).unwrap()),
                 Err(_why) => Err(Status::NotFound)
               }
             },
             None => {
-              let result = feed.followers(&instance_domain, db).await;
+              let result = feed.followers(db).await;
               match result {
                 Ok(result) => Ok(serde_json::to_string(&result).unwrap()),
                 Err(_why) => Err(Status::NotFound)

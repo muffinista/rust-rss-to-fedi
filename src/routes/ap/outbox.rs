@@ -10,9 +10,8 @@ use crate::feed::AcceptedActivity;
 
 use rocket::serde::json::Json;
 
-
 #[post("/feed/<username>/outbox", data="<activity>")]
-pub async fn user_outbox(db: &State<SqlitePool>, username: &str, activity: Json<AcceptedActivity>) -> Result<(), Status> {
+pub async fn user_outbox(username: &str, activity: Json<AcceptedActivity>, db: &State<SqlitePool>) -> Result<(), Status> {
   let feed_lookup = Feed::find_by_name(&username.to_string(), db).await;
 
   match feed_lookup {
