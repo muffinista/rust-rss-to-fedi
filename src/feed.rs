@@ -118,19 +118,12 @@ pub type ExtendedService = Ext1<ApActor<Service>, PublicKey>;
 // also examples/handle_incoming.rs
 
 use activitystreams::activity::ActorAndObject;
-// use activitystreams::activity::ActorAndObjectRef;
-// use activitystreams::activity::ActorAndObjectRefExt;
 
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
 pub enum AcceptedTypes {
-    Accept,
-    // Announce,
-    // Create,
-    // Delete,
-    Follow,
-  // Reject,
-  //  Update,
-    Undo,
+  Accept,
+  Follow,
+  Undo,
 }
 
 pub type AcceptedActivity = ActorAndObject<AcceptedTypes>;
@@ -269,8 +262,10 @@ impl Feed {
     }
   }
 
-  // Return an object here instead of JSON so we can manipulate it if needed
-  pub fn to_activity_pub(&self) -> Result<ExtendedService, AnyError> {    
+  pub fn to_activity_pub(&self) -> Result<String, AnyError> {    
+    // we could return an object here instead of JSON so we can manipulate it if needed
+    // pub fn to_activity_pub(&self) -> Result<ExtendedService, AnyError> {    
+
     let mut svc = Ext1::new(
       ApActor::new(
         iri!("https://example.com/inbox"),
@@ -300,30 +295,34 @@ impl Feed {
     if self.icon_url.is_some() {
       svc.set_icon(iri!(&self.icon_url.clone().unwrap()));
     }
+
+    // generate JSON and return
+    Ok(serde_json::to_string(&svc).unwrap())
+
+    // if returning an object makes sense we can do something like this:
+    // let any_base = svc.into_any_base();
+    // //    println!("any base: {:?}", any_base);
     
-    //.set_inbox(iri!(format!("https://{}/users/{}/inbox", domain, self.name)))
-    //.set_following(iri!(format!("https://{}/users/{}/following", domain, self.name)));
-
-    let any_base = svc.into_any_base();
-
-    match any_base {
-      Ok(any_base) => {
-        println!("any_base: {:#?}", any_base);
-        let x = ExtendedService::from_any_base(any_base).unwrap();
-
-        match x {
-          Some(x) => Ok(x),
-          None => todo!()
-        }
-      },
-      Err(_) => todo!()
-    }
+    // match any_base {
+    //   Ok(any_base) => {
+    //     let x = ExtendedService::from_any_base(any_base).unwrap();
+        
+    //     match x {
+    //       Some(x) => {
+    //         println!("JSON: {:?}", serde_json::to_string(&x).unwrap());
+    //         Ok(x)
+    //       },
+    //       None => todo!()
+    //     }
+    //   },
+    //   Err(_) => todo!()
+    // }
+    
   }
 
   async fn follow(&self, pool: &SqlitePool, actor: &str) -> Result<(), sqlx::Error> {
-    sqlx::query!("INSERT INTO followers (feed_id, actor)
-                                VALUES($1, $2)",
-                               self.id, actor)
+    sqlx::query!("INSERT INTO followers (feed_id, actor) VALUES($1, $2)",
+                 self.id, actor)
       .execute(pool)
       .await?;
 
@@ -331,13 +330,11 @@ impl Feed {
   }
 
   async fn unfollow(&self, pool: &SqlitePool, actor: &str) -> Result<(), sqlx::Error>  {
-    println!("unfollow {:?}", actor);
-    let result = sqlx::query!("DELETE FROM followers WHERE feed_id = ? AND actor = ?",
-                               self.id, actor)
+    sqlx::query!("DELETE FROM followers WHERE feed_id = ? AND actor = ?",
+                 self.id, actor)
       .execute(pool)
       .await?;
-    println!("unfollow result {:?}", result);
-
+    
     Ok(())
   }
 
@@ -589,8 +586,9 @@ fn test_feed_to_activity_pub() {
     icon_url: Some("http://foo.com/icon.png".to_string())
   };
 
-  let result = feed.to_activity_pub().unwrap();
-  let output = serde_json::to_string(&result).unwrap();
+  let output = feed.to_activity_pub().unwrap();
+  //let result = feed.to_activity_pub().unwrap();
+  //let output = serde_json::to_string(&result).unwrap();
 
   let v: Value = serde_json::from_str(&output).unwrap();
   assert_eq!(v["name"], "testfeed");
@@ -702,14 +700,15 @@ async fn test_followers_paged(pool: SqlitePool) -> Result<(), String> {
   let name:String = "testfeed".to_string();
   let pk:String = "pk".to_string();
   let pubk:String = "pk".to_string();
-  let feed = Feed { id: 1,
-                    user_id: 1,
-                    name: name.clone(),
-                    url: url,
-                    private_key: pk,
-                    public_key: pubk,
-                    image_url: Some("image".to_string()),
-                    icon_url: Some("icon".to_string())
+  let feed = Feed {
+    id: 1,
+    user_id: 1,
+    name: name.clone(),
+    url: url,
+    private_key: pk,
+    public_key: pubk,
+    image_url: Some("image".to_string()),
+    icon_url: Some("icon".to_string())
   };
 
   for i in 1..35 {
@@ -731,7 +730,7 @@ async fn test_followers_paged(pool: SqlitePool) -> Result<(), String> {
       assert!(s.contains("/colin12"));
       assert!(s.contains("/colin13"));
       assert!(s.contains(&format!(r#"first":"{}"#, path_to_url(&uri!(render_feed_followers(name.clone(), Some(1)))))));
-      //assert!(s.contains(&format!(r#"prev":"{}"#, path_to_url(&uri!(render_feed_followers(name.clone(), Some(1)))))));      
+      assert!(s.contains(&format!(r#"prev":"{}"#, path_to_url(&uri!(render_feed_followers(name.clone(), Some(1)))))));      
       assert!(s.contains(&format!(r#"next":"{}"#, path_to_url(&uri!(render_feed_followers(name.clone(), Some(3)))))));
       assert!(s.contains(&format!(r#"last":"{}"#, path_to_url(&uri!(render_feed_followers(name.clone(), Some(4)))))));
       assert!(s.contains(&format!(r#"current":"{}"#, path_to_url(&uri!(render_feed_followers(name.clone(), Some(2)))))));
