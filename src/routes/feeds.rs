@@ -10,6 +10,7 @@ use sqlx::sqlite::SqlitePool;
 
 use crate::user::User;
 use crate::feed::Feed;
+use crate::utils::*;
 
 #[derive(FromForm)]
 pub struct FeedForm {
@@ -109,14 +110,14 @@ pub async fn render_feed_followers(username: &str, page: Option<u32>, db: &State
               let result = feed.followers_paged(page, db).await;
               match result {
                 Ok(result) => Ok(serde_json::to_string(&result).unwrap()),
-                Err(_why) => Err(Status::NotFound)
+                Err(_why) => Err(Status::InternalServerError)
               }
             },
             None => {
               let result = feed.followers(db).await;
               match result {
                 Ok(result) => Ok(serde_json::to_string(&result).unwrap()),
-                Err(_why) => Err(Status::NotFound)
+                Err(_why) => Err(Status::InternalServerError)
               }
             }
           };
@@ -126,7 +127,7 @@ pub async fn render_feed_followers(username: &str, page: Option<u32>, db: &State
         None => Err(Status::NotFound)
       }
     },
-    Err(_why) => Err(Status::NotFound)
+    Err(_why) => Err(Status::InternalServerError)
   }
 }
 
@@ -140,6 +141,8 @@ mod test {
   use rocket::{Rocket, Build};
   use crate::user::User;
   use crate::feed::Feed;
+  use crate::utils::*;
+  
   use sqlx::sqlite::SqlitePool;
   use std::env;
   
@@ -187,11 +190,10 @@ mod test {
 
     Feed::create(&user, &url, &name, &pool).await?;
 
-    let server:Rocket<Build> = build_server(pool).await;
+    let server: Rocket<Build> = build_server(pool).await;
     let client = Client::tracked(server).await.unwrap();
 
     let req = client.get(uri!(super::render_feed(&name))).header(Header::new("Accept", "application/activity+json"));
-    //.header(ContentType::JSON);
     let response = req.dispatch().await;
 
     assert_eq!(response.status(), Status::Ok);
@@ -204,39 +206,46 @@ mod test {
     Ok(())
   }
 
-  // #[sqlx::test]
-  // async fn test_render_feed_followers(pool: SqlitePool) {
-  //   let server:Rocket<Build> = build_server(pool).await;
-  //   let client = Client::tracked(server).await.unwrap();
+  #[sqlx::test]
+  async fn test_render_feed_followers(pool: SqlitePool) -> sqlx::Result<()> {
+    let user = User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()) };
 
-  //   let req = client.get(uri!(super::render_feed_followers("acct:foo@bar.com")));
-  //   let response = req.dispatch().await;
+    let url: String = "https://foo.com/rss.xml".to_string();
+    let name: String = "testfeed".to_string();
 
-  //   assert_eq!(response.status(), Status::NotFound);
-  // }
+    let feed = Feed::create(&user, &url, &name, &pool).await?;
 
-  // #[sqlx::test]
-  // async fn test_lookup_webfinger_valid(pool: SqlitePool) -> sqlx::Result<()> {
-  //   let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
+    for i in 1..35 {
+      let actor = format!("https://activitypub.pizza/users/colin{}", i);
+      sqlx::query!("INSERT INTO followers (feed_id, actor) VALUES($1, $2)", feed.id, actor)
+        .execute(&pool)
+        .await
+        .unwrap();
+    }
 
-  //   let user = User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()) };
-
-  //   let url: String = "https://foo.com/rss.xml".to_string();
-  //   let name: String = "testfeed".to_string();
-
-  //   Feed::create(&user, &url, &name, &pool).await?;
     
-  //   let server: Rocket<Build> = build_server(pool).await;
-  //   let client = Client::tracked(server).await.unwrap();
-    
-  //   let req = client.get(uri!(super::lookup_webfinger(format!("acct:{}@{}", name, instance_domain))));
-  //   let response = req.dispatch().await;
+    let server: Rocket<Build> = build_server(pool).await;
+    let client = Client::tracked(server).await.unwrap();
 
-  //   assert_eq!(response.status(), Status::Ok);
-    
-  //   let body = response.into_string().await.unwrap();
-  //   assert!(body.contains(r#"href":"https://test.com/feed/testfeed"#));
+    let req = client.get(uri!(super::render_feed_followers(&name, Some(2))));
+    let response = req.dispatch().await;
 
-  //   Ok(())
-  // }
+    assert_eq!(response.status(), Status::Ok);
+
+    let body = response.into_string().await.unwrap();
+    println!("{:?}", body);
+
+
+    assert!(body.contains("OrderedCollectionPage"));
+    assert!(body.contains("/colin11"));
+    assert!(body.contains("/colin12"));
+    assert!(body.contains("/colin13"));
+    assert!(body.contains(&format!(r#"first":"{}"#, path_to_url(&uri!(super::render_feed_followers(name.clone(), Some(1)))))));
+    assert!(body.contains(&format!(r#"prev":"{}"#, path_to_url(&uri!(super::render_feed_followers(name.clone(), Some(1)))))));      
+    assert!(body.contains(&format!(r#"next":"{}"#, path_to_url(&uri!(super::render_feed_followers(name.clone(), Some(3)))))));
+    assert!(body.contains(&format!(r#"last":"{}"#, path_to_url(&uri!(super::render_feed_followers(name.clone(), Some(4)))))));
+    assert!(body.contains(&format!(r#"current":"{}"#, path_to_url(&uri!(super::render_feed_followers(name.clone(), Some(2)))))));
+    
+    Ok(())
+  }
 }

@@ -24,6 +24,7 @@ pub async fn build_server(pool: SqlitePool) -> Rocket<Build> {
       crate::routes::feeds::add_feed,
       crate::routes::feeds::delete_feed,
       crate::routes::feeds::render_feed,
+      crate::routes::feeds::render_feed_followers,
       crate::routes::feeds::show_feed,
       crate::routes::webfinger::lookup_webfinger,
       crate::routes::ap::outbox::user_outbox    

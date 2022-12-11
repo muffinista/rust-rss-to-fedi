@@ -702,9 +702,15 @@ async fn test_followers_paged(pool: SqlitePool) -> Result<(), String> {
   let name:String = "testfeed".to_string();
   let pk:String = "pk".to_string();
   let pubk:String = "pk".to_string();
-  let feed = Feed { id: 1, user_id: 1, name: name, url: url, private_key: pk, public_key: pubk,
-    image_url: Some("image".to_string()),
-    icon_url: Some("icon".to_string()) };
+  let feed = Feed { id: 1,
+                    user_id: 1,
+                    name: name.clone(),
+                    url: url,
+                    private_key: pk,
+                    public_key: pubk,
+                    image_url: Some("image".to_string()),
+                    icon_url: Some("icon".to_string())
+  };
 
   for i in 1..35 {
     let actor = format!("https://activitypub.pizza/users/colin{}", i);
@@ -713,22 +719,23 @@ async fn test_followers_paged(pool: SqlitePool) -> Result<(), String> {
       .await
       .unwrap();
   }
-  
+
   let result = feed.followers_paged(2, &pool).await;
   match result {
     Ok(result) => {
       let s = serde_json::to_string(&result).unwrap();
       println!("{:?}", s);
-
+      
       assert!(s.contains("OrderedCollectionPage"));
       assert!(s.contains("/colin11"));
       assert!(s.contains("/colin12"));
       assert!(s.contains("/colin13"));
-      assert!(s.contains(r#"first":"https://domain.com/users/testfeed/feed?page=1"#));
-      assert!(s.contains(r#"prev":"https://domain.com/users/testfeed/feed?page=1"#));
-      assert!(s.contains(r#"next":"https://domain.com/users/testfeed/feed?page=3"#));
-      assert!(s.contains(r#"last":"https://domain.com/users/testfeed/feed?page=4"#));
-      assert!(s.contains(r#"current":"https://domain.com/users/testfeed/feed?page=2"#));
+      assert!(s.contains(&format!(r#"first":"{}"#, path_to_url(&uri!(render_feed_followers(name.clone(), Some(1)))))));
+      //assert!(s.contains(&format!(r#"prev":"{}"#, path_to_url(&uri!(render_feed_followers(name.clone(), Some(1)))))));      
+      assert!(s.contains(&format!(r#"next":"{}"#, path_to_url(&uri!(render_feed_followers(name.clone(), Some(3)))))));
+      assert!(s.contains(&format!(r#"last":"{}"#, path_to_url(&uri!(render_feed_followers(name.clone(), Some(4)))))));
+      assert!(s.contains(&format!(r#"current":"{}"#, path_to_url(&uri!(render_feed_followers(name.clone(), Some(2)))))));
+
       Ok(())
     },
     Err(why) => Err(why.to_string())
@@ -741,7 +748,7 @@ async fn test_follower_count(pool: SqlitePool) -> Result<(), String> {
   let name:String = "testfeed".to_string();
   let pk:String = "pk".to_string();
   let pubk:String = "pk".to_string();
-  let feed = Feed { id: 1, user_id: 1, name: name, url: url, private_key: pk, public_key: pubk,
+  let feed = Feed { id: 1, user_id: 1, name: name.clone(), url: url, private_key: pk, public_key: pubk,
     image_url: Some("image".to_string()),
     icon_url: Some("icon".to_string()) };
 
