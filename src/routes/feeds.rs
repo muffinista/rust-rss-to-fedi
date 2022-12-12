@@ -10,7 +10,6 @@ use sqlx::sqlite::SqlitePool;
 
 use crate::user::User;
 use crate::feed::Feed;
-use crate::utils::*;
 
 #[derive(FromForm)]
 pub struct FeedForm {
@@ -135,7 +134,6 @@ pub async fn render_feed_followers(username: &str, page: Option<u32>, db: &State
 mod test {
   use crate::server::build_server;
   use rocket::local::asynchronous::Client;
-  use rocket::http::ContentType;
   use rocket::http::{Header, Status};
   use rocket::uri;
   use rocket::{Rocket, Build};
@@ -144,7 +142,6 @@ mod test {
   use crate::utils::*;
   
   use sqlx::sqlite::SqlitePool;
-  use std::env;
   
   // #[sqlx::test]
   // async fn test_add_feed(pool: SqlitePool) {

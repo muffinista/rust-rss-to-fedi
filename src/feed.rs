@@ -4,7 +4,7 @@ use serde::{Serialize};
 use reqwest;
 use feed_rs::parser;
 
-use std::{env, error::Error, fmt};
+use std::{error::Error, fmt};
 
 use crate::user::User;
 use crate::item::Item;
@@ -241,19 +241,25 @@ impl Feed {
   }
 
   pub async fn update_icon_url(&self, url:&str, pool: &SqlitePool) -> Result<(), sqlx::Error> {
-    sqlx::query!("UPDATE feeds SET icon_url = $1 WHERE id = $2", url, self.id)
+    let result = sqlx::query!("UPDATE feeds SET icon_url = $1 WHERE id = $2", url, self.id)
       .execute(pool)
       .await;
 
-    Ok(())
+    match result {
+      Ok(_result) => Ok(()),
+      Err(why) => Err(why)
+    }
   }
 
   pub async fn update_image_url(&self, url:&str, pool: &SqlitePool) -> Result<(), sqlx::Error> {
-    sqlx::query!("UPDATE feeds SET image_url = $1 WHERE id = $2", url, self.id)
+    let result = sqlx::query!("UPDATE feeds SET image_url = $1 WHERE id = $2", url, self.id)
       .execute(pool)
       .await;
 
-    Ok(())
+    match result {
+      Ok(_result) => Ok(()),
+      Err(why) => Err(why)
+    }
   }
       
   pub async fn parse(&self, pool: &SqlitePool) -> Result<Vec<Item>, FeedError> {        
@@ -265,12 +271,11 @@ impl Feed {
         match data {
           Ok(data) => {
             if data.icon.is_some() {
-              self.update_icon_url(&data.icon.as_ref().unwrap().uri, pool);
+              self.update_icon_url(&data.icon.as_ref().unwrap().uri, pool).await.ok();
             }
             if data.logo.is_some() {
-              self.update_image_url(&data.logo.as_ref().unwrap().uri, pool);
+              self.update_image_url(&data.logo.as_ref().unwrap().uri, pool).await.ok();
             }
-
             
             let result = Feed::feed_to_entries(self, data, pool).await;
             match result {
@@ -595,6 +600,8 @@ async fn test_feed_to_entries(pool: SqlitePool) -> sqlx::Result<()> {
 
 #[test]
 fn test_feed_to_activity_pub() {
+  use std::env;
+
   let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
 
   use serde_json::Value;
