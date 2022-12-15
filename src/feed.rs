@@ -302,40 +302,48 @@ impl Feed {
     let body = Feed::load(self).await;
     match body {
       Ok(body) => {
-        let data = parser::parse(body.as_bytes());
+        let work = self.parse_from_data(body.to_string(), pool).await;
+        match work {
+          Ok(entries) => Ok(entries),
+          Err(_why) => Err(FeedError)
+        }
+      },
+      Err(_why) => Err(FeedError)
+    }   
+  }
+
+  pub async fn parse_from_data(&mut self, body: String, pool: &SqlitePool) -> Result<Vec<Item>, FeedError> {        
+    let data = parser::parse(body.as_bytes());
         
-        match data {
-          Ok(data) => {
-            if data.title.is_some() {
-              self.title = Some(data.title.as_ref().unwrap().content.clone());
-            }
-            if data.description.is_some() {
-              self.description = Some(data.description.as_ref().unwrap().content.clone());
-            }
+    match data {
+      Ok(data) => {
+        if data.title.is_some() {
+          self.title = Some(data.title.as_ref().unwrap().content.clone());
+        }
+        if data.description.is_some() {
+          self.description = Some(data.description.as_ref().unwrap().content.clone());
+        }
 
-            if data.icon.is_some() {
-              self.icon_url = Some(data.icon.as_ref().unwrap().uri.clone());
-              // self.update_icon_url(&data.icon.as_ref().unwrap().uri, pool).await.ok();
-            }
-            if data.logo.is_some() {
-              self.image_url = Some(data.logo.as_ref().unwrap().uri.clone());
-              // self.update_image_url(&data.logo.as_ref().unwrap().uri, pool).await.ok();
-            }
+        if data.icon.is_some() {
+          self.icon_url = Some(data.icon.as_ref().unwrap().uri.clone());
+          // self.update_icon_url(&data.icon.as_ref().unwrap().uri, pool).await.ok();
+        }
+        if data.logo.is_some() {
+          self.image_url = Some(data.logo.as_ref().unwrap().uri.clone());
+          // self.update_image_url(&data.logo.as_ref().unwrap().uri, pool).await.ok();
+        }
 
-            // todo snag link too
+        // todo snag link too
 
-            let update = self.save(pool).await;
-            match update {
-              Ok(_update) => {
-                let result = self.feed_to_entries(data, pool).await;
-                match result {
-                  Ok(result) => Ok(result),
-                  Err(_why) => return Err(FeedError)
-                }    
-              }
+        let update = self.save(pool).await;
+        match update {
+          Ok(_update) => {
+            let result = self.feed_to_entries(data, pool).await;
+            match result {
+              Ok(result) => Ok(result),
               Err(_why) => return Err(FeedError)
-            }
-          },
+            }    
+          }
           Err(_why) => return Err(FeedError)
         }
       },
@@ -627,7 +635,6 @@ mod test {
   #[sqlx::test]
   async fn test_find(pool: SqlitePool) -> sqlx::Result<()> {
     let user = fake_user();
-
     let url: String = "https://foo.com/rss.xml".to_string();
     let name: String = "testfeed".to_string();
     
@@ -675,6 +682,30 @@ mod test {
     
     Ok(())
   }
+
+  #[sqlx::test]
+  async fn test_parse_from_data(pool: SqlitePool) -> sqlx::Result<()> {
+    use std::fs;
+    let user = fake_user();
+    let url: String = "https://foo.com/rss.xml".to_string();
+    let name: String = "testfeed".to_string();
+    
+    let mut feed = Feed::create(&user, &url, &name, &pool).await?;
+
+    let path = "fixtures/test_feed_to_entries.xml";
+    let data = fs::read_to_string(path).unwrap();
+
+    let result = feed.parse_from_data(data, &pool).await.unwrap();
+    assert_eq!(result.len(), 49);
+
+    let feed2 = Feed::find(feed.id, &pool).await?;
+
+    assert_eq!(feed2.url, url);
+    assert_eq!(feed2.title, Some("muffinlabs.com".to_string()));
+
+    Ok(())
+  }
+ 
 
   #[sqlx::test]
   async fn test_feed_to_entries(pool: SqlitePool) -> sqlx::Result<()> {
