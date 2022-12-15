@@ -1,0 +1,10 @@
+{% extends "default" %}
+{% block title %}Login{% endblock title %}
+
+{% block content %}
+  <h1>Email sent!</h1>
+  <p>
+    Check your email for a link to continue!
+  </p>
+{% endblock content %}
+

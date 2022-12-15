@@ -1,5 +1,14 @@
+
+Add a new feed:
+
 <form method="post" action="/feed">
-  Url: <input type="text" name="url" required />
-  Name: <input type="text" name="name" required />
-  <button type="submit">go</button>
+  <div class="form-row">
+    <label for="url">url:</label> <input type="text" name="url" required />
+  </div>
+  <div class="form-row">
+    <label for="name">name:</label> <input type="text" name="name" required />
+  </div>
+  <div class="form-row">
+    <button type="submit">go</button>
+  </div>
 </form>

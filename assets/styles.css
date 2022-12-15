@@ -1,0 +1,40 @@
+body {
+  font-size: 14px;
+  font-family: Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased; 
+}
+
+header, footer {
+  background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAkAAAAJCAYAAADgkQYQAAAALklEQVQoU2NkIAIwEqGGgZAiYwYGhrOEFIEtIlsR2Apkt5JtEoaHYSZhWIGsEgB+QQMKUesOpwAAAABJRU5ErkJggg==) repeat;
+}
+
+footer {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 3.0em;
+  text-align: center;
+  align-items: center
+}
+
+main {
+  padding-left: 1.0em;
+  min-height: 85vh;
+  max-width: 50em;
+  line-height: 1.5em;
+}
+
+form > .form-row {
+  display: flex;
+  justify-content: flex-end;
+  padding: .5em;
+}
+
+.form-row > label {
+  padding: .5em 1em .5em 0;
+  flex: 1;
+}
+.form-row > input {
+  flex: 2;
+}

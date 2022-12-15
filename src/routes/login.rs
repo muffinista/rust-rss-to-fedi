@@ -4,6 +4,8 @@ use rocket::http::Status;
 use rocket::response::Redirect;
 use rocket::State;
 use rocket::http::{Cookie, CookieJar};
+use rocket::uri;
+use rocket_dyn_templates::{Template, context};
 
 use sqlx::sqlite::SqlitePool;
 
@@ -51,10 +53,13 @@ pub async fn do_login(db: &State<SqlitePool>, form: Form<LoginForm>) -> Result<R
   
   match user {
     Ok(user) => {
-      print!("/user/auth/{}", user.login_token);
+      let auth_url = uri!(attempt_login(user.login_token));
+      println!("{:?}", auth_url);
       // just log the user in for now
-      //Ok(Redirect::to("/"))
-      Ok(Redirect::to(format!("/user/auth/{}", user.login_token)))
+      // Ok(Redirect::to(format!("/user/auth/{}", user.login_token)))
+
+      let dest = uri!(login_result());
+      Ok(Redirect::to(dest))
     },
     Err(why) => {
       print!("{}", why);
@@ -63,3 +68,7 @@ pub async fn do_login(db: &State<SqlitePool>, form: Form<LoginForm>) -> Result<R
   }
 }
 
+#[get("/login/results")]
+pub async fn login_result() -> Template {
+  Template::render("login-after", context! { logged_in: false })
+}

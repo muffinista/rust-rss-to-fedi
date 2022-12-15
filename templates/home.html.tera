@@ -3,16 +3,15 @@
 
 {% block content %}
   <h1>Index</h1>
-  <p class="important">
-    Welcome to my awesome homepage.
+  <p>
+    Here's a tool you can use to get RSS feeds into the fediverse.
   </p>
 
   {% if logged_in %}
-    {% for feed in feeds %}
-      {{loop.index}}. {{feed.url}} <a href="/feed/{{feed.id}}/delete">delete</a>
-    {% endfor %}
+    {% include "feeds" %}
     {% include "add-feed" %}
   {% else %}
+    <p>You can get started by entering your email address here.</p>
     {% include "login" %}
   {% endif %}
   

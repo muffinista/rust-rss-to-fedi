@@ -1,0 +1,3 @@
+{% for feed in feeds %}
+  {{loop.index}}. {{feed.url}} <a href="/feed/{{feed.id}}/delete">delete</a>
+{% endfor %}

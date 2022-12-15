@@ -5,6 +5,7 @@ use rocket::http::Status;
 use rocket::response::Redirect;
 use rocket::State;
 use rocket_dyn_templates::{Template, context};
+use rocket::uri;
 
 use sqlx::sqlite::SqlitePool;
 
@@ -22,8 +23,9 @@ pub async fn add_feed(user: User, db: &State<SqlitePool>, form: Form<FeedForm>) 
   let feed = Feed::create(&user, &form.url, &form.name, &db).await;
   
   match feed {
-    Ok(_feed) => {
-      Ok(Redirect::to("/"))
+    Ok(feed) => {
+      let dest = uri!(show_feed(feed.name));
+      Ok(Redirect::to(dest))
     },
     Err(why) => {
       print!("{}", why);
@@ -80,11 +82,13 @@ pub async fn show_feed(user: Option<User>, username: &str, db: &State<SqlitePool
         Some(feed) => {
           let logged_in = user.is_some();
           let owned_by = logged_in && user.unwrap().id == feed.user_id;
-      
+          let feed_url = uri!(show_feed(feed.name));
+
           Ok(Template::render("feed", context! {
             logged_in: logged_in,
             owned_by: owned_by,
-            feed: feed
+            feed: feed,
+            feed_url: feed_url
           }))
         },
         None => Err(Status::NotFound)

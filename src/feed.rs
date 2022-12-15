@@ -164,6 +164,17 @@ impl Feed {
       Err(why) => Err(why)
     }
   }
+
+  pub async fn exists_by_url(url: &String, pool: &SqlitePool) -> Result<bool, sqlx::Error> {
+    let result = sqlx::query!("SELECT count(1) AS tally FROM feeds WHERE url = ?", url)
+      .fetch_one(pool)
+      .await;
+
+    match result {
+      Ok(result) => Ok(result.tally > 0),
+      Err(why) => Err(why)
+    }
+  }
   
   pub async fn create(user: &User, url: &String, name: &String, pool: &SqlitePool) -> Result<Feed, sqlx::Error> {
     // generate keypair used for signing AP requests
@@ -171,13 +182,6 @@ impl Feed {
     let pkey = PKey::from_rsa(rsa).unwrap();
     let public_key = pkey.public_key_to_pem().unwrap();
     let private_key = pkey.private_key_to_pem_pkcs8().unwrap();
-    // let key_to_string = |key| match String::from_utf8(key) {
-    //   Ok(s) => Ok(s),
-    //   Err(e) => Err(Error::new(
-    //     ErrorKind::Other,
-    //     format!("Failed converting key to string: {}", e),
-    //   )),
-    // };
 
     let private_key_str = String::from_utf8(private_key).unwrap();
     let public_key_str = String::from_utf8(public_key).unwrap();
@@ -196,8 +200,8 @@ impl Feed {
     let old_feed = Feed::find(id, pool).await;
     
     sqlx::query!("DELETE FROM feeds WHERE user_id = $1 AND id = $2", user.id, id)
-    .execute(pool)
-    .await?;
+      .execute(pool)
+      .await?;
     
     old_feed   
   }

@@ -1,17 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+  <head>
     {% block head %}
-    <link rel="stylesheet" href="style.css" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="/assets/styles.css" />
     <title>{% block title %}{% endblock title %} - My Webpage</title>
     {% endblock head %}
-</head>
-<body>
-    <div id="content">{% block content %}{% endblock content %}</div>
-    <div id="footer">
-        {% block footer %}
-        &copy; Copyright 2008 by <a href="http://domain.invalid/">you</a>.
-        {% endblock footer %}
-    </div>
-</body>
+  </head>
+  <body>
+    <header>
+      <nav><a href="/">Home</a></nav>
+
+    </header>
+    <main>
+      {% block content %}{% endblock content %}
+    </main>
+    <footer>
+      {% block footer %}
+      &copy; Copyright 2008 by <a href="http://domain.invalid/">you</a>.
+      {% endblock footer %}
+    </footer>
+  </body>
 </html>
