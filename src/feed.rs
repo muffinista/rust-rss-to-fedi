@@ -46,6 +46,10 @@ pub struct Feed {
   pub public_key: String,
   pub image_url: Option<String>,
   pub icon_url: Option<String>,
+
+  pub title: Option<String>,
+  pub description: Option<String>,
+  pub site_url: Option<String>,
 }
 
 impl PartialEq for Feed {
@@ -93,22 +97,19 @@ pub struct PublicKeyInner {
     public_key_pem: String,
 }
 
-impl<U> UnparsedExtension<U> for PublicKey
-where
-    U: UnparsedMutExt,
-{
-    type Error = serde_json::Error;
+impl<U> UnparsedExtension<U> for PublicKey where U: UnparsedMutExt, {
+  type Error = serde_json::Error;
 
-    fn try_from_unparsed(unparsed_mut: &mut U) -> Result<Self, Self::Error> {
-        Ok(PublicKey {
-            public_key: unparsed_mut.remove("publicKey")?,
-        })
-    }
+  fn try_from_unparsed(unparsed_mut: &mut U) -> Result<Self, Self::Error> {
+    Ok(PublicKey {
+      public_key: unparsed_mut.remove("publicKey")?,
+    })
+  }
 
-    fn try_into_unparsed(self, unparsed_mut: &mut U) -> Result<(), Self::Error> {
-        unparsed_mut.insert("publicKey", self.public_key)?;
-        Ok(())
-    }
+  fn try_into_unparsed(self, unparsed_mut: &mut U) -> Result<(), Self::Error> {
+    unparsed_mut.insert("publicKey", self.public_key)?;
+    Ok(())
+  }
 }
 
 pub type ExtendedService = Ext1<ApActor<Service>, PublicKey>;
@@ -176,7 +177,10 @@ impl Feed {
     }
   }
   
-  pub async fn create(user: &User, url: &String, name: &String, pool: &SqlitePool) -> Result<Feed, sqlx::Error> {
+  pub async fn create(user: &User,
+      url: &String,
+      name: &String, pool: &SqlitePool) -> Result<Feed, sqlx::Error> {
+
     // generate keypair used for signing AP requests
     let rsa = Rsa::generate(2048).unwrap();
     let pkey = PKey::from_rsa(rsa).unwrap();
@@ -312,6 +316,10 @@ impl Feed {
       },
     );
     
+    println!("{:?}", iri!(path_to_url(&uri!(render_feed(&self.name)))));
+    println!("{:?}", iri!(path_to_url(&uri!(user_outbox(&self.name)))));
+    println!("{:?}", iri!(path_to_url(&uri!(render_feed_followers(&self.name, None::<u32>)))));
+
     svc
       .set_context(context())
       .add_context(security())
@@ -474,331 +482,320 @@ impl Feed {
   }
 }
 
+#[cfg(test)]
+mod test {
+  use sqlx::sqlite::SqlitePool;
+  use rocket::uri;
+  use feed_rs::parser;
+
+  use crate::user::User;
+  use crate::Feed;
+  use crate::feed::AcceptedActivity;
+  use crate::utils::*;
   
-#[sqlx::test]
-async fn test_create(pool: SqlitePool) -> sqlx::Result<()> {
-  let user = User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()) };
-  
-  let url:String = "https://foo.com/rss.xml".to_string();
-  let name:String = "testfeed".to_string();
-  let feed = Feed::create(&user, &url, &name, &pool).await?;
-  
-  assert_eq!(feed.url, url);
-  assert_eq!(feed.name, name);
-  assert_eq!(feed.user_id, user.id);
-  
-  Ok(())
-}
-  
-#[sqlx::test]
-async fn test_find_by_url(pool: SqlitePool) -> sqlx::Result<()> {
-  let user = User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()) };
-  let url: String = "https://foo.com/rss.xml".to_string();
-  let name: String = "testfeed".to_string();
+  use crate::routes::feeds::*;
 
-  let feed = Feed::create(&user, &url, &name, &pool).await?;
-  let feed2 = Feed::find_by_url(&url, &pool).await?;
-  
-  assert_eq!(feed, feed2);
-  assert_eq!(feed2.url, url);
-  
-  Ok(())
-}
-#[sqlx::test]
-async fn test_find_by_name(pool: SqlitePool) -> sqlx::Result<()> {
-  let user = User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()) };
-
-  let url: String = "https://foo.com/rss.xml".to_string();
-  let name: String = "testfeed".to_string();
-
-  let feed = Feed::create(&user, &url, &name, &pool).await?;
-  let feed2 = Feed::find_by_url(&url, &pool).await?;
-  
-  assert_eq!(feed, feed2);
-  assert_eq!(feed2.url, url);
-  
-  Ok(())
-}
-
-#[sqlx::test]
-async fn test_find(pool: SqlitePool) -> sqlx::Result<()> {
-  let user = User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()) };
-  
-  let url: String = "https://foo.com/rss.xml".to_string();
-  let name: String = "testfeed".to_string();
-  
-  let feed = Feed::create(&user, &url, &name, &pool).await?;
-  
-  let feed2 = Feed::find(feed.id, &pool).await?;
-  
-  assert_eq!(feed, feed2);
-  assert_eq!(feed2.url, url);
-  
-  Ok(())
-}
-
-#[sqlx::test]
-async fn test_for_user(pool: SqlitePool) -> sqlx::Result<()> {
-  let user = User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()) };
-  
-  let url: String = "https://foo.com/rss.xml".to_string();
-  let name: String = "testfeed".to_string();
-  let _feed = Feed::create(&user, &url, &name, &pool).await?;
-  
-  let url2: String = "https://foofoo.com/rss.xml".to_string();
-  let name2: String = "testfeed2".to_string();
-  let _feed2 = Feed::create(&user, &url2, &name2, &pool).await?;
-  
-  let feeds = Feed::for_user(&user, &pool).await?; 
-  assert_eq!(feeds.len(), 2);
-  
-  Ok(())
-}
-
-#[sqlx::test]
-async fn test_delete(pool: SqlitePool) -> sqlx::Result<()> {
-  let user = User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()) };
-
-  let url: String = "https://foo.com/rss.xml".to_string();
-  let name: String = "testfeed".to_string();
-  let feed = Feed::create(&user, &url, &name, &pool).await?;
-  
-  let deleted_feed = Feed::delete(&user, feed.id, &pool).await?;
-  assert_eq!(feed, deleted_feed);
-  
-  let feeds = Feed::for_user(&user, &pool).await?; 
-  assert_eq!(feeds.len(), 0);
-  
-  Ok(())
-}
-
-#[sqlx::test]
-async fn test_feed_to_entries(pool: SqlitePool) -> sqlx::Result<()> {
-  use std::fs;
-  let feed:Feed = Feed {
-    id: 1,
-    user_id: 1,
-    name: "testfeed".to_string(),
-    url: "https://foo.com/rss.xml".to_string(),
-    private_key: "pk".to_string(),
-    public_key: "pk".to_string(),
-    image_url: Some("image".to_string()),
-    icon_url: Some("icon".to_string())
-  };
-
-  let path = "fixtures/test_feed_to_entries.xml";
-  let data = parser::parse(fs::read_to_string(path).unwrap().as_bytes()).unwrap();
-
-  let result = Feed::feed_to_entries(&feed, data, &pool).await.unwrap();
-
-  assert_eq!(result.len(), 49);
-
-  // check that reloading the same feed doesn't create more records
-  let data2 = parser::parse(fs::read_to_string(path).unwrap().as_bytes()).unwrap();
-  let result2 = Feed::feed_to_entries(&feed, data2, &pool).await.unwrap();
-
-  assert_eq!(result2.len(), 0);
-
-  Ok(())
-}
-
-#[test]
-fn test_feed_to_activity_pub() {
-  use std::env;
-
-  let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
-
-  use serde_json::Value;
-  let feed:Feed = Feed {
-    id: 1,
-    user_id: 1,
-    name: "testfeed".to_string(),
-    url: "https://foo.com/rss.xml".to_string(),
-    private_key: "private key".to_string(),
-    public_key: "public key".to_string(),
-    image_url: Some("http://foo.com/image.png".to_string()),
-    icon_url: Some("http://foo.com/icon.png".to_string())
-  };
-
-  let output = feed.to_activity_pub().unwrap();
-  //let result = feed.to_activity_pub().unwrap();
-  //let output = serde_json::to_string(&result).unwrap();
-
-  let v: Value = serde_json::from_str(&output).unwrap();
-  assert_eq!(v["name"], "testfeed");
-  assert_eq!(v["publicKey"]["id"], format!("https://{}/feed/testfeed#main-key", instance_domain));
-  assert_eq!(v["publicKey"]["publicKeyPem"], "public key");  
-}
-
-#[sqlx::test]
-async fn test_follow(pool: SqlitePool) -> sqlx::Result<()> {
-  let actor = "https://activitypub.pizza/users/colin".to_string();
-  let json = format!(r#"{{"actor":"{}","object":"{}/feed","type":"Follow"}}"#, actor, actor).to_string();
-  let act:AcceptedActivity = serde_json::from_str(&json).unwrap();
-
-  let user = User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()) };
-  
-  let url:String = "https://foo.com/rss.xml".to_string();
-  let name:String = "testfeed".to_string();
-  let feed = Feed::create(&user, &url, &name, &pool).await?;
-
-  let result = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = ? AND actor = ?", feed.id, actor)
-    .fetch_one(&pool)
-    .await
-    .unwrap();
-
-  assert!(result.tally == 0);
-
-  feed.handle_activity(&pool, &act).await?;
-
-  let result2 = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = ? AND actor = ?", feed.id, actor)
-    .fetch_one(&pool)
-    .await
-    .unwrap();
-
-  assert!(result2.tally > 0);
-    
-  Ok(())
-}
-
-#[sqlx::test]
-async fn test_unfollow(pool: SqlitePool) -> sqlx::Result<()> {
-  let actor = "https://activitypub.pizza/users/colin".to_string();
-  let json = format!(r#"{{"actor":"{}","object":"{}/feed","type":"Undo"}}"#, actor, actor).to_string();
-  let act:AcceptedActivity = serde_json::from_str(&json).unwrap();
-
-  let user = User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()) };
-  
-  let url:String = "https://foo.com/rss.xml".to_string();
-  let name:String = "testfeed".to_string();
-  let feed = Feed::create(&user, &url, &name, &pool).await?;
-
-  sqlx::query!("INSERT INTO followers (feed_id, actor) VALUES($1, $2)", feed.id, actor)
-    .execute(&pool)
-    .await?;
-
-  let result = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = ? AND actor = ?", feed.id, actor)
-    .fetch_one(&pool)
-    .await
-    .unwrap();
-
-  assert!(result.tally == 1);
-
-  feed.handle_activity(&pool, &act).await?;
-
-  let post_result = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = ? AND actor = ?", feed.id, actor)
-    .fetch_one(&pool)
-    .await
-    .unwrap();
-
-  assert!(post_result.tally == 0);
-    
-  Ok(())
-}
-
-#[sqlx::test]
-async fn test_followers(pool: SqlitePool) -> Result<(), String> {
-  let url:String = "https://foo.com/rss.xml".to_string();
-  let name:String = "testfeed".to_string();
-  let pk:String = "pk".to_string();
-  let pubk:String = "pk".to_string();
-  let feed = Feed { id: 1, user_id: 1, name: name, url: url, private_key: pk, public_key: pubk,
-    image_url: Some("image".to_string()),
-    icon_url: Some("icon".to_string()) };
-
-  for i in 1..4 {
-    let actor = format!("https://activitypub.pizza/users/colin{}", i);
-    sqlx::query!("INSERT INTO followers (feed_id, actor) VALUES($1, $2)", feed.id, actor)
-      .execute(&pool)
-      .await
-      .unwrap();
-  }
-  
-  let result = feed.followers(&pool).await;
-  match result {
-    Ok(result) => {
-      let s = serde_json::to_string(&result).unwrap();
-      println!("{:?}", s);
-
-      assert!(s.contains("A list of followers"));
-      Ok(())
-    },
-
-    Err(why) => Err(why.to_string())
-  }
-}
-
-#[sqlx::test]
-async fn test_followers_paged(pool: SqlitePool) -> Result<(), String> {
-  let url:String = "https://foo.com/rss.xml".to_string();
-  let name:String = "testfeed".to_string();
-  let pk:String = "pk".to_string();
-  let pubk:String = "pk".to_string();
-  let feed = Feed {
-    id: 1,
-    user_id: 1,
-    name: name.clone(),
-    url: url,
-    private_key: pk,
-    public_key: pubk,
-    image_url: Some("image".to_string()),
-    icon_url: Some("icon".to_string())
-  };
-
-  for i in 1..35 {
-    let actor = format!("https://activitypub.pizza/users/colin{}", i);
-    sqlx::query!("INSERT INTO followers (feed_id, actor) VALUES($1, $2)", feed.id, actor)
-      .execute(&pool)
-      .await
-      .unwrap();
+  fn fake_user() -> User {
+    User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()) }
   }
 
-  let result = feed.followers_paged(2, &pool).await;
-  match result {
-    Ok(result) => {
-      let s = serde_json::to_string(&result).unwrap();
-      println!("{:?}", s);
-      
-      assert!(s.contains("OrderedCollectionPage"));
-      assert!(s.contains("/colin11"));
-      assert!(s.contains("/colin12"));
-      assert!(s.contains("/colin13"));
-      assert!(s.contains(&format!(r#"first":"{}"#, path_to_url(&uri!(render_feed_followers(name.clone(), Some(1)))))));
-      assert!(s.contains(&format!(r#"prev":"{}"#, path_to_url(&uri!(render_feed_followers(name.clone(), Some(1)))))));      
-      assert!(s.contains(&format!(r#"next":"{}"#, path_to_url(&uri!(render_feed_followers(name.clone(), Some(3)))))));
-      assert!(s.contains(&format!(r#"last":"{}"#, path_to_url(&uri!(render_feed_followers(name.clone(), Some(4)))))));
-      assert!(s.contains(&format!(r#"current":"{}"#, path_to_url(&uri!(render_feed_followers(name.clone(), Some(2)))))));
-
-      Ok(())
-    },
-    Err(why) => Err(why.to_string())
-  }
-}
-
-#[sqlx::test]
-async fn test_follower_count(pool: SqlitePool) -> Result<(), String> {
-  let url:String = "https://foo.com/rss.xml".to_string();
-  let name:String = "testfeed".to_string();
-  let pk:String = "pk".to_string();
-  let pubk:String = "pk".to_string();
-  let feed = Feed { id: 1, user_id: 1, name: name.clone(), url: url, private_key: pk, public_key: pubk,
-    image_url: Some("image".to_string()),
-    icon_url: Some("icon".to_string()) };
-
-  for i in 1..36{
-    let actor = format!("https://activitypub.pizza/users/colin{}", i);
-    sqlx::query!("INSERT INTO followers (feed_id, actor) VALUES($1, $2)", feed.id, actor)
-      .execute(&pool)
-      .await
-      .unwrap();
-  }
-  
-  let result = feed.follower_count(&pool).await;
-  match result {
-    Ok(result) => { 
-      assert_eq!(35, result);
-      Ok(())
+  fn fake_feed() -> Feed {
+    Feed {
+      id: 1,
+      user_id: 1,
+      name: "testfeed".to_string(),
+      url: "https://foo.com/rss.xml".to_string(),
+      private_key: "private key".to_string(),
+      public_key: "public key".to_string(),
+      image_url: Some("https://foo.com/image.png".to_string()),
+      icon_url: Some("https://foo.com/image.ico".to_string()),
+      description: None,
+      site_url: None,
+      title: None
     }
-    Err(why) => Err(why.to_string())
+  }
+
+
+  #[sqlx::test]
+  async fn test_create(pool: SqlitePool) -> sqlx::Result<()> {
+    let user = fake_user();
+    
+    let url:String = "https://foo.com/rss.xml".to_string();
+    let name:String = "testfeed".to_string();
+    let feed = Feed::create(&user, &url, &name, &pool).await?;
+    
+    assert_eq!(feed.url, url);
+    assert_eq!(feed.name, name);
+    assert_eq!(feed.user_id, user.id);
+    
+    Ok(())
+  }
+    
+  #[sqlx::test]
+  async fn test_find_by_url(pool: SqlitePool) -> sqlx::Result<()> {
+    let user = fake_user();
+    let url: String = "https://foo.com/rss.xml".to_string();
+    let name: String = "testfeed".to_string();
+
+    let feed = Feed::create(&user, &url, &name, &pool).await?;
+    let feed2 = Feed::find_by_url(&url, &pool).await?;
+    
+    assert_eq!(feed, feed2);
+    assert_eq!(feed2.url, url);
+    
+    Ok(())
+  }
+  #[sqlx::test]
+  async fn test_find_by_name(pool: SqlitePool) -> sqlx::Result<()> {
+    let user = fake_user();
+
+    let url: String = "https://foo.com/rss.xml".to_string();
+    let name: String = "testfeed".to_string();
+
+    let feed = Feed::create(&user, &url, &name, &pool).await?;
+    let feed2 = Feed::find_by_url(&url, &pool).await?;
+    
+    assert_eq!(feed, feed2);
+    assert_eq!(feed2.url, url);
+    
+    Ok(())
+  }
+
+  #[sqlx::test]
+  async fn test_find(pool: SqlitePool) -> sqlx::Result<()> {
+    let user = fake_user();
+
+    let url: String = "https://foo.com/rss.xml".to_string();
+    let name: String = "testfeed".to_string();
+    
+    let feed = Feed::create(&user, &url, &name, &pool).await?;
+    
+    let feed2 = Feed::find(feed.id, &pool).await?;
+    
+    assert_eq!(feed, feed2);
+    assert_eq!(feed2.url, url);
+    
+    Ok(())
+  }
+
+  #[sqlx::test]
+  async fn test_for_user(pool: SqlitePool) -> sqlx::Result<()> {
+    let user = fake_user();
+    
+    let url: String = "https://foo.com/rss.xml".to_string();
+    let name: String = "testfeed".to_string();
+    let _feed = Feed::create(&user, &url, &name, &pool).await?;
+    
+    let url2: String = "https://foofoo.com/rss.xml".to_string();
+    let name2: String = "testfeed2".to_string();
+    let _feed2 = Feed::create(&user, &url2, &name2, &pool).await?;
+    
+    let feeds = Feed::for_user(&user, &pool).await?; 
+    assert_eq!(feeds.len(), 2);
+    
+    Ok(())
+  }
+
+  #[sqlx::test]
+  async fn test_delete(pool: SqlitePool) -> sqlx::Result<()> {
+    let user = fake_user();
+
+    let url: String = "https://foo.com/rss.xml".to_string();
+    let name: String = "testfeed".to_string();
+    let feed = Feed::create(&user, &url, &name, &pool).await?;
+    
+    let deleted_feed = Feed::delete(&user, feed.id, &pool).await?;
+    assert_eq!(feed, deleted_feed);
+    
+    let feeds = Feed::for_user(&user, &pool).await?; 
+    assert_eq!(feeds.len(), 0);
+    
+    Ok(())
+  }
+
+  #[sqlx::test]
+  async fn test_feed_to_entries(pool: SqlitePool) -> sqlx::Result<()> {
+    use std::fs;
+    let feed:Feed = fake_feed();
+
+    let path = "fixtures/test_feed_to_entries.xml";
+    let data = parser::parse(fs::read_to_string(path).unwrap().as_bytes()).unwrap();
+
+    let result = Feed::feed_to_entries(&feed, data, &pool).await.unwrap();
+
+    assert_eq!(result.len(), 49);
+
+    // check that reloading the same feed doesn't create more records
+    let data2 = parser::parse(fs::read_to_string(path).unwrap().as_bytes()).unwrap();
+    let result2 = Feed::feed_to_entries(&feed, data2, &pool).await.unwrap();
+
+    assert_eq!(result2.len(), 0);
+
+    Ok(())
+  }
+
+  #[test]
+  fn test_feed_to_activity_pub() {
+    use std::env;
+
+    let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
+
+    use serde_json::Value;
+    let feed:Feed = fake_feed();
+
+    let output = feed.to_activity_pub().unwrap();
+
+    let v: Value = serde_json::from_str(&output).unwrap();
+    assert_eq!(v["name"], "testfeed");
+    assert_eq!(v["publicKey"]["id"], format!("https://{}/feed/testfeed#main-key", instance_domain));
+    assert_eq!(v["publicKey"]["publicKeyPem"], "public key");  
+  }
+
+  #[sqlx::test]
+  async fn test_follow(pool: SqlitePool) -> sqlx::Result<()> {
+    let actor = "https://activitypub.pizza/users/colin".to_string();
+    let json = format!(r#"{{"actor":"{}","object":"{}/feed","type":"Follow"}}"#, actor, actor).to_string();
+    let act:AcceptedActivity = serde_json::from_str(&json).unwrap();
+
+    let user = fake_user();
+    
+    let url:String = "https://foo.com/rss.xml".to_string();
+    let name:String = "testfeed".to_string();
+    let feed = Feed::create(&user, &url, &name, &pool).await?;
+
+    let result = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = ? AND actor = ?", feed.id, actor)
+      .fetch_one(&pool)
+      .await
+      .unwrap();
+
+    assert!(result.tally == 0);
+
+    feed.handle_activity(&pool, &act).await?;
+
+    let result2 = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = ? AND actor = ?", feed.id, actor)
+      .fetch_one(&pool)
+      .await
+      .unwrap();
+
+    assert!(result2.tally > 0);
+      
+    Ok(())
+  }
+
+  #[sqlx::test]
+  async fn test_unfollow(pool: SqlitePool) -> sqlx::Result<()> {
+    let actor = "https://activitypub.pizza/users/colin".to_string();
+    let json = format!(r#"{{"actor":"{}","object":"{}/feed","type":"Undo"}}"#, actor, actor).to_string();
+    let act:AcceptedActivity = serde_json::from_str(&json).unwrap();
+
+    let user = fake_user();
+    
+    let url:String = "https://foo.com/rss.xml".to_string();
+    let name:String = "testfeed".to_string();
+    let feed = Feed::create(&user, &url, &name, &pool).await?;
+
+    sqlx::query!("INSERT INTO followers (feed_id, actor) VALUES($1, $2)", feed.id, actor)
+      .execute(&pool)
+      .await?;
+
+    let result = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = ? AND actor = ?", feed.id, actor)
+      .fetch_one(&pool)
+      .await
+      .unwrap();
+
+    assert!(result.tally == 1);
+
+    feed.handle_activity(&pool, &act).await?;
+
+    let post_result = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = ? AND actor = ?", feed.id, actor)
+      .fetch_one(&pool)
+      .await
+      .unwrap();
+
+    assert!(post_result.tally == 0);
+      
+    Ok(())
+  }
+
+  #[sqlx::test]
+  async fn test_followers(pool: SqlitePool) -> Result<(), String> {
+    let feed:Feed = fake_feed();
+
+    for i in 1..4 {
+      let actor = format!("https://activitypub.pizza/users/colin{}", i);
+      sqlx::query!("INSERT INTO followers (feed_id, actor) VALUES($1, $2)", feed.id, actor)
+        .execute(&pool)
+        .await
+        .unwrap();
+    }
+    
+    let result = feed.followers(&pool).await;
+    match result {
+      Ok(result) => {
+        let s = serde_json::to_string(&result).unwrap();
+        println!("{:?}", s);
+
+        assert!(s.contains("A list of followers"));
+        Ok(())
+      },
+
+      Err(why) => Err(why.to_string())
+    }
+  }
+
+  #[sqlx::test]
+  async fn test_followers_paged(pool: SqlitePool) -> Result<(), String> {
+    let feed:Feed = fake_feed();
+
+    for i in 1..35 {
+      let actor = format!("https://activitypub.pizza/users/colin{}", i);
+      sqlx::query!("INSERT INTO followers (feed_id, actor) VALUES($1, $2)", feed.id, actor)
+        .execute(&pool)
+        .await
+        .unwrap();
+    }
+
+    let result = feed.followers_paged(2, &pool).await;
+    match result {
+      Ok(result) => {
+        let s = serde_json::to_string(&result).unwrap();
+        println!("{:?}", s);
+        
+        assert!(s.contains("OrderedCollectionPage"));
+        assert!(s.contains("/colin11"));
+        assert!(s.contains("/colin12"));
+        assert!(s.contains("/colin13"));
+        assert!(s.contains(&format!(r#"first":"{}"#, path_to_url(&uri!(render_feed_followers(feed.name.clone(), Some(1)))))));
+        assert!(s.contains(&format!(r#"prev":"{}"#, path_to_url(&uri!(render_feed_followers(feed.name.clone(), Some(1)))))));      
+        assert!(s.contains(&format!(r#"next":"{}"#, path_to_url(&uri!(render_feed_followers(feed.name.clone(), Some(3)))))));
+        assert!(s.contains(&format!(r#"last":"{}"#, path_to_url(&uri!(render_feed_followers(feed.name.clone(), Some(4)))))));
+        assert!(s.contains(&format!(r#"current":"{}"#, path_to_url(&uri!(render_feed_followers(feed.name.clone(), Some(2)))))));
+
+        Ok(())
+      },
+      Err(why) => Err(why.to_string())
+    }
+  }
+
+  #[sqlx::test]
+  async fn test_follower_count(pool: SqlitePool) -> Result<(), String> {
+    let feed:Feed = fake_feed();
+
+    for i in 1..36{
+      let actor = format!("https://activitypub.pizza/users/colin{}", i);
+      sqlx::query!("INSERT INTO followers (feed_id, actor) VALUES($1, $2)", feed.id, actor)
+        .execute(&pool)
+        .await
+        .unwrap();
+    }
+    
+    let result = feed.follower_count(&pool).await;
+    match result {
+      Ok(result) => { 
+        assert_eq!(35, result);
+        Ok(())
+      }
+      Err(why) => Err(why.to_string())
+    }
   }
 }

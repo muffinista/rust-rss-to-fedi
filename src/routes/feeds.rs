@@ -82,7 +82,7 @@ pub async fn show_feed(user: Option<User>, username: &str, db: &State<SqlitePool
         Some(feed) => {
           let logged_in = user.is_some();
           let owned_by = logged_in && user.unwrap().id == feed.user_id;
-          let feed_url = uri!(show_feed(feed.name));
+          let feed_url = uri!(show_feed(&feed.name));
 
           Ok(Template::render("feed", context! {
             logged_in: logged_in,

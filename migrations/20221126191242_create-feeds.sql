@@ -8,9 +8,10 @@ CREATE TABLE feeds (
   public_key VARCHAR NOT NULL,
   private_key VARCHAR NOT NULL,
   image_url VARCHAR,
-  icon_url VARCHAR
-);
+  icon_url VARCHAR,
 
---   login_token_expires_at DATETIME
---   access_expires_at DATETIME
+  title VARCHAR,
+  description VARCHAR,
+  site_url VARCHAR
+);
 
