@@ -327,7 +327,7 @@ impl Feed {
             let update = self.save(pool).await;
             match update {
               Ok(_update) => {
-                let result = Feed::feed_to_entries(self, data, pool).await;
+                let result = self.feed_to_entries(data, pool).await;
                 match result {
                   Ok(result) => Ok(result),
                   Err(_why) => return Err(FeedError)
