@@ -199,7 +199,35 @@ impl Feed {
     
     Feed::find(feed_id, pool).await
   }
-  
+
+  pub async fn save(self, pool: &SqlitePool) -> Result<Feed, sqlx::Error> {
+    sqlx::query!("UPDATE feeds
+      SET url = $1,
+          name = $2,
+          private_key = $3,
+          public_key = $4,
+          image_url = $5,
+          icon_url = $6,
+          title = $7,
+          description = $8,
+          site_url = $9
+      WHERE id = $10",
+      self.url,
+      self.name,
+      self.private_key,
+      self.public_key,
+      self.image_url,
+      self.icon_url,
+      self.title,
+      self.description,
+      self.site_url,
+      self.id
+    ).execute(pool)
+      .await?;
+
+    Ok(self)
+  }
+
   pub async fn delete(user: &User, id: i64, pool: &SqlitePool) -> Result<Feed, sqlx::Error> {
     let old_feed = Feed::find(id, pool).await;
     
@@ -269,7 +297,7 @@ impl Feed {
       Err(why) => Err(why)
     }
   }
-      
+
   pub async fn parse(&self, pool: &SqlitePool) -> Result<Vec<Item>, FeedError> {        
     let body = Feed::load(self).await;
     match body {
@@ -530,7 +558,25 @@ mod test {
     
     Ok(())
   }
+
+  #[sqlx::test]
+  async fn test_save(pool: SqlitePool) -> sqlx::Result<()> {
+    let user = fake_user();
     
+    let url:String = "https://foo.com/rss.xml".to_string();
+    let name:String = "testfeed".to_string();
+    let mut feed = Feed::create(&user, &url, &name, &pool).await?;
+    
+    let newname = "testfeed2".to_string();
+    feed.name = newname.clone();
+
+    let updated_feed = feed.save(&pool).await?;
+
+    assert_eq!(updated_feed.name, newname);
+
+    Ok(())
+  }
+
   #[sqlx::test]
   async fn test_find_by_url(pool: SqlitePool) -> sqlx::Result<()> {
     let user = fake_user();
