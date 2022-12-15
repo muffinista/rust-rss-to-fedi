@@ -200,7 +200,7 @@ impl Feed {
     Feed::find(feed_id, pool).await
   }
 
-  pub async fn save(self, pool: &SqlitePool) -> Result<Feed, sqlx::Error> {
+  pub async fn save(&self, pool: &SqlitePool) -> Result<&Feed, sqlx::Error> {
     sqlx::query!("UPDATE feeds
       SET url = $1,
           name = $2,
@@ -298,7 +298,7 @@ impl Feed {
     }
   }
 
-  pub async fn parse(&self, pool: &SqlitePool) -> Result<Vec<Item>, FeedError> {        
+  pub async fn parse(&mut self, pool: &SqlitePool) -> Result<Vec<Item>, FeedError> {        
     let body = Feed::load(self).await;
     match body {
       Ok(body) => {
@@ -306,16 +306,33 @@ impl Feed {
         
         match data {
           Ok(data) => {
+            if data.title.is_some() {
+              self.title = Some(data.title.as_ref().unwrap().content.clone());
+            }
+            if data.description.is_some() {
+              self.description = Some(data.description.as_ref().unwrap().content.clone());
+            }
+
             if data.icon.is_some() {
-              self.update_icon_url(&data.icon.as_ref().unwrap().uri, pool).await.ok();
+              self.icon_url = Some(data.icon.as_ref().unwrap().uri.clone());
+              // self.update_icon_url(&data.icon.as_ref().unwrap().uri, pool).await.ok();
             }
             if data.logo.is_some() {
-              self.update_image_url(&data.logo.as_ref().unwrap().uri, pool).await.ok();
+              self.image_url = Some(data.logo.as_ref().unwrap().uri.clone());
+              // self.update_image_url(&data.logo.as_ref().unwrap().uri, pool).await.ok();
             }
-            
-            let result = Feed::feed_to_entries(self, data, pool).await;
-            match result {
-              Ok(result) => Ok(result),
+
+            // todo snag link too
+
+            let update = self.save(pool).await;
+            match update {
+              Ok(_update) => {
+                let result = Feed::feed_to_entries(self, data, pool).await;
+                match result {
+                  Ok(result) => Ok(result),
+                  Err(_why) => return Err(FeedError)
+                }    
+              }
               Err(_why) => return Err(FeedError)
             }
           },
