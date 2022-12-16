@@ -276,6 +276,17 @@ impl Feed {
     Ok(result)
   }
 
+  pub async fn entries_count(&self, pool: &SqlitePool)  -> Result<u64, AnyError>{
+    let result = sqlx::query!("SELECT COUNT(1) AS tally FROM items WHERE feed_id = ?", self.id)
+      .fetch_one(pool)
+      .await;
+
+    match result {
+      Ok(result) => Ok(result.tally as u64),
+      Err(_why) => todo!()
+    }
+  }
+
   pub async fn update_icon_url(&self, url:&str, pool: &SqlitePool) -> Result<(), sqlx::Error> {
     let result = sqlx::query!("UPDATE feeds SET icon_url = $1 WHERE id = $2", url, self.id)
       .execute(pool)
@@ -568,6 +579,17 @@ mod test {
     }
   }
 
+  async fn real_feed(pool: &SqlitePool) -> sqlx::Result<Feed> {
+    let user = fake_user();
+    
+    let url:String = "https://foo.com/rss.xml".to_string();
+    let name:String = "testfeed".to_string();
+    let feed = Feed::create(&user, &url, &name, &pool).await?;
+    
+    Ok(feed)
+  }
+
+
 
   #[sqlx::test]
   async fn test_create(pool: SqlitePool) -> sqlx::Result<()> {
@@ -696,7 +718,7 @@ mod test {
     let data = fs::read_to_string(path).unwrap();
 
     let result = feed.parse_from_data(data, &pool).await.unwrap();
-    assert_eq!(result.len(), 49);
+    assert_eq!(result.len(), 3);
 
     let feed2 = Feed::find(feed.id, &pool).await?;
 
@@ -710,20 +732,34 @@ mod test {
   #[sqlx::test]
   async fn test_feed_to_entries(pool: SqlitePool) -> sqlx::Result<()> {
     use std::fs;
-    let feed:Feed = fake_feed();
+    let feed:Feed = real_feed(&pool).await?;
+
+    assert_eq!(feed.entries_count(&pool).await.unwrap(), 0);
+    
 
     let path = "fixtures/test_feed_to_entries.xml";
     let data = parser::parse(fs::read_to_string(path).unwrap().as_bytes()).unwrap();
 
     let result = Feed::feed_to_entries(&feed, data, &pool).await.unwrap();
 
-    assert_eq!(result.len(), 49);
+    assert_eq!(result.len(), 3);
+    assert_eq!(feed.entries_count(&pool).await.unwrap(), 3);
 
     // check that reloading the same feed doesn't create more records
     let data2 = parser::parse(fs::read_to_string(path).unwrap().as_bytes()).unwrap();
     let result2 = Feed::feed_to_entries(&feed, data2, &pool).await.unwrap();
 
     assert_eq!(result2.len(), 0);
+    assert_eq!(feed.entries_count(&pool).await.unwrap(), 3);
+
+    // try with slightly more data
+    let path2 = "fixtures/test_feed_to_entries_2.xml";
+    let data2 = parser::parse(fs::read_to_string(path2).unwrap().as_bytes()).unwrap();
+    let result2 = Feed::feed_to_entries(&feed, data2, &pool).await.unwrap();
+
+    assert_eq!(result2.len(), 4);
+    
+    assert_eq!(feed.entries_count(&pool).await.unwrap(), 7);
 
     Ok(())
   }

@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>muffinlabs.com</title>
+  <id>http://muffinlabs.com/</id>
+  <link href="http://muffinlabs.com/"/>
+  <link href="http://muffinlabs.com/atom.xml" rel="self"/>
+  <updated>2022-09-10T12:49:00+00:00</updated>
+  <author>
+    <name>Colin Mitchell</name>
+  </author>
+  <entry>
+    <title>How I maintain botsin.space</title>
+    <link rel="alternate" href="http://muffinlabs.com/2022/09/10/how-i-maintain-botsin-space/"/>
+    <id>http://muffinlabs.com/2022/09/10/how-i-maintain-botsin-space/</id>
+    <published>2022-09-10T12:49:00+00:00</published>
+    <updated>2022-09-10T12:49:00+00:00</updated>
+    <author>
+      <name>Colin Mitchell</name>
+    </author>
+    <content type="html">&lt;p&gt;I've been meaning to write up some notes on how I manage</content>
+  </entry>
+  <entry>
+    <title>SpaceJamCheck in the New York Times</title>
+    <link rel="alternate" href="https://www.nytimes.com/2021/05/21/style/welcome-to-the-space-jam-again.html"/>
+    <id>https://www.nytimes.com/2021/05/21/style/welcome-to-the-space-jam-again.html</id>
+    <published>2021-05-24T00:00:00+00:00</published>
+    <updated>2021-05-24T00:00:00+00:00</updated>
+    <author>
+      <name>Colin Mitchell</name>
+    </author>
+    <content type="html">I was interviewed in the NYT as part of an article about the Space Jam website and my Twitter bot @SpaceJamCheck.</content>
+  </entry>
+  <entry>
+    <title>Emoji Fireplace app</title>
+    <link rel="alternate" href="https://muffinlabs.com/emoji-fireplace"/>
+    <id>https://muffinlabs.com/emoji-fireplace</id>
+    <published>2019-12-29T00:00:00+00:00</published>
+    <updated>2019-12-29T00:00:00+00:00</updated>
+    <author>
+      <name>Colin Mitchell</name>
+    </author>
+    <content type="html">I made an app version of my emoji yule log for Android devices.</content>
+  </entry>
+  <entry>
+    <title>Audio Sweetener Bot</title>
+    <link rel="alternate" href="https://botsin.space/@audiosweetener"/>
+    <id>https://botsin.space/@audiosweetener</id>
+    <published>2019-01-10T00:00:00+00:00</published>
+    <updated>2019-01-10T00:00:00+00:00</updated>
+    <author>
+      <name>Colin Mitchell</name>
+    </author>
+    <content type="html">Here's a bot that posts audio clips from the BBC Sound Effects Archive.</content>
+  </entry>
+  <entry>
+    <title>Tall Boy</title>
+    <link rel="alternate" href="https://glitch.com/~tall-boy"/>
+    <id>https://glitch.com/~tall-boy</id>
+    <published>2018-11-16T00:00:00+00:00</published>
+    <updated>2018-11-16T00:00:00+00:00</updated>
+    <author>
+      <name>Colin Mitchell</name>
+    </author>
+    <content type="html">I made a p5.js sketch that is a rendition of those inflatable dancers you see in front of stores and in other random places</content>
+  </entry>
+  <entry>
+    <title>November Rain Bot</title>
+    <link rel="alternate" href="https://botsin.space/@NovemberRain"/>
+    <id>https://botsin.space/@NovemberRain</id>
+    <published>2018-11-16T00:00:00+00:00</published>
+    <updated>2018-11-16T00:00:00+00:00</updated>
+    <author>
+      <name>Colin Mitchell</name>
+    </author>
+    <content type="html">I made a bot that posts frames from the November Rain video. It'll only run for the month of November. It runs in rough order, so the bot starts at the start of the video, and it should end on the last frame.</content>
+  </entry>
+  <entry>
+    <title>Pitchers and Catchers</title>
+    <link rel="alternate" href="http://pitchersandcatchersreport.in/"/>
+    <id>http://pitchersandcatchersreport.in/</id>
+    <published>2018-10-29T00:00:00+00:00</published>
+    <updated>2018-10-29T00:00:00+00:00</updated>
+    <author>
+      <name>Colin Mitchell</name>
+    </author>
+    <content type="html">I made a website to let you know when Spring Training starts</content>
+  </entry>
+</feed>
