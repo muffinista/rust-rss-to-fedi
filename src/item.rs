@@ -5,6 +5,23 @@ use feed_rs::model::Entry;
 
 use crate::feed::Feed;
 
+use activitystreams::activity::*;
+use activitystreams::object::ApObject;
+use activitystreams::object::Note;
+use activitystreams::iri;
+use activitystreams::base::BaseExt;
+use activitystreams::base::ExtendsExt;
+use activitystreams::object::ObjectExt;
+
+use anyhow::Error as AnyError;
+
+use activitystreams::{
+  security,
+  context
+};
+
+
+use rocket::futures::TryStreamExt;
 
 #[derive(Debug, Serialize)]
 pub struct Item {
@@ -67,7 +84,60 @@ impl Item {
       .last_insert_rowid();
     Item::find(item_id, pool).await
   }
-  
+
+  pub fn to_activity_pub(&self) -> Result<ApObject<Create>, AnyError> {    
+    // we could return an object here instead of JSON so we can manipulate it if needed
+    // pub fn to_activity_pub(&self) -> Result<ExtendedService, AnyError> {    
+
+    let mut note: ApObject<Note> = ApObject::new(Note::new());
+
+    note
+      //.set_id(iri!(path_to_url(&uri!(render_feed(&self.name)))))
+      .set_attributed_to(iri!("https://create.pizza/"))
+      .set_content("Hello")
+      .set_url(iri!("https://create.pizza/"))
+      .set_cc(iri!("https://www.w3.org/ns/activitystreams#Public"));
+      //.set_published(self.created_at)
+
+    let mut action: ApObject<Create> = ApObject::new(Create::new(iri!("https://create.pizza/"), note.into_any_base()?));
+
+    action
+      .set_context(context())
+      .add_context(security());
+
+    Ok(action)
+
+
+    // if returning an object makes sense we can do something like this:
+    // let any_base = svc.into_any_base();
+    // //    println!("any base: {:?}", any_base);
+    
+    // match any_base {
+    //   Ok(any_base) => {
+    //     let x = ExtendedService::from_any_base(any_base).unwrap();
+        
+    //     match x {
+    //       Some(x) => {
+    //         println!("JSON: {:?}", serde_json::to_string(&x).unwrap());
+    //         Ok(x)
+    //       },
+    //       None => todo!()
+    //     }
+    //   },
+    //   Err(_) => todo!()
+    // }
+    
+  }
+
+  pub async fn deliver(&self, feed: &Feed, pool: &SqlitePool) -> Result<(), sqlx::Error> {
+    let followers = feed.followers_list(pool).await?;
+    for follwer in followers { 
+      // generate and send
+    };
+
+    Ok(())
+  }
+
   // pub async fn delete(feed: &Feed, id: i64, pool: &SqlitePool) -> Result<Item, sqlx::Error> {
   //   let old_item = Item::find(id, pool).await;
     
@@ -77,4 +147,31 @@ impl Item {
     
   //   old_item   
   // }
+}
+
+
+
+#[cfg(test)]
+mod test {
+  // use sqlx::sqlite::SqlitePool;
+
+  use crate::Item;
+
+  #[sqlx::test]
+  async fn test_to_activity_pub() -> Result<(), String> {
+    let item:Item = Item { id: 1, feed_id: 1, guid: "12345".to_string(), title: Some("Hello!".to_string()), content: Some("Hey!".to_string()) };
+
+    let result = item.to_activity_pub();
+    match result {
+      Ok(result) => {
+        let s = serde_json::to_string(&result).unwrap();
+        println!("{}", s);
+        
+        assert!(s.contains("Hello"));
+
+        Ok(())
+      },
+      Err(why) => Err(why.to_string())
+    }
+  }
 }

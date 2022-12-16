@@ -4,6 +4,7 @@ use activitystreams::{actor::{ApActor, ApActorExt, Service}, iri};
 use activitystreams::{
   prelude::*,
   security,
+  context
 };
 
 use sqlx::sqlite::SqlitePool;
@@ -19,9 +20,6 @@ use crate::item::Item;
 use crate::follower::Follower;
 use crate::keys::*;
 
-use activitystreams::{
-  context
-};
 
 use activitystreams::base::BaseExt;
 
@@ -313,6 +311,22 @@ impl Feed {
     }
   }
 
+  pub fn to_actor(&self) -> Result<ApActor<Service>, AnyError> {
+    let mut service = ApActor::new(
+      iri!("http://localhost:8080/inbox"),
+      Service::new(),
+    );
+
+    service
+      .set_id(iri!(path_to_url(&uri!(render_feed(&self.name)))))
+      .set_url(iri!(path_to_url(&uri!(render_feed(&self.name)))))
+      .set_name(self.name.clone())
+      .set_preferred_username(self.name.clone())
+      .set_outbox(iri!(path_to_url(&uri!(user_outbox(&self.name)))));
+
+    Ok(service)
+  }
+
   pub fn to_activity_pub(&self) -> Result<String, AnyError> {    
     // we could return an object here instead of JSON so we can manipulate it if needed
     // pub fn to_activity_pub(&self) -> Result<ExtendedService, AnyError> {    
@@ -413,6 +427,12 @@ impl Feed {
       Ok(result) => Ok(result.tally as u64),
       Err(_why) => todo!()
     }
+  }
+
+  pub async fn followers_list(&self, pool: &SqlitePool)  -> Result<Vec<Follower>, sqlx::Error>{
+    sqlx::query_as!(Follower, "SELECT * FROM followers WHERE feed_id = ?", self.id)
+      .fetch_all(pool)
+      .await
   }
   
   pub async fn followers(&self, pool: &SqlitePool)  -> Result<ApObject<OrderedCollection>, AnyError>{
