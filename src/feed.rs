@@ -317,14 +317,15 @@ impl Feed {
     // we could return an object here instead of JSON so we can manipulate it if needed
     // pub fn to_activity_pub(&self) -> Result<ExtendedService, AnyError> {    
 
+    let feed_url = path_to_url(&uri!(render_feed(&self.name)));
     let mut svc = Ext1::new(
       ApActor::new(
-        iri!("https://example.com/inbox"),
+        iri!(feed_url),
         Service::new(),
       ),
       PublicKey {
         public_key: PublicKeyInner {
-          id: iri!(format!("{}#main-key", path_to_url(&uri!(render_feed(&self.name))))),
+          id: iri!(format!("{}#main-key", feed_url)),
           owner: iri!(path_to_url(&uri!(render_feed(&self.name)))),
           public_key_pem: self.public_key.to_owned(),
         },
