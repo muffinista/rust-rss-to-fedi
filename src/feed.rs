@@ -1,3 +1,11 @@
+use activitystreams_ext::{Ext1};
+use activitystreams::{actor::{ApActor, ApActorExt, Service}, iri};
+
+use activitystreams::{
+  prelude::*,
+  security,
+};
+
 use sqlx::sqlite::SqlitePool;
 use serde::{Serialize};
 
@@ -8,6 +16,8 @@ use std::{error::Error, fmt};
 
 use crate::user::User;
 use crate::item::Item;
+use crate::follower::Follower;
+use crate::keys::*;
 
 use activitystreams::{
   context
@@ -18,18 +28,9 @@ use activitystreams::base::BaseExt;
 use activitystreams::collection::OrderedCollection;
 use activitystreams::collection::OrderedCollectionPage;
 use activitystreams::object::ApObject;
-use activitystreams::{actor::{ApActor, ApActorExt, Service}, iri};
-use activitystreams::unparsed::*;
 
-use activitystreams::{
-  prelude::*,
-  security,
-  iri_string::types::IriString,
-};
 
 use anyhow::Error as AnyError;
-
-use openssl::{pkey::PKey, rsa::Rsa};
 
 use rocket::uri;
 use crate::utils::*;
@@ -58,19 +59,6 @@ impl PartialEq for Feed {
   }
 }
 
-#[derive(Debug, Serialize)]
-pub struct Follower {
-  pub id: i64,
-  pub feed_id: i64,
-  pub actor: String
-}
-
-impl PartialEq for Follower {
-  fn eq(&self, other: &Self) -> bool {
-    self.id == other.id
-  }
-}
-
 #[derive(Debug)]
 pub struct FeedError;
 
@@ -81,38 +69,7 @@ impl fmt::Display for FeedError {
   }
 }
 
-use activitystreams_ext::{Ext1, UnparsedExtension};
-
-#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PublicKey {
-    public_key: PublicKeyInner,
-}
-
-#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PublicKeyInner {
-    id: IriString,
-    owner: IriString,
-    public_key_pem: String,
-}
-
-impl<U> UnparsedExtension<U> for PublicKey where U: UnparsedMutExt, {
-  type Error = serde_json::Error;
-
-  fn try_from_unparsed(unparsed_mut: &mut U) -> Result<Self, Self::Error> {
-    Ok(PublicKey {
-      public_key: unparsed_mut.remove("publicKey")?,
-    })
-  }
-
-  fn try_into_unparsed(self, unparsed_mut: &mut U) -> Result<(), Self::Error> {
-    unparsed_mut.insert("publicKey", self.public_key)?;
-    Ok(())
-  }
-}
-
-pub type ExtendedService = Ext1<ApActor<Service>, PublicKey>;
+const PER_PAGE:u32 = 10u32;
 
 // https://docs.rs/activitystreams/0.7.0-alpha.20/activitystreams/index.html#parse
 // also examples/handle_incoming.rs
@@ -127,8 +84,8 @@ pub enum AcceptedTypes {
 }
 
 pub type AcceptedActivity = ActorAndObject<AcceptedTypes>;
+pub type ExtendedService = Ext1<ApActor<Service>, PublicKey>;
 
-const PER_PAGE:u32 = 10u32;
 
 impl Feed {
   pub async fn find(id: i64, pool: &SqlitePool) -> Result<Feed, sqlx::Error> {
@@ -182,13 +139,7 @@ impl Feed {
       name: &String, pool: &SqlitePool) -> Result<Feed, sqlx::Error> {
 
     // generate keypair used for signing AP requests
-    let rsa = Rsa::generate(2048).unwrap();
-    let pkey = PKey::from_rsa(rsa).unwrap();
-    let public_key = pkey.public_key_to_pem().unwrap();
-    let private_key = pkey.private_key_to_pem_pkcs8().unwrap();
-
-    let private_key_str = String::from_utf8(private_key).unwrap();
-    let public_key_str = String::from_utf8(public_key).unwrap();
+    let (private_key_str, public_key_str) = generate_key();
 
     let feed_id = sqlx::query!("INSERT INTO feeds (user_id, url, name, private_key, public_key)
                                 VALUES($1, $2, $3, $4, $5)",
@@ -379,10 +330,6 @@ impl Feed {
         },
       },
     );
-    
-    println!("{:?}", iri!(path_to_url(&uri!(render_feed(&self.name)))));
-    println!("{:?}", iri!(path_to_url(&uri!(user_outbox(&self.name)))));
-    println!("{:?}", iri!(path_to_url(&uri!(render_feed_followers(&self.name, None::<u32>)))));
 
     svc
       .set_context(context())
