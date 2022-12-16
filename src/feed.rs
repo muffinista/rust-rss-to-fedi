@@ -590,15 +590,14 @@ mod test {
   }
 
 
-
   #[sqlx::test]
   async fn test_create(pool: SqlitePool) -> sqlx::Result<()> {
     let user = fake_user();
+    let feed:Feed = real_feed(&pool).await?;
     
     let url:String = "https://foo.com/rss.xml".to_string();
     let name:String = "testfeed".to_string();
-    let feed = Feed::create(&user, &url, &name, &pool).await?;
-    
+
     assert_eq!(feed.url, url);
     assert_eq!(feed.name, name);
     assert_eq!(feed.user_id, user.id);
@@ -608,11 +607,8 @@ mod test {
 
   #[sqlx::test]
   async fn test_save(pool: SqlitePool) -> sqlx::Result<()> {
-    let user = fake_user();
-    
-    let url:String = "https://foo.com/rss.xml".to_string();
-    let name:String = "testfeed".to_string();
-    let mut feed = Feed::create(&user, &url, &name, &pool).await?;
+   
+    let mut feed:Feed = real_feed(&pool).await?;
     
     let newname = "testfeed2".to_string();
     feed.name = newname.clone();
@@ -626,46 +622,37 @@ mod test {
 
   #[sqlx::test]
   async fn test_find_by_url(pool: SqlitePool) -> sqlx::Result<()> {
-    let user = fake_user();
     let url: String = "https://foo.com/rss.xml".to_string();
     let name: String = "testfeed".to_string();
 
-    let feed = Feed::create(&user, &url, &name, &pool).await?;
+    let feed:Feed = real_feed(&pool).await?;
     let feed2 = Feed::find_by_url(&url, &pool).await?;
     
     assert_eq!(feed, feed2);
+    assert_eq!(feed2.name, name);
     assert_eq!(feed2.url, url);
     
     Ok(())
   }
+
   #[sqlx::test]
   async fn test_find_by_name(pool: SqlitePool) -> sqlx::Result<()> {
-    let user = fake_user();
-
-    let url: String = "https://foo.com/rss.xml".to_string();
-    let name: String = "testfeed".to_string();
-
-    let feed = Feed::create(&user, &url, &name, &pool).await?;
-    let feed2 = Feed::find_by_url(&url, &pool).await?;
+    let feed:Feed = real_feed(&pool).await?;
+    let feed2 = Feed::find_by_url(&feed.url, &pool).await?;
     
     assert_eq!(feed, feed2);
-    assert_eq!(feed2.url, url);
+    assert_eq!(feed2.url, feed.url);
     
     Ok(())
   }
 
   #[sqlx::test]
   async fn test_find(pool: SqlitePool) -> sqlx::Result<()> {
-    let user = fake_user();
-    let url: String = "https://foo.com/rss.xml".to_string();
-    let name: String = "testfeed".to_string();
-    
-    let feed = Feed::create(&user, &url, &name, &pool).await?;
-    
+    let feed:Feed = real_feed(&pool).await?;
     let feed2 = Feed::find(feed.id, &pool).await?;
     
     assert_eq!(feed, feed2);
-    assert_eq!(feed2.url, url);
+    assert_eq!(feed2.url, feed.url);
     
     Ok(())
   }
@@ -691,11 +678,8 @@ mod test {
   #[sqlx::test]
   async fn test_delete(pool: SqlitePool) -> sqlx::Result<()> {
     let user = fake_user();
+    let feed:Feed = real_feed(&pool).await?;
 
-    let url: String = "https://foo.com/rss.xml".to_string();
-    let name: String = "testfeed".to_string();
-    let feed = Feed::create(&user, &url, &name, &pool).await?;
-    
     let deleted_feed = Feed::delete(&user, feed.id, &pool).await?;
     assert_eq!(feed, deleted_feed);
     
@@ -708,11 +692,7 @@ mod test {
   #[sqlx::test]
   async fn test_parse_from_data(pool: SqlitePool) -> sqlx::Result<()> {
     use std::fs;
-    let user = fake_user();
-    let url: String = "https://foo.com/rss.xml".to_string();
-    let name: String = "testfeed".to_string();
-    
-    let mut feed = Feed::create(&user, &url, &name, &pool).await?;
+    let mut feed:Feed = real_feed(&pool).await?;
 
     let path = "fixtures/test_feed_to_entries.xml";
     let data = fs::read_to_string(path).unwrap();
@@ -721,8 +701,6 @@ mod test {
     assert_eq!(result.len(), 3);
 
     let feed2 = Feed::find(feed.id, &pool).await?;
-
-    assert_eq!(feed2.url, url);
     assert_eq!(feed2.title, Some("muffinlabs.com".to_string()));
 
     Ok(())
@@ -787,11 +765,7 @@ mod test {
     let json = format!(r#"{{"actor":"{}","object":"{}/feed","type":"Follow"}}"#, actor, actor).to_string();
     let act:AcceptedActivity = serde_json::from_str(&json).unwrap();
 
-    let user = fake_user();
-    
-    let url:String = "https://foo.com/rss.xml".to_string();
-    let name:String = "testfeed".to_string();
-    let feed = Feed::create(&user, &url, &name, &pool).await?;
+    let feed:Feed = real_feed(&pool).await?;
 
     let result = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = ? AND actor = ?", feed.id, actor)
       .fetch_one(&pool)
@@ -817,12 +791,8 @@ mod test {
     let actor = "https://activitypub.pizza/users/colin".to_string();
     let json = format!(r#"{{"actor":"{}","object":"{}/feed","type":"Undo"}}"#, actor, actor).to_string();
     let act:AcceptedActivity = serde_json::from_str(&json).unwrap();
-
-    let user = fake_user();
     
-    let url:String = "https://foo.com/rss.xml".to_string();
-    let name:String = "testfeed".to_string();
-    let feed = Feed::create(&user, &url, &name, &pool).await?;
+    let feed:Feed = real_feed(&pool).await?;
 
     sqlx::query!("INSERT INTO followers (feed_id, actor) VALUES($1, $2)", feed.id, actor)
       .execute(&pool)
