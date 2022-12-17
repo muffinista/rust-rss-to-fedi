@@ -3,6 +3,8 @@
 CREATE TABLE followers (
   id INTEGER PRIMARY KEY,
   feed_id INTEGER NOT NULL,
-  actor VARCHAR NOT NULL
+  actor VARCHAR NOT NULL,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL
 );
 

@@ -1,6 +1,7 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
 use sqlx::sqlite::SqlitePool;
+use chrono::prelude::*;
 
 use std::env;
 
@@ -19,7 +20,7 @@ async fn main() -> Result<(), reqwest::Error>  {
     .ok();
 
   let email:String = "foo@bar.com".to_string();
-  let user = User { id: 1, email: email, access_token: Some("".to_string()), login_token: "".to_string() };
+  let user = User { id: 1, email: email, access_token: Some("".to_string()), login_token: "".to_string(), created_at: Utc::now().naive_utc(), updated_at: Utc::now().naive_utc() };
   let feed = Feed::create(&user,
                           &"https://muffinlabs.com/atom.xml".to_string(),
                           &"muffinlabs".to_string(),

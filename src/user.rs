@@ -6,7 +6,10 @@ pub struct User {
     pub id: i64,
     pub email: String,
     pub login_token: String,
-    pub access_token: Option<String>
+    pub access_token: Option<String>,
+    pub created_at: chrono::NaiveDateTime,
+    pub updated_at: chrono::NaiveDateTime
+ 
 }
 
 impl PartialEq for User {
@@ -57,8 +60,8 @@ impl User {
     pub async fn create_by_email(email: &String, pool: &SqlitePool) -> Result<User, sqlx::Error> {
         let token = User::generate_login_token();
         let user_id = sqlx::query!(
-            "INSERT INTO users (email, login_token)
-                VALUES($1, $2)", email, token)
+            "INSERT INTO users (email, login_token, created_at, updated_at)
+                VALUES($1, $2, datetime(CURRENT_TIMESTAMP, 'utc'), datetime(CURRENT_TIMESTAMP, 'utc'))", email, token)
                 .execute(pool)
             .await?
             .last_insert_rowid();

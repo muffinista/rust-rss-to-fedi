@@ -42,12 +42,13 @@ mod test {
   use rocket::{Rocket, Build};
   use crate::user::User;
   use crate::feed::Feed;
-  
+  use chrono::Utc;
+
   use sqlx::sqlite::SqlitePool;
 
   #[sqlx::test]
   async fn test_user_outbox(pool: SqlitePool) -> sqlx::Result<()> {
-    let user = User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()) };
+    let user = User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()), created_at: Utc::now().naive_utc(), updated_at: Utc::now().naive_utc() };
 
     let url: String = "https://foo.com/rss.xml".to_string();
     let name: String = "testfeed".to_string();

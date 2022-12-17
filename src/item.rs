@@ -1,6 +1,5 @@
 use sqlx::sqlite::SqlitePool;
 use serde::{Serialize};
-
 use feed_rs::model::Entry;
 
 use crate::feed::Feed;
@@ -21,7 +20,8 @@ use activitystreams::{
 };
 
 
-use rocket::futures::TryStreamExt;
+use rocket_dyn_templates::tera::Tera;
+use rocket_dyn_templates::tera::Context;
 
 #[derive(Debug, Serialize)]
 pub struct Item {
@@ -29,7 +29,11 @@ pub struct Item {
   pub feed_id: i64,
   pub guid: String,
   pub title: Option<String>,
-  pub content: Option<String>
+  pub content: Option<String>,
+  pub url: Option<String>,
+  pub created_at: chrono::NaiveDateTime,
+  pub updated_at: chrono::NaiveDateTime
+
 }
 
 impl PartialEq for Item {
@@ -71,62 +75,74 @@ impl Item {
   pub async fn create_from_entry(entry: &Entry, feed: &Feed, pool: &SqlitePool) -> Result<Item, sqlx::Error> {
     let title = &entry.title.as_ref().unwrap().content;
     let body = &entry.content.as_ref().unwrap().body;
-  
+
+    let item_url = if entry.links.len() > 0 {
+      Some(&entry.links[0].href)
+    } else {
+      None
+    };
+
+    
     // println!("Create: {:?}", entry.id);
 
-    let item_id = sqlx::query!("INSERT INTO items (feed_id, guid, title, content) VALUES($1, $2, $3, $4)",
-      feed.id,
-      entry.id,
-      title,
-      body)
+    let item_id = sqlx::query!("INSERT INTO items (feed_id, guid, title, content, url, created_at, updated_at) VALUES($1, $2, $3, $4, $5, datetime(CURRENT_TIMESTAMP, 'utc'), datetime(CURRENT_TIMESTAMP, 'utc'))",
+                               feed.id,
+                               entry.id,
+                               title,
+                               body,
+                               item_url
+    )
       .execute(pool)
       .await?
       .last_insert_rowid();
     Item::find(item_id, pool).await
   }
 
-  pub fn to_activity_pub(&self) -> Result<ApObject<Create>, AnyError> {    
-    // we could return an object here instead of JSON so we can manipulate it if needed
-    // pub fn to_activity_pub(&self) -> Result<ExtendedService, AnyError> {    
 
+  pub fn to_html(&self) -> String {
+    let tera = match Tera::new("templates/ap/*.*") {
+      Ok(t) => t,
+      Err(e) => {
+        println!("Parsing error(s): {}", e);
+        ::std::process::exit(1);
+      }
+    };
+
+    let mut context = Context::new();
+    context.insert("title", &self.title);
+    context.insert("body", &self.content);
+    if self.url.is_some() {
+      context.insert("link", &self.url.as_ref().unwrap());
+    }
+    
+    tera.render("feed-item.html.tera", &context).unwrap()
+  }
+
+  
+  pub fn to_activity_pub(&self, feed: &Feed) -> Result<ApObject<Create>, AnyError> {    
     let mut note: ApObject<Note> = ApObject::new(Note::new());
 
+    let feed_url = feed.ap_url();
     note
-      //.set_id(iri!(path_to_url(&uri!(render_feed(&self.name)))))
-      .set_attributed_to(iri!("https://create.pizza/"))
-      .set_content("Hello")
-      .set_url(iri!("https://create.pizza/"))
+      .set_attributed_to(iri!(feed_url))
+      .set_content(self.to_html())
+      // @todo direct url to item
+      .set_url(iri!(feed_url))
       .set_cc(iri!("https://www.w3.org/ns/activitystreams#Public"));
       //.set_published(self.created_at)
 
-    let mut action: ApObject<Create> = ApObject::new(Create::new(iri!("https://create.pizza/"), note.into_any_base()?));
+    let mut action: ApObject<Create> = ApObject::new(
+      Create::new(
+        iri!(feed_url),
+        note.into_any_base()?
+      )
+    );
 
     action
       .set_context(context())
       .add_context(security());
 
     Ok(action)
-
-
-    // if returning an object makes sense we can do something like this:
-    // let any_base = svc.into_any_base();
-    // //    println!("any base: {:?}", any_base);
-    
-    // match any_base {
-    //   Ok(any_base) => {
-    //     let x = ExtendedService::from_any_base(any_base).unwrap();
-        
-    //     match x {
-    //       Some(x) => {
-    //         println!("JSON: {:?}", serde_json::to_string(&x).unwrap());
-    //         Ok(x)
-    //       },
-    //       None => todo!()
-    //     }
-    //   },
-    //   Err(_) => todo!()
-    // }
-    
   }
 
   pub async fn deliver(&self, feed: &Feed, pool: &SqlitePool) -> Result<(), sqlx::Error> {
@@ -153,21 +169,40 @@ impl Item {
 
 #[cfg(test)]
 mod test {
-  // use sqlx::sqlite::SqlitePool;
-
   use crate::Item;
+  use crate::Feed;
+  use chrono::Utc;
 
+  fn fake_feed() -> Feed {
+    Feed {
+      id: 1,
+      user_id: 1,
+      name: "testfeed".to_string(),
+      url: "https://foo.com/rss.xml".to_string(),
+      private_key: "private key".to_string(),
+      public_key: "public key".to_string(),
+      image_url: Some("https://foo.com/image.png".to_string()),
+      icon_url: Some("https://foo.com/image.ico".to_string()),
+      description: None,
+      site_url: None,
+      title: None, created_at: Utc::now().naive_utc(), updated_at: Utc::now().naive_utc()
+    }
+  }
+
+  
   #[sqlx::test]
   async fn test_to_activity_pub() -> Result<(), String> {
-    let item:Item = Item { id: 1, feed_id: 1, guid: "12345".to_string(), title: Some("Hello!".to_string()), content: Some("Hey!".to_string()) };
+    let feed:Feed = fake_feed();
+    let item:Item = Item { id: 1, feed_id: 1, guid: "12345".to_string(), title: Some("Hello!".to_string()), content: Some("Hey!".to_string()), url: Some("http://google.com".to_string()), created_at: Utc::now().naive_utc(), updated_at: Utc::now().naive_utc() };
 
-    let result = item.to_activity_pub();
+    let result = item.to_activity_pub(&feed);
     match result {
       Ok(result) => {
         let s = serde_json::to_string(&result).unwrap();
         println!("{}", s);
         
-        assert!(s.contains("Hello"));
+        assert!(s.contains("Hello!"));
+        assert!(s.contains("<p>Hey!</p>"));
 
         Ok(())
       },

@@ -66,6 +66,8 @@ mod test {
   use crate::feed::Feed;
   use sqlx::sqlite::SqlitePool;
   use std::env;
+  use chrono::Utc;
+
   
   #[sqlx::test]
   async fn test_lookup_webfinger_404(pool: SqlitePool) {
@@ -82,7 +84,7 @@ mod test {
   async fn test_lookup_webfinger_valid(pool: SqlitePool) -> sqlx::Result<()> {
     let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
 
-    let user = User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()) };
+    let user = User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()), created_at: Utc::now().naive_utc(), updated_at: Utc::now().naive_utc() };
 
     let url: String = "https://foo.com/rss.xml".to_string();
     let name: String = "testfeed".to_string();

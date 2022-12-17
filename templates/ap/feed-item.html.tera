@@ -1,0 +1,4 @@
+{% if link %}<a href="{{ link }}">{{ title }}</a>
+{% else %}{{ title }}
+{% endif %}
+<p>{{ body }}</p>

@@ -49,6 +49,9 @@ pub struct Feed {
   pub title: Option<String>,
   pub description: Option<String>,
   pub site_url: Option<String>,
+
+  pub created_at: chrono::NaiveDateTime,
+  pub updated_at: chrono::NaiveDateTime
 }
 
 impl PartialEq for Feed {
@@ -139,8 +142,8 @@ impl Feed {
     // generate keypair used for signing AP requests
     let (private_key_str, public_key_str) = generate_key();
 
-    let feed_id = sqlx::query!("INSERT INTO feeds (user_id, url, name, private_key, public_key)
-                                VALUES($1, $2, $3, $4, $5)",
+    let feed_id = sqlx::query!("INSERT INTO feeds (user_id, url, name, private_key, public_key, created_at, updated_at)
+                                VALUES($1, $2, $3, $4, $5, datetime(CURRENT_TIMESTAMP, 'utc'), datetime(CURRENT_TIMESTAMP, 'utc'))",
                                user.id, url, name, private_key_str, public_key_str)
       .execute(pool)
       .await?
@@ -159,7 +162,8 @@ impl Feed {
           icon_url = $6,
           title = $7,
           description = $8,
-          site_url = $9
+          site_url = $9,
+          updated_at = datetime(CURRENT_TIMESTAMP, 'utc')
       WHERE id = $10",
       self.url,
       self.name,
@@ -311,15 +315,20 @@ impl Feed {
     }
   }
 
+
+  pub fn ap_url(&self) -> String {
+    path_to_url(&uri!(render_feed(&self.name)))
+  }
+  
   pub fn to_actor(&self) -> Result<ApActor<Service>, AnyError> {
     let mut service = ApActor::new(
-      iri!("http://localhost:8080/inbox"),
+      iri!(self.ap_url()),
       Service::new(),
     );
 
     service
-      .set_id(iri!(path_to_url(&uri!(render_feed(&self.name)))))
-      .set_url(iri!(path_to_url(&uri!(render_feed(&self.name)))))
+      .set_id(iri!(self.ap_url()))
+      .set_url(iri!(self.ap_url()))
       .set_name(self.name.clone())
       .set_preferred_username(self.name.clone())
       .set_outbox(iri!(path_to_url(&uri!(user_outbox(&self.name)))));
@@ -331,7 +340,7 @@ impl Feed {
     // we could return an object here instead of JSON so we can manipulate it if needed
     // pub fn to_activity_pub(&self) -> Result<ExtendedService, AnyError> {    
 
-    let feed_url = path_to_url(&uri!(render_feed(&self.name)));
+    let feed_url = self.ap_url();
     let mut svc = Ext1::new(
       ApActor::new(
         iri!(feed_url),
@@ -387,7 +396,7 @@ impl Feed {
   }
 
   async fn follow(&self, pool: &SqlitePool, actor: &str) -> Result<(), sqlx::Error> {
-    sqlx::query!("INSERT INTO followers (feed_id, actor) VALUES($1, $2)",
+    sqlx::query!("INSERT INTO followers (feed_id, actor, created_at, updated_at) VALUES($1, $2, datetime(CURRENT_TIMESTAMP, 'utc'), datetime(CURRENT_TIMESTAMP, 'utc'))",
                  self.id, actor)
       .execute(pool)
       .await?;
@@ -526,9 +535,10 @@ mod test {
   use crate::utils::*;
   
   use crate::routes::feeds::*;
+  use chrono::Utc;
 
   fn fake_user() -> User {
-    User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()) }
+    User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()), created_at: Utc::now().naive_utc(), updated_at: Utc::now().naive_utc() }
   }
 
   fn fake_feed() -> Feed {
@@ -543,7 +553,7 @@ mod test {
       icon_url: Some("https://foo.com/image.ico".to_string()),
       description: None,
       site_url: None,
-      title: None
+      title: None, created_at: Utc::now().naive_utc(), updated_at: Utc::now().naive_utc()
     }
   }
 
@@ -762,7 +772,7 @@ mod test {
     
     let feed:Feed = real_feed(&pool).await?;
 
-    sqlx::query!("INSERT INTO followers (feed_id, actor) VALUES($1, $2)", feed.id, actor)
+    sqlx::query!("INSERT INTO followers (feed_id, actor, created_at, updated_at) VALUES($1, $2, datetime(CURRENT_TIMESTAMP, 'utc'), datetime(CURRENT_TIMESTAMP, 'utc'))", feed.id, actor)
       .execute(&pool)
       .await?;
 
@@ -791,7 +801,7 @@ mod test {
 
     for i in 1..4 {
       let actor = format!("https://activitypub.pizza/users/colin{}", i);
-      sqlx::query!("INSERT INTO followers (feed_id, actor) VALUES($1, $2)", feed.id, actor)
+      sqlx::query!("INSERT INTO followers (feed_id, actor, created_at, updated_at) VALUES($1, $2, datetime(CURRENT_TIMESTAMP, 'utc'), datetime(CURRENT_TIMESTAMP, 'utc'))", feed.id, actor)
         .execute(&pool)
         .await
         .unwrap();
@@ -817,7 +827,7 @@ mod test {
 
     for i in 1..35 {
       let actor = format!("https://activitypub.pizza/users/colin{}", i);
-      sqlx::query!("INSERT INTO followers (feed_id, actor) VALUES($1, $2)", feed.id, actor)
+      sqlx::query!("INSERT INTO followers (feed_id, actor, created_at, updated_at) VALUES($1, $2, datetime(CURRENT_TIMESTAMP, 'utc'), datetime(CURRENT_TIMESTAMP, 'utc'))", feed.id, actor)
         .execute(&pool)
         .await
         .unwrap();
@@ -851,7 +861,7 @@ mod test {
 
     for i in 1..36{
       let actor = format!("https://activitypub.pizza/users/colin{}", i);
-      sqlx::query!("INSERT INTO followers (feed_id, actor) VALUES($1, $2)", feed.id, actor)
+      sqlx::query!("INSERT INTO followers (feed_id, actor, created_at, updated_at) VALUES($1, $2, datetime(CURRENT_TIMESTAMP, 'utc'), datetime(CURRENT_TIMESTAMP, 'utc'))", feed.id, actor)
         .execute(&pool)
         .await
         .unwrap();

@@ -12,6 +12,9 @@ CREATE TABLE feeds (
 
   title VARCHAR,
   description VARCHAR,
-  site_url VARCHAR
+  site_url VARCHAR,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL
+
 );
 
