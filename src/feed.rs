@@ -395,7 +395,7 @@ impl Feed {
     
   }
 
-  async fn follow(&self, pool: &SqlitePool, actor: &str) -> Result<(), sqlx::Error> {
+  pub async fn follow(&self, pool: &SqlitePool, actor: &str) -> Result<(), sqlx::Error> {
     sqlx::query!("INSERT INTO followers (feed_id, actor, created_at, updated_at) VALUES($1, $2, datetime(CURRENT_TIMESTAMP, 'utc'), datetime(CURRENT_TIMESTAMP, 'utc'))",
                  self.id, actor)
       .execute(pool)
@@ -404,7 +404,7 @@ impl Feed {
     Ok(())
   }
 
-  async fn unfollow(&self, pool: &SqlitePool, actor: &str) -> Result<(), sqlx::Error>  {
+  pub async fn unfollow(&self, pool: &SqlitePool, actor: &str) -> Result<(), sqlx::Error>  {
     sqlx::query!("DELETE FROM followers WHERE feed_id = ? AND actor = ?",
                  self.id, actor)
       .execute(pool)

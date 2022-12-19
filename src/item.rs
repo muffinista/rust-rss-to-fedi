@@ -19,6 +19,7 @@ use activitystreams::{
   context
 };
 
+use activitystreams::time::OffsetDateTime;
 
 use rocket_dyn_templates::tera::Tera;
 use rocket_dyn_templates::tera::Context;
@@ -123,13 +124,15 @@ impl Item {
     let mut note: ApObject<Note> = ApObject::new(Note::new());
 
     let feed_url = feed.ap_url();
+    let ts = OffsetDateTime::from_unix_timestamp(self.created_at.timestamp()).unwrap();
+
     note
       .set_attributed_to(iri!(feed_url))
       .set_content(self.to_html())
       // @todo direct url to item
       .set_url(iri!(feed_url))
-      .set_cc(iri!("https://www.w3.org/ns/activitystreams#Public"));
-      //.set_published(self.created_at)
+      .set_cc(iri!("https://www.w3.org/ns/activitystreams#Public"))
+      .set_published(ts);
 
     let mut action: ApObject<Create> = ApObject::new(
       Create::new(
@@ -145,32 +148,43 @@ impl Item {
     Ok(action)
   }
 
-  pub async fn deliver(&self, feed: &Feed, pool: &SqlitePool) -> Result<(), sqlx::Error> {
+  pub async fn delete(feed: &Feed, id: i64, pool: &SqlitePool) -> Result<Item, sqlx::Error> {
+    let old_item = Item::find(id, pool).await;
+    
+    sqlx::query!("DELETE FROM items WHERE feed_id = $1 AND id = $2", feed.id, id)
+    .execute(pool)
+    .await?;
+    
+    old_item   
+  }
+
+
+  pub async fn deliver(&self, feed: &Feed, pool: &SqlitePool) -> Result<(), AnyError> {
+    let message = self.to_activity_pub(feed).unwrap();
     let followers = feed.followers_list(pool).await?;
-    for follwer in followers { 
+    for follower in followers { 
+
       // generate and send
+      let mut targeted = message.clone();
+      targeted.set_many_tos(vec![iri!(follower.actor)]);
+
+      let s = serde_json::to_string(&targeted).unwrap();
+      println!("{}", s);
     };
 
     Ok(())
   }
-
-  // pub async fn delete(feed: &Feed, id: i64, pool: &SqlitePool) -> Result<Item, sqlx::Error> {
-  //   let old_item = Item::find(id, pool).await;
-    
-  //   sqlx::query!("DELETE FROM items WHERE feed_id = $1 AND id = $2", feed.id, id)
-  //   .execute(pool)
-  //   .await?;
-    
-  //   old_item   
-  // }
 }
 
 
 
 #[cfg(test)]
 mod test {
+  use sqlx::sqlite::SqlitePool;
+
   use crate::Item;
   use crate::Feed;
+
   use chrono::Utc;
 
   fn fake_feed() -> Feed {
@@ -199,11 +213,26 @@ mod test {
     match result {
       Ok(result) => {
         let s = serde_json::to_string(&result).unwrap();
-        println!("{}", s);
+        // println!("{}", s);
         
         assert!(s.contains("Hello!"));
         assert!(s.contains("<p>Hey!</p>"));
 
+        Ok(())
+      },
+      Err(why) => Err(why.to_string())
+    }
+  }
+  
+  #[sqlx::test]
+  async fn test_deliver(pool: SqlitePool) -> Result<(), String> {
+    let feed: Feed = fake_feed();
+    let item: Item = Item { id: 1, feed_id: 1, guid: "12345".to_string(), title: Some("Hello!".to_string()), content: Some("Hey!".to_string()), url: Some("http://google.com".to_string()), created_at: Utc::now().naive_utc(), updated_at: Utc::now().naive_utc() };
+    let _follower = feed.follow(&pool, "https://bar.com/foo").await;
+
+    let result = item.deliver(&feed, &pool).await;
+    match result {
+      Ok(result) => {
         Ok(())
       },
       Err(why) => Err(why.to_string())
