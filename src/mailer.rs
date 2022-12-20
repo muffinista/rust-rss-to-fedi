@@ -19,13 +19,14 @@ use std::time::SystemTime;
 use sha2::{Digest, Sha256};
 use base64;
 
-pub async fn find_inbox(actor: &str) -> Result<Url, WebfingerError> {
-  let webfinger = resolve(actor, true).await;
+pub async fn find_actor_url(actor: &str) -> Result<Url, WebfingerError> {
   let rel = "self".to_string();
   let mime_type = Some("application/activity+json".to_string());
+  let webfinger = resolve(actor, true).await;
 
   match webfinger {
     Ok(webfinger) => {
+      println!("wf {:?}", webfinger);
       let query:Option<webfinger::Link> = webfinger
         .links
         .into_iter()
@@ -43,40 +44,32 @@ pub async fn find_inbox(actor: &str) -> Result<Url, WebfingerError> {
 
 
 /// deliver a payload to an inbox
-pub async fn deliver_to_inbox(actor: &str, private_key: &str, json: &str) -> Result<(), anyhow::Error> {
-  let webfinger = find_inbox(actor).await;
-  match webfinger {
-    Ok(webfinger) => {
-      println!("{:?}", webfinger);
+pub async fn deliver_to_inbox(inbox: &Url, private_key: &str, json: &str) -> Result<(), anyhow::Error> {
+  let client = ClientBuilder::new(reqwest::Client::new())
+    .build();
+  // // Trace HTTP requests. See the tracing crate to make use of these traces.
+  // .with(TracingMiddleware::default())
+  // // Retry failed requests.
+  // .with(RetryTransientMiddleware::new_with_policy(retry_policy))
 
-      let client = ClientBuilder::new(reqwest::Client::new())
-        .build();
-      // // Trace HTTP requests. See the tracing crate to make use of these traces.
-      // .with(TracingMiddleware::default())
-      // // Retry failed requests.
-      // .with(RetryTransientMiddleware::new_with_policy(retry_policy))
+  let heads = generate_request_headers(&inbox);
   
-      let heads = generate_request_headers(&webfinger);
-      
-      let request_builder = client
-          .post(webfinger)
-          // .timeout(timeout)
-          .headers(heads);
-  
-      let request = sign_request(
-          request_builder,
-          private_key.to_string(),
-          json.to_string()
-      )
-      .await?;
+  let request_builder = client
+      .post(inbox.to_string())
+      // .timeout(timeout)
+      .headers(heads);
 
-      let response = client.execute(request).await;
-      match response {
-        // @todo check response code/etc
-        Ok(_response) => Ok(()),
-        Err(_why) => todo!()
-      }
-    },
+  let request = sign_request(
+      request_builder,
+      private_key.to_string(),
+      json.to_string()
+  )
+  .await?;
+
+  let response = client.execute(request).await;
+  match response {
+    // @todo check response code/etc
+    Ok(_response) => Ok(()),
     Err(_why) => todo!()
   }
 }
@@ -136,6 +129,6 @@ pub async fn sign_request(
 #[tokio::test]
 async fn test_find_inbox() {
   let actor = "muffinista@botsin.space";
-  let inbox:Url = find_inbox(&actor).await.unwrap();
+  let inbox:Url = find_actor_url(&actor).await.unwrap();
   assert_eq!("https://botsin.space/users/muffinista", inbox.to_string());
 }

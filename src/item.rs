@@ -3,6 +3,7 @@ use serde::{Serialize};
 use feed_rs::model::Entry;
 
 use crate::feed::Feed;
+use crate::mailer::*;
 
 use activitystreams::activity::*;
 use activitystreams::object::ApObject;
@@ -163,13 +164,32 @@ impl Item {
     let message = self.to_activity_pub(feed).unwrap();
     let followers = feed.followers_list(pool).await?;
     for follower in followers { 
+      let inbox = follower.find_inbox().await;
+      // match inbox {
+      //   Ok(inbox) => {
+      //     println!("{:?}", inbox);
 
-      // generate and send
-      let mut targeted = message.clone();
-      targeted.set_many_tos(vec![iri!(follower.actor)]);
+      //     // generate and send
+      //     let mut targeted = message.clone();
 
-      let s = serde_json::to_string(&targeted).unwrap();
-      println!("{}", s);
+      //     targeted.set_many_tos(vec![iri!(inbox.to_string())]);
+
+      //     let msg = serde_json::to_string(&targeted).unwrap();
+      //     println!("{}", msg);
+
+      //     let result = deliver_to_inbox(&inbox, &feed.private_key, &msg).await;
+
+      //     match result {
+      //       Ok(_result) => println!("sent!"),
+      //       Err(why) => println!("failure! {:?}", why)
+      //     }
+
+      //   },
+      //   Err(why) => {
+      //     println!("failure! {:?}", why);
+      //     panic!("oops!");
+      //   }
+      // }
     };
 
     Ok(())
@@ -184,17 +204,20 @@ mod test {
 
   use crate::Item;
   use crate::Feed;
+  use crate::keys::*;
 
   use chrono::Utc;
 
   fn fake_feed() -> Feed {
+    let (private_key_str, public_key_str) = generate_key();
+
     Feed {
       id: 1,
       user_id: 1,
       name: "testfeed".to_string(),
       url: "https://foo.com/rss.xml".to_string(),
-      private_key: "private key".to_string(),
-      public_key: "public key".to_string(),
+      private_key: private_key_str.to_string(),
+      public_key: public_key_str.to_string(),
       image_url: Some("https://foo.com/image.png".to_string()),
       icon_url: Some("https://foo.com/image.ico".to_string()),
       description: None,
@@ -203,17 +226,29 @@ mod test {
     }
   }
 
+  fn fake_item() -> Item {
+    Item {
+      id: 1,
+      feed_id: 1,
+      guid: "12345".to_string(),
+      title: Some("Hello!".to_string()),
+      content: Some("Hey!".to_string()),
+      url: Some("http://google.com".to_string()),
+      created_at: Utc::now().naive_utc(),
+      updated_at: Utc::now().naive_utc()
+    }
+  }
+
   
   #[sqlx::test]
   async fn test_to_activity_pub() -> Result<(), String> {
-    let feed:Feed = fake_feed();
-    let item:Item = Item { id: 1, feed_id: 1, guid: "12345".to_string(), title: Some("Hello!".to_string()), content: Some("Hey!".to_string()), url: Some("http://google.com".to_string()), created_at: Utc::now().naive_utc(), updated_at: Utc::now().naive_utc() };
+    let feed: Feed = fake_feed();
+    let item: Item = fake_item();
 
     let result = item.to_activity_pub(&feed);
     match result {
       Ok(result) => {
         let s = serde_json::to_string(&result).unwrap();
-        // println!("{}", s);
         
         assert!(s.contains("Hello!"));
         assert!(s.contains("<p>Hey!</p>"));
@@ -227,8 +262,9 @@ mod test {
   #[sqlx::test]
   async fn test_deliver(pool: SqlitePool) -> Result<(), String> {
     let feed: Feed = fake_feed();
-    let item: Item = Item { id: 1, feed_id: 1, guid: "12345".to_string(), title: Some("Hello!".to_string()), content: Some("Hey!".to_string()), url: Some("http://google.com".to_string()), created_at: Utc::now().naive_utc(), updated_at: Utc::now().naive_utc() };
-    let _follower = feed.follow(&pool, "https://bar.com/foo").await;
+    let item: Item = fake_item();
+
+    let _follower = feed.follow(&pool, "muffinista@botsin.space").await;
 
     let result = item.deliver(&feed, &pool).await;
     match result {
