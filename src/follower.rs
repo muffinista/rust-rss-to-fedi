@@ -1,4 +1,6 @@
 use serde::{Serialize};
+use serde_json::Value;
+
 use crate::mailer::*;
 
 use reqwest::Request;
@@ -48,15 +50,6 @@ impl Follower {
           HeaderValue::from_str("application/ld+json").unwrap(),
         );
 
-
-        // headers.insert(
-        //   HeaderName::from_static("host"),
-        //   HeaderValue::from_str(&host).expect("Hostname is valid"),
-        // );
-
-        println!("yo! {:?}", profile_url);
-
-
         // query that
         let client = reqwest::Client::new();
         let res = client
@@ -68,9 +61,8 @@ impl Follower {
 
         let body = res.text().await?;
 
-        println!("***** {:?}", body);
-
-        Ok(body)
+        let v: Value = serde_json::from_str(&body).unwrap();
+        Ok(v["inbox"].as_str().unwrap().to_string())
       },
       Err(_why) => panic!("oops!")
     }

@@ -25,6 +25,9 @@ use activitystreams::time::OffsetDateTime;
 use rocket_dyn_templates::tera::Tera;
 use rocket_dyn_templates::tera::Context;
 
+use url::{Url, ParseError};
+
+
 #[derive(Debug, Serialize)]
 pub struct Item {
   pub id: i64,
@@ -165,31 +168,33 @@ impl Item {
     let followers = feed.followers_list(pool).await?;
     for follower in followers { 
       let inbox = follower.find_inbox().await;
-      // match inbox {
-      //   Ok(inbox) => {
-      //     println!("{:?}", inbox);
+      match inbox {
+        Ok(inbox) => {
+          println!("--{}--", inbox);
 
-      //     // generate and send
-      //     let mut targeted = message.clone();
+          // generate and send
+          let mut targeted = message.clone();
 
-      //     targeted.set_many_tos(vec![iri!(inbox.to_string())]);
+          targeted.set_many_tos(vec![iri!(inbox)]);
+          println!("hmmmmmmm");
 
-      //     let msg = serde_json::to_string(&targeted).unwrap();
-      //     println!("{}", msg);
+          
+          let msg = serde_json::to_string(&targeted).unwrap();
+          println!("{}", msg);
 
-      //     let result = deliver_to_inbox(&inbox, &feed.private_key, &msg).await;
+          let result = deliver_to_inbox(&Url::parse(&inbox)?, &feed.ap_url(), &feed.private_key, &msg).await;
 
-      //     match result {
-      //       Ok(_result) => println!("sent!"),
-      //       Err(why) => println!("failure! {:?}", why)
-      //     }
+          match result {
+            Ok(_result) => println!("sent!"),
+            Err(why) => println!("failure! {:?}", why)
+          }
 
-      //   },
-      //   Err(why) => {
-      //     println!("failure! {:?}", why);
-      //     panic!("oops!");
-      //   }
-      // }
+        },
+        Err(why) => {
+          println!("failure! {:?}", why);
+          panic!("oops!");
+        }
+      }
     };
 
     Ok(())
@@ -214,7 +219,7 @@ mod test {
     Feed {
       id: 1,
       user_id: 1,
-      name: "testfeed".to_string(),
+      name: "muffinfeed".to_string(),
       url: "https://foo.com/rss.xml".to_string(),
       private_key: private_key_str.to_string(),
       public_key: public_key_str.to_string(),

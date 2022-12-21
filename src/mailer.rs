@@ -44,7 +44,7 @@ pub async fn find_actor_url(actor: &str) -> Result<Url, WebfingerError> {
 
 
 /// deliver a payload to an inbox
-pub async fn deliver_to_inbox(inbox: &Url, private_key: &str, json: &str) -> Result<(), anyhow::Error> {
+pub async fn deliver_to_inbox(inbox: &Url, key_id: &str, private_key: &str, json: &str) -> Result<(), anyhow::Error> {
   let client = ClientBuilder::new(reqwest::Client::new())
     .build();
   // // Trace HTTP requests. See the tracing crate to make use of these traces.
@@ -53,23 +53,31 @@ pub async fn deliver_to_inbox(inbox: &Url, private_key: &str, json: &str) -> Res
   // .with(RetryTransientMiddleware::new_with_policy(retry_policy))
 
   let heads = generate_request_headers(&inbox);
-  
-  let request_builder = client
-      .post(inbox.to_string())
-      // .timeout(timeout)
-      .headers(heads);
 
+  println!("BODY: {}", json.to_string());
+  let request_builder = client
+    .post(inbox.to_string())
+    .headers(heads)
+    .body(json.to_string());
+  // .timeout(timeout)
+  
   let request = sign_request(
-      request_builder,
-      private_key.to_string(),
-      json.to_string()
+    request_builder,
+    format!("{}#main-key", key_id.to_string()),
+    private_key.to_string(),
+    json.to_string()
   )
-  .await?;
+    .await?;
+
+  println!("REQ: {:?}", request);
 
   let response = client.execute(request).await;
   match response {
     // @todo check response code/etc
-    Ok(_response) => Ok(()),
+    Ok(response) => {
+      println!("response: {:?}", response);
+      Ok(())
+    },
     Err(_why) => todo!()
   }
 }
@@ -82,10 +90,10 @@ fn generate_request_headers(inbox: &Url) -> HeaderMap {
   }
 
   let mut headers = HeaderMap::new();
-  headers.insert(
-    HeaderName::from_static("content-type"),
-    HeaderValue::from_static("application/activity+json"),
-  );
+  // headers.insert(
+  //   HeaderName::from_static("content-type"),
+  //   HeaderValue::from_static("application/activity+json"),
+  // );
   headers.insert(
     HeaderName::from_static("host"),
     HeaderValue::from_str(&host).expect("Hostname is valid"),
@@ -100,6 +108,7 @@ fn generate_request_headers(inbox: &Url) -> HeaderMap {
 
 pub async fn sign_request(
   request_builder: RequestBuilder,
+  key_id: String,
   private_key: String,
   payload: String
 ) -> Result<Request, anyhow::Error> {
@@ -109,21 +118,21 @@ pub async fn sign_request(
   let digest = Sha256::new();
 
   request_builder
-      .signature_with_digest(
-          config,
-          "a-key-id",
-          digest,
-          payload,
-          move |signing_string| {
-              let private_key = PKey::private_key_from_pem(private_key.as_bytes())?;
-              let mut signer = Signer::new(MessageDigest::sha256(), &private_key)?;
-              signer.update(signing_string.as_bytes())?;
-
-              Ok(base64::encode(signer.sign_to_vec()?)) as Result<_, anyhow::Error>
-          },
-      )
-      .await
-  }
+    .signature_with_digest(
+      config,
+      key_id,
+      digest,
+      payload,
+      move |signing_string| {
+        let private_key = PKey::private_key_from_pem(private_key.as_bytes())?;
+        let mut signer = Signer::new(MessageDigest::sha256(), &private_key)?;
+        signer.update(signing_string.as_bytes())?;
+        
+        Ok(base64::encode(signer.sign_to_vec()?)) as Result<_, anyhow::Error>
+      },
+    )
+    .await
+}
 
 
 #[tokio::test]
