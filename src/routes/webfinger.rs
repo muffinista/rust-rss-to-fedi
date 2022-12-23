@@ -39,14 +39,22 @@ pub async fn lookup_webfinger(resource: &str, db: &State<SqlitePool>) -> Result<
   if feed_exists.is_ok() && feed_exists.unwrap() {
     let href = path_to_url(&uri!(render_feed(&userstr)));
     Ok(serde_json::to_string(&Webfinger {
-      subject: userstr.clone(),
+      subject: format!("acct:{}@{}", userstr.clone(), instance_domain),
       aliases: vec![userstr.clone()],
-      links: vec![Link {
-        rel: "http://webfinger.net/rel/profile-page".to_string(),
-        mime_type: None,
-        href: Some(href),
-        template: None,
-      }],
+      links: vec![
+        Link {
+          rel: "http://webfinger.net/rel/profile-page".to_string(),
+          mime_type: None,
+          href: Some(href.clone()),
+          template: None,
+        },
+        Link {
+          rel: "self".to_string(),
+          mime_type: Some("application/activity+json".to_string()),
+          href: Some(href.clone()),
+          template: None,
+        }
+      ],
     }).unwrap())
   }
   else {

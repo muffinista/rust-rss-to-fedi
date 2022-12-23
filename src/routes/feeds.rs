@@ -60,7 +60,13 @@ pub async fn render_feed(username: &str, db: &State<SqlitePool>) -> Result<Strin
         Some(feed) => {
           let ap = feed.to_activity_pub();
           match ap {
-            Ok(ap) => Ok(serde_json::to_string(&ap).unwrap()),
+            Ok(ap) => {
+              //let output = serde_json::to_string(&ap).unwrap();
+              println!("{}", ap);
+  
+              //Ok(output)
+              Ok(ap)
+            },
             Err(_why) => Err(Status::NotFound)
           }
         },

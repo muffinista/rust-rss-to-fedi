@@ -76,6 +76,7 @@ pub async fn deliver_to_inbox(inbox: &Url, key_id: &str, private_key: &str, json
     // @todo check response code/etc
     Ok(response) => {
       println!("response: {:?}", response);
+      println!("response text: {:?}", response.text().await.unwrap());
       Ok(())
     },
     Err(_why) => todo!()
@@ -124,6 +125,7 @@ pub async fn sign_request(
       digest,
       payload,
       move |signing_string| {
+        println!("sign me!!! {}", signing_string);
         let private_key = PKey::private_key_from_pem(private_key.as_bytes())?;
         let mut signer = Signer::new(MessageDigest::sha256(), &private_key)?;
         signer.update(signing_string.as_bytes())?;

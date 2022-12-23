@@ -170,14 +170,10 @@ impl Item {
       let inbox = follower.find_inbox().await;
       match inbox {
         Ok(inbox) => {
-          println!("--{}--", inbox);
-
           // generate and send
           let mut targeted = message.clone();
 
           targeted.set_many_tos(vec![iri!(inbox)]);
-          println!("hmmmmmmm");
-
           
           let msg = serde_json::to_string(&targeted).unwrap();
           println!("{}", msg);
@@ -185,7 +181,7 @@ impl Item {
           let result = deliver_to_inbox(&Url::parse(&inbox)?, &feed.ap_url(), &feed.private_key, &msg).await;
 
           match result {
-            Ok(_result) => println!("sent!"),
+            Ok(result) => println!("sent! {:?}", result),
             Err(why) => println!("failure! {:?}", why)
           }
 
