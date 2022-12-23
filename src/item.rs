@@ -178,7 +178,7 @@ impl Item {
           let msg = serde_json::to_string(&targeted).unwrap();
           println!("{}", msg);
 
-          let result = deliver_to_inbox(&Url::parse(&inbox)?, &feed.ap_url(), &feed.private_key, &msg).await;
+          let result = deliver_to_inbox(&Url::parse(&"https://botsin.space/inbox")?, &feed.ap_url(), &feed.private_key, &msg).await;
 
           match result {
             Ok(result) => println!("sent! {:?}", result),

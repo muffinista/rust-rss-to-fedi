@@ -33,6 +33,7 @@ use anyhow::Error as AnyError;
 use rocket::uri;
 use crate::utils::*;
 use crate::routes::feeds::*;
+use crate::routes::ap::inbox::*;
 use crate::routes::ap::outbox::*;
 
 #[derive(Debug, Serialize)]
@@ -331,6 +332,7 @@ impl Feed {
       .set_url(iri!(self.ap_url()))
       .set_name(self.name.clone())
       .set_preferred_username(self.name.clone())
+      .set_inbox(iri!(path_to_url(&uri!(user_inbox(&self.name)))))
       .set_outbox(iri!(path_to_url(&uri!(user_outbox(&self.name)))));
 
     Ok(service)
@@ -361,6 +363,7 @@ impl Feed {
       .set_id(iri!(path_to_url(&uri!(render_feed(&self.name)))))
       .set_name(self.name.clone())
       .set_preferred_username(self.name.clone())
+      .set_inbox(iri!(path_to_url(&uri!(user_inbox(&self.name)))))
       .set_outbox(iri!(path_to_url(&uri!(user_outbox(&self.name)))))
       .set_followers(iri!(path_to_url(&uri!(render_feed_followers(&self.name, None::<u32>)))));
 

@@ -28,6 +28,7 @@ pub async fn build_server(pool: SqlitePool) -> Rocket<Build> {
       crate::routes::feeds::render_feed_followers,
       crate::routes::feeds::show_feed,
       crate::routes::webfinger::lookup_webfinger,
+      crate::routes::ap::inbox::user_inbox,
       crate::routes::ap::outbox::user_outbox    
     ])
     .attach(Template::fairing())

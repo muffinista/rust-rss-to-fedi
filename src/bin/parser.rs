@@ -27,7 +27,7 @@ async fn main() -> Result<(), reqwest::Error>  {
     feed_id: feed.id,
     guid: "12345".to_string(),
     title: Some("Hello!".to_string()),
-    content: Some("Hey!".to_string()),
+    content: Some("Here is some content".to_string()),
     url: Some("http://google.com".to_string()),
     created_at: Utc::now().naive_utc(),
     updated_at: Utc::now().naive_utc()
