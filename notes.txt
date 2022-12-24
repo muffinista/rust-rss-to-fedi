@@ -1,12 +1,12 @@
+
 todo
 =====
 - send accept for follow requests
 - figure out how to convert mastodon actor url to address
 
 
-
-
  6996  echo "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh" > README.md
+
  8184  rustup override set nightly
  8192  rustup default stable
 
