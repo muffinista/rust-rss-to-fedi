@@ -58,6 +58,7 @@ pub async fn render_feed(username: &str, db: &State<SqlitePool>) -> Result<Strin
     Ok(feed_lookup) => {
       match feed_lookup {
         Some(feed) => {
+          println!("generate output");
           let ap = feed.to_activity_pub();
           match ap {
             Ok(ap) => {

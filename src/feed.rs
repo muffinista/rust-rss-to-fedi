@@ -19,13 +19,23 @@ use crate::user::User;
 use crate::item::Item;
 use crate::follower::Follower;
 use crate::keys::*;
+use crate::mailer::*;
 
 
+use activitystreams::base::AnyBase;
 use activitystreams::base::BaseExt;
+use activitystreams::activity::*;
 
 use activitystreams::collection::OrderedCollection;
 use activitystreams::collection::OrderedCollectionPage;
 use activitystreams::object::ApObject;
+use activitystreams::object::AsObject;
+
+use activitystreams::{
+  iri_string::types::IriString,
+};
+
+use url::{Url, ParseError};
 
 
 use anyhow::Error as AnyError;
@@ -109,6 +119,7 @@ impl Feed {
   }
   
   pub async fn find_by_name(name: &String, pool: &SqlitePool) -> Result<Option<Feed>, sqlx::Error> {
+    println!("feed: {}", name);
     sqlx::query_as!(Feed, "SELECT * FROM feeds WHERE name = ?", name)
       .fetch_optional(pool)
       .await
@@ -398,16 +409,36 @@ impl Feed {
     
   }
 
-  pub async fn follow(&self, pool: &SqlitePool, actor: &str) -> Result<(), sqlx::Error> {
+  pub async fn follow(&self, pool: &SqlitePool, actor: &str, activity: &AcceptedActivity) -> Result<(), AnyError> {
     sqlx::query!("INSERT INTO followers (feed_id, actor, created_at, updated_at) VALUES($1, $2, datetime(CURRENT_TIMESTAMP, 'utc'), datetime(CURRENT_TIMESTAMP, 'utc'))",
                  self.id, actor)
       .execute(pool)
       .await?;
 
+    // // deliver an Accept message
+    let (_actor, _object, original_follow) = activity.clone().into_parts();
+    
+    let inbox = format!("{}/inbox", actor);
+
+    let follow_id: &IriString = original_follow.id_unchecked().ok_or(FeedError)?;
+
+    let mut follow = Follow::new(actor.clone(), self.ap_url());
+    follow.set_id(follow_id.clone());
+
+    let mut accept = Accept::new(self.ap_url(), follow.into_any_base()?);
+    accept.set_context(context());
+
+    let msg = serde_json::to_string(&accept).unwrap();
+
+    println!("{}", msg);
+
+    let result = deliver_to_inbox(&Url::parse(&inbox)?, &self.ap_url(), &self.private_key, &msg).await;
+    println!("{:?}", result);
+
     Ok(())
   }
 
-  pub async fn unfollow(&self, pool: &SqlitePool, actor: &str) -> Result<(), sqlx::Error>  {
+  pub async fn unfollow(&self, pool: &SqlitePool, actor: &str) -> Result<(), AnyError>  {
     sqlx::query!("DELETE FROM followers WHERE feed_id = ? AND actor = ?",
                  self.id, actor)
       .execute(pool)
@@ -416,13 +447,13 @@ impl Feed {
     Ok(())
   }
 
-  pub async fn handle_activity(&self, pool: &SqlitePool, activity: &AcceptedActivity)  -> Result<(), sqlx::Error>{
+  pub async fn handle_activity(&self, pool: &SqlitePool, activity: &AcceptedActivity)  -> Result<(), AnyError> {
     let (actor, _object, act) = activity.clone().into_parts();
 
     let actor_id = actor.as_single_id().unwrap().to_string();
     
     match act.kind() {
-      Some(AcceptedTypes::Follow) => self.follow(pool, &actor_id).await,
+      Some(AcceptedTypes::Follow) => self.follow(pool, &actor_id, &activity).await,
       Some(AcceptedTypes::Undo) => self.unfollow(pool, &actor_id).await,
       // we don't need to handle this but if we receive it, just move on
       Some(AcceptedTypes::Accept) => Ok(()),

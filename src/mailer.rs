@@ -2,6 +2,7 @@ use http_signature_normalization_reqwest::prelude::*;
 use reqwest::Request;
 use reqwest_middleware::{ClientBuilder, RequestBuilder};
 use reqwest::header::{HeaderValue, HeaderMap, HeaderName};
+use reqwest_tracing::TracingMiddleware;
 
 use webfinger::resolve;
 use webfinger::WebfingerError;
@@ -22,7 +23,8 @@ use base64;
 pub async fn find_actor_url(actor: &str) -> Result<Url, WebfingerError> {
   let rel = "self".to_string();
   let mime_type = Some("application/activity+json".to_string());
-  let webfinger = resolve(actor, true).await;
+  println!("query webfinger for {}", actor);
+  let webfinger = resolve(format!("acct:{}", actor), true).await;
 
   match webfinger {
     Ok(webfinger) => {
@@ -46,9 +48,9 @@ pub async fn find_actor_url(actor: &str) -> Result<Url, WebfingerError> {
 /// deliver a payload to an inbox
 pub async fn deliver_to_inbox(inbox: &Url, key_id: &str, private_key: &str, json: &str) -> Result<(), anyhow::Error> {
   let client = ClientBuilder::new(reqwest::Client::new())
+    // Trace HTTP requests. See the tracing crate to make use of these traces.
+    .with(TracingMiddleware::default())
     .build();
-  // // Trace HTTP requests. See the tracing crate to make use of these traces.
-  // .with(TracingMiddleware::default())
   // // Retry failed requests.
   // .with(RetryTransientMiddleware::new_with_policy(retry_policy))
 

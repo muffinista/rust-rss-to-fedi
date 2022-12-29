@@ -128,6 +128,7 @@ impl Item {
     let mut note: ApObject<Note> = ApObject::new(Note::new());
 
     let feed_url = feed.ap_url();
+    let item_url = format!("{}/items/{}", feed_url, self.id);
     let ts = OffsetDateTime::from_unix_timestamp(self.created_at.timestamp()).unwrap();
 
     note
@@ -136,6 +137,7 @@ impl Item {
       // @todo direct url to item
       .set_url(iri!(feed_url))
       .set_cc(iri!("https://www.w3.org/ns/activitystreams#Public"))
+      .set_id(iri!(item_url))
       .set_published(ts);
 
     let mut action: ApObject<Create> = ApObject::new(
@@ -170,6 +172,7 @@ impl Item {
       let inbox = follower.find_inbox().await;
       match inbox {
         Ok(inbox) => {
+          println!("INBOX: {}", inbox);
           // generate and send
           let mut targeted = message.clone();
 
@@ -178,7 +181,7 @@ impl Item {
           let msg = serde_json::to_string(&targeted).unwrap();
           println!("{}", msg);
 
-          let result = deliver_to_inbox(&Url::parse(&"https://botsin.space/inbox")?, &feed.ap_url(), &feed.private_key, &msg).await;
+          let result = deliver_to_inbox(&Url::parse(&inbox)?, &feed.ap_url(), &feed.private_key, &msg).await;
 
           match result {
             Ok(result) => println!("sent! {:?}", result),

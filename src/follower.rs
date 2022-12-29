@@ -31,41 +31,42 @@ impl PartialEq for Follower {
 
 impl Follower {
   pub async fn find_inbox(&self) -> Result<String, AnyError> {
-    // get the AP url for the user
-    let webfinger = find_actor_url(&self.actor).await;
+    Ok(format!("{}/inbox", &self.actor))
+    // // get the AP url for the user
+    // let webfinger = find_actor_url(&self.actor).await;
 
-    match webfinger {
-      Ok(webfinger) => {
-        let profile_url = webfinger;
+    // match webfinger {
+    //   Ok(webfinger) => {
+    //     let profile_url = webfinger;
 
-        let mut host = profile_url.domain().expect("Domain is valid").to_string();
-        if let Some(port) = profile_url.port() {
-          host = format!("{}:{}", host, port);
-        }
+    //     let mut host = profile_url.domain().expect("Domain is valid").to_string();
+    //     if let Some(port) = profile_url.port() {
+    //       host = format!("{}:{}", host, port);
+    //     }
       
-        let mut headers = HeaderMap::new();
+    //     let mut headers = HeaderMap::new();
 
-        headers.insert(
-          reqwest::header::ACCEPT,
-          HeaderValue::from_str("application/ld+json").unwrap(),
-        );
+    //     headers.insert(
+    //       reqwest::header::ACCEPT,
+    //       HeaderValue::from_str("application/ld+json").unwrap(),
+    //     );
 
-        // query that
-        let client = reqwest::Client::new();
-        let res = client
-          .get(profile_url)
-          .headers(headers)
-          .send()
-          .await?;
+    //     // query that
+    //     let client = reqwest::Client::new();
+    //     let res = client
+    //       .get(profile_url)
+    //       .headers(headers)
+    //       .send()
+    //       .await?;
 
 
-        let body = res.text().await?;
+    //     let body = res.text().await?;
 
-        let v: Value = serde_json::from_str(&body).unwrap();
-        Ok(v["inbox"].as_str().unwrap().to_string())
-      },
-      Err(_why) => panic!("oops!")
-    }
+    //     let v: Value = serde_json::from_str(&body).unwrap();
+    //     Ok(v["inbox"].as_str().unwrap().to_string())
+    //   },
+    //   Err(_why) => panic!("oops!")
+    // }
   }
 
 }
