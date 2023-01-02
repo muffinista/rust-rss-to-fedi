@@ -25,7 +25,7 @@ use activitystreams::time::OffsetDateTime;
 use rocket_dyn_templates::tera::Tera;
 use rocket_dyn_templates::tera::Context;
 
-use url::{Url, ParseError};
+use url::Url;
 
 
 #[derive(Debug, Serialize)]

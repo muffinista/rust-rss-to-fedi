@@ -22,20 +22,18 @@ use crate::keys::*;
 use crate::mailer::*;
 
 
-use activitystreams::base::AnyBase;
 use activitystreams::base::BaseExt;
 use activitystreams::activity::*;
 
 use activitystreams::collection::OrderedCollection;
 use activitystreams::collection::OrderedCollectionPage;
 use activitystreams::object::ApObject;
-use activitystreams::object::AsObject;
 
 use activitystreams::{
   iri_string::types::IriString,
 };
 
-use url::{Url, ParseError};
+use url::Url;
 
 
 use anyhow::Error as AnyError;
@@ -91,6 +89,7 @@ use activitystreams::activity::ActorAndObject;
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
 pub enum AcceptedTypes {
   Accept,
+  Delete,
   Follow,
   Undo,
 }
@@ -455,6 +454,7 @@ impl Feed {
     match act.kind() {
       Some(AcceptedTypes::Follow) => self.follow(pool, &actor_id, &activity).await,
       Some(AcceptedTypes::Undo) => self.unfollow(pool, &actor_id).await,
+      Some(AcceptedTypes::Delete) => self.unfollow(pool, &actor_id).await,
       // we don't need to handle this but if we receive it, just move on
       Some(AcceptedTypes::Accept) => Ok(()),
       None => Ok(())

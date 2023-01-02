@@ -1,5 +1,4 @@
 use serde::{Serialize};
-use serde_json::Value;
 
 use crate::mailer::*;
 
@@ -68,5 +67,4 @@ impl Follower {
     //   Err(_why) => panic!("oops!")
     // }
   }
-
 }
