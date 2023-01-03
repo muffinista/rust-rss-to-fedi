@@ -36,6 +36,7 @@ use activitystreams::{
 use url::Url;
 
 
+use anyhow::{anyhow};
 use anyhow::Error as AnyError;
 
 use rocket::uri;
@@ -408,11 +409,20 @@ impl Feed {
     
   }
 
-  pub async fn follow(&self, pool: &SqlitePool, actor: &str, activity: &AcceptedActivity) -> Result<(), AnyError> {
-    sqlx::query!("INSERT INTO followers (feed_id, actor, created_at, updated_at) VALUES($1, $2, datetime(CURRENT_TIMESTAMP, 'utc'), datetime(CURRENT_TIMESTAMP, 'utc'))",
+  pub async fn add_follower(&self, pool: &SqlitePool, actor: &str) -> Result<(), AnyError> {
+    let result = sqlx::query!("INSERT INTO followers (feed_id, actor, created_at, updated_at) VALUES($1, $2, datetime(CURRENT_TIMESTAMP, 'utc'), datetime(CURRENT_TIMESTAMP, 'utc'))",
                  self.id, actor)
       .execute(pool)
-      .await?;
+      .await;
+
+    match result {
+      Ok(_result) => Ok(()),
+      Err(why) => Err(anyhow!(why.to_string()))
+    } 
+  }
+
+  pub async fn follow(&self, pool: &SqlitePool, actor: &str, activity: &AcceptedActivity) -> Result<(), AnyError> {
+    self.add_follower(pool, actor).await?;
 
     // // deliver an Accept message
     let (_actor, _object, original_follow) = activity.clone().into_parts();
@@ -772,12 +782,12 @@ mod test {
   }
 
   #[sqlx::test]
-  async fn test_follow(pool: SqlitePool) -> sqlx::Result<()> {
+  async fn test_follow(pool: SqlitePool) -> Result<(), String> {
     let actor = "https://activitypub.pizza/users/colin".to_string();
     let json = format!(r#"{{"actor":"{}","object":"{}/feed","type":"Follow"}}"#, actor, actor).to_string();
     let act:AcceptedActivity = serde_json::from_str(&json).unwrap();
 
-    let feed:Feed = real_feed(&pool).await?;
+    let feed:Feed = real_feed(&pool).await.unwrap();
 
     let result = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = ? AND actor = ?", feed.id, actor)
       .fetch_one(&pool)
@@ -786,29 +796,35 @@ mod test {
 
     assert!(result.tally == 0);
 
-    feed.handle_activity(&pool, &act).await?;
+    let activity_result = feed.handle_activity(&pool, &act).await;
+    match activity_result {
+      Ok(_result) => {
+        let result2 = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = ? AND actor = ?", feed.id, actor)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+  
+        assert!(result2.tally > 0);
 
-    let result2 = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = ? AND actor = ?", feed.id, actor)
-      .fetch_one(&pool)
-      .await
-      .unwrap();
+        Ok(())
+      },
 
-    assert!(result2.tally > 0);
-      
-    Ok(())
+      Err(why) => Err(why.to_string())
+    }
   }
 
   #[sqlx::test]
-  async fn test_unfollow(pool: SqlitePool) -> sqlx::Result<()> {
+  async fn test_unfollow(pool: SqlitePool) -> Result<(), String> {
     let actor = "https://activitypub.pizza/users/colin".to_string();
     let json = format!(r#"{{"actor":"{}","object":"{}/feed","type":"Undo"}}"#, actor, actor).to_string();
     let act:AcceptedActivity = serde_json::from_str(&json).unwrap();
     
-    let feed:Feed = real_feed(&pool).await?;
+    let feed:Feed = real_feed(&pool).await.unwrap();
 
     sqlx::query!("INSERT INTO followers (feed_id, actor, created_at, updated_at) VALUES($1, $2, datetime(CURRENT_TIMESTAMP, 'utc'), datetime(CURRENT_TIMESTAMP, 'utc'))", feed.id, actor)
       .execute(&pool)
-      .await?;
+      .await
+      .unwrap();
 
     let result = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = ? AND actor = ?", feed.id, actor)
       .fetch_one(&pool)
@@ -817,7 +833,7 @@ mod test {
 
     assert!(result.tally == 1);
 
-    feed.handle_activity(&pool, &act).await?;
+    feed.handle_activity(&pool, &act).await.unwrap();
 
     let post_result = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = ? AND actor = ?", feed.id, actor)
       .fetch_one(&pool)

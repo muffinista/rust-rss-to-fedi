@@ -201,7 +201,6 @@ impl Item {
 }
 
 
-
 #[cfg(test)]
 mod test {
   use sqlx::sqlite::SqlitePool;
@@ -268,11 +267,11 @@ mod test {
     let feed: Feed = fake_feed();
     let item: Item = fake_item();
 
-    let _follower = feed.follow(&pool, "muffinista@botsin.space").await;
+    let _follower = feed.add_follower(&pool, "muffinista@botsin.space").await;
 
     let result = item.deliver(&feed, &pool).await;
     match result {
-      Ok(result) => {
+      Ok(_result) => {
         Ok(())
       },
       Err(why) => Err(why.to_string())

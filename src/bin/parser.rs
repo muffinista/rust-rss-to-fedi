@@ -5,7 +5,7 @@ use chrono::prelude::*;
 
 use std::env;
 
-use rustypub::user::User;
+// use rustypub::user::User;
 use rustypub::feed::Feed;
 use rustypub::Item;
 
