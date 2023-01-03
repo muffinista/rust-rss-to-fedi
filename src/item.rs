@@ -210,6 +210,7 @@ mod test {
   use crate::keys::*;
 
   use chrono::Utc;
+  use mockito::mock;
 
   fn fake_feed() -> Feed {
     let (private_key_str, public_key_str) = generate_key();
@@ -267,7 +268,22 @@ mod test {
     let feed: Feed = fake_feed();
     let item: Item = fake_item();
 
-    let _follower = feed.add_follower(&pool, "muffinista@botsin.space").await;
+    let actor = format!("{}/users/colin", &mockito::server_url());
+    let profile = format!("{{\"inbox\": \"{}/users/colin/inbox\"}}", &mockito::server_url());
+
+    let _m = mock("GET", "/users/colin")
+      .with_status(200)
+      .with_header("Accept", "application/ld+json")
+      .with_body(profile)
+      .create();
+
+    let _m2 = mock("POST", "/users/colin/inbox")
+      .with_status(202)
+      .create();
+
+
+
+    let _follower = feed.add_follower(&pool, &actor).await;
 
     let result = item.deliver(&feed, &pool).await;
     match result {

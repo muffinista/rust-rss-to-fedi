@@ -38,7 +38,7 @@ url = "2.3.1"
 sha2 = "0.10.6"
 base64 = "0.13.1"
 chrono = { version = "0.4.23", features = ["serde"] }
-reqwest-tracing = "0.4.0"
+mockito = "0.31.1"
 
 
 # chrono = "~0.4.23"

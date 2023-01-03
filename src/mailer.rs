@@ -1,8 +1,7 @@
 use http_signature_normalization_reqwest::prelude::*;
 use reqwest::Request;
 use reqwest_middleware::{ClientBuilder, RequestBuilder};
-use reqwest::header::{HeaderValue, HeaderMap, HeaderName};
-use reqwest_tracing::TracingMiddleware;
+use reqwest::header::{HeaderValue, HeaderMap}; // , HeaderName
 
 use webfinger::resolve;
 use webfinger::WebfingerError;
@@ -48,15 +47,12 @@ pub async fn find_actor_url(actor: &str) -> Result<Url, WebfingerError> {
 /// deliver a payload to an inbox
 pub async fn deliver_to_inbox(inbox: &Url, key_id: &str, private_key: &str, json: &str) -> Result<(), anyhow::Error> {
   let client = ClientBuilder::new(reqwest::Client::new())
-    // Trace HTTP requests. See the tracing crate to make use of these traces.
-    .with(TracingMiddleware::default())
     .build();
   // // Retry failed requests.
   // .with(RetryTransientMiddleware::new_with_policy(retry_policy))
 
   let heads = generate_request_headers(&inbox);
 
-  println!("BODY: {}", json.to_string());
   let request_builder = client
     .post(inbox.to_string())
     .headers(heads)
@@ -71,14 +67,10 @@ pub async fn deliver_to_inbox(inbox: &Url, key_id: &str, private_key: &str, json
   )
     .await?;
 
-  println!("REQ: {:?}", request);
-
   let response = client.execute(request).await;
   match response {
     // @todo check response code/etc
     Ok(response) => {
-      println!("response: {:?}", response);
-      println!("response text: {:?}", response.text().await.unwrap());
       Ok(())
     },
     Err(_why) => todo!()
@@ -86,21 +78,21 @@ pub async fn deliver_to_inbox(inbox: &Url, key_id: &str, private_key: &str, json
 }
 
 
-fn generate_request_headers(inbox: &Url) -> HeaderMap {
-  let mut host = inbox.domain().expect("Domain is valid").to_string();
-  if let Some(port) = inbox.port() {
-      host = format!("{}:{}", host, port);
-  }
-
+fn generate_request_headers(_inbox: &Url) -> HeaderMap {
   let mut headers = HeaderMap::new();
+  // let mut host = inbox.domain().expect("Domain is valid").to_string();
+  // if let Some(port) = inbox.port() {
+  //     host = format!("{}:{}", host, port);
+  // }
+
   // headers.insert(
   //   HeaderName::from_static("content-type"),
   //   HeaderValue::from_static("application/activity+json"),
   // );
-  headers.insert(
-    HeaderName::from_static("host"),
-    HeaderValue::from_str(&host).expect("Hostname is valid"),
-  );
+  // headers.insert(
+  //   HeaderName::from_static("host"),
+  //   HeaderValue::from_str(&host).expect("Hostname is valid"),
+  // );
   headers.insert(
     "date",
     HeaderValue::from_str(&fmt_http_date(SystemTime::now())).expect("Date is valid"),

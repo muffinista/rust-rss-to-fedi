@@ -61,8 +61,9 @@ impl Follower {
 mod test {
   use crate::Feed;
   use crate::Follower;
-  use chrono::Utc;
   use crate::keys::*;
+  use chrono::Utc;
+  use mockito::mock;
 
   fn fake_feed() -> Feed {
     let (private_key_str, public_key_str) = generate_key();
@@ -86,7 +87,7 @@ mod test {
     Follower {
       id: 1,
       feed_id: feed.id,
-      actor: "https://botsin.space/users/muffinista".to_string(),
+      actor: format!("{}/users/muffinista", &mockito::server_url()),
       created_at: Utc::now().naive_utc(),
       updated_at: Utc::now().naive_utc()
     }
@@ -98,8 +99,14 @@ mod test {
     let feed: Feed = fake_feed();
     let follower: Follower = fake_follower(&feed);
 
+    let _m = mock("GET", "/users/muffinista")
+      .with_status(200)
+      .with_header("Accept", "application/ld+json")
+      .with_body("{\"inbox\": \"https://foo.com/users/muffinista/inbox\"}")
+      .create();
+
     let result = follower.find_inbox().await.unwrap();
-    assert!(result.contains("Hello!"));
+    assert!(result == "https://foo.com/users/muffinista/inbox");
     Ok(())
   }
 }

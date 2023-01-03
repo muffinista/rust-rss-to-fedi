@@ -119,7 +119,6 @@ impl Feed {
   }
   
   pub async fn find_by_name(name: &String, pool: &SqlitePool) -> Result<Option<Feed>, sqlx::Error> {
-    println!("feed: {}", name);
     sqlx::query_as!(Feed, "SELECT * FROM feeds WHERE name = ?", name)
       .fetch_optional(pool)
       .await
@@ -424,27 +423,23 @@ impl Feed {
   pub async fn follow(&self, pool: &SqlitePool, actor: &str, activity: &AcceptedActivity) -> Result<(), AnyError> {
     self.add_follower(pool, actor).await?;
 
-    // // deliver an Accept message
+    // deliver an Accept message
     let (_actor, _object, original_follow) = activity.clone().into_parts();
-    
-    let inbox = format!("{}/inbox", actor);
 
+    let inbox = format!("{}/inbox", actor);
     let follow_id: &IriString = original_follow.id_unchecked().ok_or(FeedError)?;
 
     let mut follow = Follow::new(actor.clone(), self.ap_url());
+
     follow.set_id(follow_id.clone());
 
     let mut accept = Accept::new(self.ap_url(), follow.into_any_base()?);
     accept.set_context(context());
 
     let msg = serde_json::to_string(&accept).unwrap();
+    deliver_to_inbox(&Url::parse(&inbox)?, &self.ap_url(), &self.private_key, &msg).await
 
-    println!("{}", msg);
-
-    let result = deliver_to_inbox(&Url::parse(&inbox)?, &self.ap_url(), &self.private_key, &msg).await;
-    println!("{:?}", result);
-
-    Ok(())
+    // Ok(())
   }
 
   pub async fn unfollow(&self, pool: &SqlitePool, actor: &str) -> Result<(), AnyError>  {
@@ -580,6 +575,7 @@ mod test {
   
   use crate::routes::feeds::*;
   use chrono::Utc;
+
 
   fn fake_user() -> User {
     User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()), created_at: Utc::now().naive_utc(), updated_at: Utc::now().naive_utc() }
@@ -783,8 +779,9 @@ mod test {
 
   #[sqlx::test]
   async fn test_follow(pool: SqlitePool) -> Result<(), String> {
-    let actor = "https://activitypub.pizza/users/colin".to_string();
-    let json = format!(r#"{{"actor":"{}","object":"{}/feed","type":"Follow"}}"#, actor, actor).to_string();
+    let actor = format!("{}/users/colin", &mockito::server_url());
+
+    let json = format!(r#"{{"id": "{}/1/2/3", "actor":"{}","object":{{ "id": "{}" }} ,"type":"Follow"}}"#, &mockito::server_url(), actor, actor).to_string();
     let act:AcceptedActivity = serde_json::from_str(&json).unwrap();
 
     let feed:Feed = real_feed(&pool).await.unwrap();
@@ -797,6 +794,7 @@ mod test {
     assert!(result.tally == 0);
 
     let activity_result = feed.handle_activity(&pool, &act).await;
+
     match activity_result {
       Ok(_result) => {
         let result2 = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = ? AND actor = ?", feed.id, actor)
@@ -861,7 +859,7 @@ mod test {
     match result {
       Ok(result) => {
         let s = serde_json::to_string(&result).unwrap();
-        println!("{:?}", s);
+        // println!("{:?}", s);
 
         assert!(s.contains("A list of followers"));
         Ok(())
@@ -887,7 +885,7 @@ mod test {
     match result {
       Ok(result) => {
         let s = serde_json::to_string(&result).unwrap();
-        println!("{:?}", s);
+        // println!("{:?}", s);
         
         assert!(s.contains("OrderedCollectionPage"));
         assert!(s.contains("/colin11"));
