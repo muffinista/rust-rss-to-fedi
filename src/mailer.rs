@@ -3,8 +3,7 @@ use reqwest::Request;
 use reqwest_middleware::{ClientBuilder, RequestBuilder};
 use reqwest::header::{HeaderValue, HeaderMap}; // , HeaderName
 
-use webfinger::resolve;
-use webfinger::WebfingerError;
+use webfinger::{resolve, Webfinger, WebfingerError};
 
 use openssl::{
   hash::MessageDigest,
@@ -19,35 +18,44 @@ use std::time::SystemTime;
 use sha2::{Digest, Sha256};
 use base64;
 
-pub async fn find_actor_url(actor: &str) -> Result<Url, WebfingerError> {
-  let rel = "self".to_string();
-  let mime_type = Some("application/activity+json".to_string());
+///
+/// query webfinger endpoint for actor and try and find data url
+///
+pub async fn find_actor_url(actor: &str) -> Result<Option<Url>, WebfingerError> {
   println!("query webfinger for {}", actor);
   let webfinger = resolve(format!("acct:{}", actor), true).await;
 
   match webfinger {
-    Ok(webfinger) => {
-      println!("wf {:?}", webfinger);
-      let query:Option<webfinger::Link> = webfinger
-        .links
-        .into_iter()
-        .find(|link| &link.rel == &rel && &link.mime_type == &mime_type);
-
-      match query {
-        Some(query) => Ok(Url::parse(&query.href.unwrap()).unwrap()),
-        None => todo!()
-      }
-      
-    },
+    Ok(webfinger) => Ok(parse_webfinger(webfinger)),
     Err(why) => Err(why)
   }
 }
 
+///
+/// parse webfinger data for activity URL
+///
+pub fn parse_webfinger(webfinger: Webfinger) -> Option<Url> {
+  let rel = "self".to_string();
+  let mime_type = Some("application/activity+json".to_string());
 
+  println!("wf {:?}", webfinger);
+  let query:Option<webfinger::Link> = webfinger
+    .links
+    .into_iter()
+    .find(|link| &link.rel == &rel && &link.mime_type == &mime_type);
+
+  match query {
+    Some(query) => Some(Url::parse(&query.href.unwrap()).unwrap()),
+    None => None
+  }
+}
+
+
+///
 /// deliver a payload to an inbox
+///
 pub async fn deliver_to_inbox(inbox: &Url, key_id: &str, private_key: &str, json: &str) -> Result<(), anyhow::Error> {
-  let client = ClientBuilder::new(reqwest::Client::new())
-    .build();
+  let client = ClientBuilder::new(reqwest::Client::new()).build();
   // // Retry failed requests.
   // .with(RetryTransientMiddleware::new_with_policy(retry_policy))
 
@@ -119,7 +127,6 @@ pub async fn sign_request(
       digest,
       payload,
       move |signing_string| {
-        println!("sign me!!! {}", signing_string);
         let private_key = PKey::private_key_from_pem(private_key.as_bytes())?;
         let mut signer = Signer::new(MessageDigest::sha256(), &private_key)?;
         signer.update(signing_string.as_bytes())?;
@@ -131,9 +138,43 @@ pub async fn sign_request(
 }
 
 
-#[tokio::test]
-async fn test_find_inbox() {
-  let actor = "muffinista@botsin.space";
-  let inbox:Url = find_actor_url(&actor).await.unwrap();
-  assert_eq!("https://botsin.space/users/muffinista", inbox.to_string());
+#[cfg(test)]
+mod test {
+  use url::Url;
+  use webfinger::Webfinger;
+
+  use crate::mailer::parse_webfinger;
+
+  #[tokio::test]
+  async fn test_parse_webfinger() {
+    let json = r#"
+      {
+          "subject": "acct:test@example.org",
+          "aliases": [
+              "https://example.org/@test/"
+          ],
+          "links": [
+              {
+                  "rel": "http://webfinger.net/rel/profile-page",
+                  "href": "https://example.org/@test/"
+              },
+              {
+                  "rel": "http://schemas.google.com/g/2010#updates-from",
+                  "type": "application/atom+xml",
+                  "href": "https://example.org/@test/feed.atom"
+              },
+              {
+                  "rel": "self",
+                  "type": "application/activity+json",
+                  "href": "https://example.org/@test/json"
+              }
+          ]
+      }"#;
+
+    let wf:Webfinger = serde_json::from_str::<Webfinger>(json).unwrap();
+
+    let inbox:Url = parse_webfinger(wf).unwrap();
+    assert_eq!("https://example.org/@test/json", inbox.to_string());
+  }
+ 
 }

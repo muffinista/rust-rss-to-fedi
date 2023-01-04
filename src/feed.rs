@@ -438,8 +438,6 @@ impl Feed {
 
     let msg = serde_json::to_string(&accept).unwrap();
     deliver_to_inbox(&Url::parse(&inbox)?, &self.ap_url(), &self.private_key, &msg).await
-
-    // Ok(())
   }
 
   pub async fn unfollow(&self, pool: &SqlitePool, actor: &str) -> Result<(), AnyError>  {
