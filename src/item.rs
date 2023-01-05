@@ -104,6 +104,10 @@ impl Item {
   }
 
 
+  ///
+  /// generate an HTML-ish version of this item suitable
+  /// for adding to an AP message
+  ///
   pub fn to_html(&self) -> String {
     let tera = match Tera::new("templates/ap/*.*") {
       Ok(t) => t,
@@ -191,7 +195,8 @@ impl Item {
         },
         Err(why) => {
           println!("failure! {:?}", why);
-          panic!("oops!");
+          // @todo retry! mark as undeliverable? delete user?
+          // panic!("oops!");
         }
       }
     };
