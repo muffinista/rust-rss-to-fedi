@@ -154,14 +154,6 @@ mod test {
 
   use sqlx::sqlite::SqlitePool;
   
-  // #[sqlx::test]
-  // async fn test_add_feed(pool: SqlitePool) {
-  // }
-  
-  // #[sqlx::test]
-  // async fn test_delete_feed(pool: SqlitePool) {
-  // }
-
   #[sqlx::test]
   async fn test_show_feed(pool: SqlitePool) -> sqlx::Result<()> {
     let user = User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()), created_at: Utc::now().naive_utc(), updated_at: Utc::now().naive_utc() };
