@@ -331,23 +331,6 @@ impl Feed {
     path_to_url(&uri!(render_feed(&self.name)))
   }
   
-  pub fn to_actor(&self) -> Result<ApActor<Service>, AnyError> {
-    let mut service = ApActor::new(
-      iri!(self.ap_url()),
-      Service::new(),
-    );
-
-    service
-      .set_id(iri!(self.ap_url()))
-      .set_url(iri!(self.ap_url()))
-      .set_name(self.name.clone())
-      .set_preferred_username(self.name.clone())
-      .set_inbox(iri!(path_to_url(&uri!(user_inbox(&self.name)))))
-      .set_outbox(iri!(path_to_url(&uri!(user_outbox(&self.name)))));
-
-    Ok(service)
-  }
-
   pub fn to_activity_pub(&self) -> Result<String, AnyError> {    
     // we could return an object here instead of JSON so we can manipulate it if needed
     // pub fn to_activity_pub(&self) -> Result<ExtendedService, AnyError> {    
@@ -647,6 +630,19 @@ mod test {
     assert_eq!(feed, feed2);
     assert_eq!(feed2.name, name);
     assert_eq!(feed2.url, url);
+    
+    Ok(())
+  }
+
+  #[sqlx::test]
+  async fn test_exists_by_url(pool: SqlitePool) -> sqlx::Result<()> {
+    let url: String = "https://foo.com/rss.xml".to_string();
+    let name: String = "testfeed".to_string();
+
+    let feed:Feed = real_feed(&pool).await?;
+    let result = Feed::exists_by_url(&url, &pool).await?;
+    
+    assert_eq!(true, result);
     
     Ok(())
   }

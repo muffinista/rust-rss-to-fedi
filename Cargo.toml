@@ -60,7 +60,13 @@ features = ["tera"]
 #rocket = "0.5.0-rc.2"
 #features = ["sqlx_sqlite"]
 
-
+[dependencies.uuid]
+version = "1.2.2"
+features = [
+    "v4",                # Lets you generate random UUIDs
+    "fast-rng",          # Use a faster (but still sufficiently random) RNG
+    "macro-diagnostics", # Enable better diagnostics for compile-time UUIDs
+]
 
 [dev-dependencies]
 native-tls = { version = "~0.2.11", features = ["vendored"] }

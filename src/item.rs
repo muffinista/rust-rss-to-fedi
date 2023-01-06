@@ -54,12 +54,6 @@ impl Item {
     .await
   }
   
-  pub async fn for_feed(feed: &Feed, pool: &SqlitePool) -> Result<Vec<Item>, sqlx::Error> {
-    sqlx::query_as!(Item, "SELECT * FROM items WHERE feed_id = ?", feed.id)
-    .fetch_all(pool)
-    .await
-  }
-  
   pub async fn find_by_guid(guid: &String, feed: &Feed, pool: &SqlitePool) -> Result<Item, sqlx::Error> {
     sqlx::query_as!(Item, "SELECT * FROM items WHERE feed_id = ? AND guid = ?", feed.id, guid)
     .fetch_one(pool)
@@ -86,7 +80,6 @@ impl Item {
     } else {
       None
     };
-
     
     // println!("Create: {:?}", entry.id);
 
@@ -216,6 +209,7 @@ mod test {
 
   use chrono::Utc;
   use mockito::mock;
+  use uuid::Uuid;
 
   fn fake_feed() -> Feed {
     let (private_key_str, public_key_str) = generate_key();
@@ -248,7 +242,66 @@ mod test {
     }
   }
 
-  
+  async fn real_item(feed: &Feed, pool: &SqlitePool) -> sqlx::Result<Item> {
+    let id = Uuid::new_v4().to_string();
+    let item_url = format!("https://foo.com/{}", id);
+
+    let item_id = sqlx::query!("INSERT INTO items
+                              (feed_id, guid, title, content, url, created_at, updated_at)
+                              VALUES($1, $2, $3, $4, $5, datetime(CURRENT_TIMESTAMP, 'utc'), datetime(CURRENT_TIMESTAMP, 'utc'))",
+                               feed.id,
+                               id,
+                               id,
+                               id,
+                               item_url
+    )
+      .execute(pool)
+      .await?
+      .last_insert_rowid();
+
+    Item::find(item_id, &pool).await
+  }
+
+  #[sqlx::test]
+  async fn test_find(pool: SqlitePool) -> sqlx::Result<()> {
+    let feed: Feed = fake_feed();
+    let item: Item = real_item(&feed, &pool).await?;
+
+    let item2 = Item::find(item.id, &pool).await?;
+    
+    assert_eq!(item, item2);
+    
+    Ok(())
+  }
+
+  #[sqlx::test]
+  async fn test_find_by_guid(pool: SqlitePool) -> sqlx::Result<()> {
+    let feed: Feed = fake_feed();
+    let item: Item = real_item(&feed, &pool).await?;
+
+    let item2 = Item::find_by_guid(&item.guid, &feed, &pool).await?;
+    
+    assert_eq!(item, item2);
+    
+    Ok(())
+  }
+
+  #[sqlx::test]
+  async fn test_exists_by_guid(pool: SqlitePool) -> sqlx::Result<()> {
+    let feed: Feed = fake_feed();
+    let item: Item = real_item(&feed, &pool).await?;
+
+    let result = Item::exists_by_guid(&item.guid, &feed, &pool).await?;   
+    assert_eq!(true, result);
+
+    let bad_guid = format!("{}sdfsdfsdf", item.guid);
+    let result = Item::exists_by_guid(&bad_guid, &feed, &pool).await?;   
+    assert_eq!(false, result);
+
+    Ok(())
+  }
+
+
   #[sqlx::test]
   async fn test_to_activity_pub() -> Result<(), String> {
     let feed: Feed = fake_feed();

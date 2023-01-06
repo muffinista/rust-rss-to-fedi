@@ -1,6 +1,3 @@
-use activitystreams_ext::{UnparsedExtension};
-use activitystreams::unparsed::*;
-
 use activitystreams::{
   iri_string::types::IriString,
 };
@@ -19,21 +16,6 @@ pub struct PublicKeyInner {
   pub id: IriString,
   pub owner: IriString,
   pub public_key_pem: String,
-}
-
-impl<U> UnparsedExtension<U> for PublicKey where U: UnparsedMutExt, {
-  type Error = serde_json::Error;
-
-  fn try_from_unparsed(unparsed_mut: &mut U) -> Result<Self, Self::Error> {
-    Ok(PublicKey {
-      public_key: unparsed_mut.remove("publicKey")?,
-    })
-  }
-
-  fn try_into_unparsed(self, unparsed_mut: &mut U) -> Result<(), Self::Error> {
-    unparsed_mut.insert("publicKey", self.public_key)?;
-    Ok(())
-  }
 }
 
 pub fn generate_key() -> (String, String) {
