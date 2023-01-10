@@ -18,6 +18,8 @@ use std::time::SystemTime;
 use sha2::{Digest, Sha256};
 use base64;
 
+use anyhow::{anyhow};
+
 ///
 /// query webfinger endpoint for actor and try and find data url
 ///
@@ -65,7 +67,6 @@ pub async fn deliver_to_inbox(inbox: &Url, key_id: &str, private_key: &str, json
     .post(inbox.to_string())
     .headers(heads)
     .body(json.to_string());
-  // .timeout(timeout)
   
   let request = sign_request(
     request_builder,
@@ -79,7 +80,11 @@ pub async fn deliver_to_inbox(inbox: &Url, key_id: &str, private_key: &str, json
   match response {
     // @todo check response code/etc
     Ok(response) => {
-      Ok(())
+      if response.status().is_success() {
+        Ok(())
+      } else {
+        Err(anyhow!(response.status().to_string()))
+      }
     },
     Err(_why) => todo!()
   }

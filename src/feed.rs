@@ -201,45 +201,8 @@ impl Feed {
     
     old_feed   
   }
+
   
-  pub async fn load(&self) -> Result<String, reqwest::Error> {
-    let res = reqwest::get(&self.url).await?;
-    
-    // Response: HTTP/1.1 200 OK
-    // Headers: {
-    //     "date": "Tue, 29 Nov 2022 00:48:07 GMT",
-    //     "content-type": "application/xml",
-    //     "content-length": "68753",
-    //     "connection": "keep-alive",
-    //     "last-modified": "Tue, 08 Nov 2022 13:54:18 GMT",
-    //     "etag": "\"10c91-5ecf5e04f7680\"",
-    //     "accept-ranges": "bytes",
-    //     "strict-transport-security": "max-age=15724800; includeSubDomains",
-    // }
-    eprintln!("Response: {:?} {}", res.version(), res.status());
-    eprintln!("Headers: {:#?}\n", res.headers());
-      
-    res.text().await
-  }
-    
-  pub async fn feed_to_entries(&self, data: feed_rs::model::Feed, pool: &SqlitePool) -> Result<Vec<Item>, FeedError> {
-    let mut result: Vec<Item> = Vec::new();
-    for entry in data.entries.iter() {
-      let exists = Item::exists_by_guid(&entry.id, &self, pool).await.unwrap();
-
-      // only create new items
-      // @todo update changed items
-      if ! exists {
-        let item = Item::create_from_entry(&entry, &self, pool).await;
-        match item {
-          Ok(item) => result.push(item),
-          Err(_why) => return Err(FeedError)
-        }
-      }
-    }
-    Ok(result)
-  }
-
   pub async fn entries_count(&self, pool: &SqlitePool)  -> Result<u64, AnyError>{
     let result = sqlx::query!("SELECT COUNT(1) AS tally FROM items WHERE feed_id = ?", self.id)
       .fetch_one(pool)
@@ -273,6 +236,55 @@ impl Feed {
     }
   }
 
+  ///
+  /// load the contents of the feed
+  ///
+  pub async fn load(&self) -> Result<String, reqwest::Error> {
+    let res = reqwest::get(&self.url).await?;
+    
+    // Response: HTTP/1.1 200 OK
+    // Headers: {
+    //     "date": "Tue, 29 Nov 2022 00:48:07 GMT",
+    //     "content-type": "application/xml",
+    //     "content-length": "68753",
+    //     "connection": "keep-alive",
+    //     "last-modified": "Tue, 08 Nov 2022 13:54:18 GMT",
+    //     "etag": "\"10c91-5ecf5e04f7680\"",
+    //     "accept-ranges": "bytes",
+    //     "strict-transport-security": "max-age=15724800; includeSubDomains",
+    // }
+    eprintln!("Response: {:?} {}", res.version(), res.status());
+    eprintln!("Headers: {:#?}\n", res.headers());
+      
+    res.text().await
+  }
+
+
+  ///
+  /// check parsed feed data for any entries we should convert into new items
+  ///
+  pub async fn feed_to_entries(&self, data: feed_rs::model::Feed, pool: &SqlitePool) -> Result<Vec<Item>, FeedError> {
+    let mut result: Vec<Item> = Vec::new();
+    for entry in data.entries.iter() {
+      let exists = Item::exists_by_guid(&entry.id, &self, pool).await.unwrap();
+
+      // only create new items
+      // @todo update changed items
+      if ! exists {
+        let item = Item::create_from_entry(&entry, &self, pool).await;
+        match item {
+          Ok(item) => result.push(item),
+          Err(_why) => return Err(FeedError)
+        }
+      }
+    }
+    Ok(result)
+  }
+
+  ///
+  /// load and parse feed
+  /// returns a list of any new items
+  ///
   pub async fn parse(&mut self, pool: &SqlitePool) -> Result<Vec<Item>, FeedError> {        
     let body = Feed::load(self).await;
     match body {
@@ -287,6 +299,9 @@ impl Feed {
     }   
   }
 
+  ///
+  /// update our stored data from the downloaded feed data
+  ///
   pub async fn parse_from_data(&mut self, body: String, pool: &SqlitePool) -> Result<Vec<Item>, FeedError> {        
     let data = parser::parse(body.as_bytes());
         
@@ -298,14 +313,11 @@ impl Feed {
         if data.description.is_some() {
           self.description = Some(data.description.as_ref().unwrap().content.clone());
         }
-
         if data.icon.is_some() {
           self.icon_url = Some(data.icon.as_ref().unwrap().uri.clone());
-          // self.update_icon_url(&data.icon.as_ref().unwrap().uri, pool).await.ok();
         }
         if data.logo.is_some() {
           self.image_url = Some(data.logo.as_ref().unwrap().uri.clone());
-          // self.update_image_url(&data.logo.as_ref().unwrap().uri, pool).await.ok();
         }
 
         // todo snag link too
@@ -327,10 +339,16 @@ impl Feed {
   }
 
 
+  ///
+  /// Return URL to use in ActivityPub output for this feed
+  ///
   pub fn ap_url(&self) -> String {
     path_to_url(&uri!(render_feed(&self.name)))
   }
   
+  ///
+  /// Generate valid ActivityPub data for this feed
+  ///
   pub fn to_activity_pub(&self) -> Result<String, AnyError> {    
     // we could return an object here instead of JSON so we can manipulate it if needed
     // pub fn to_activity_pub(&self) -> Result<ExtendedService, AnyError> {    
@@ -391,6 +409,10 @@ impl Feed {
     
   }
 
+  ///
+  /// add follower to feed
+  /// @todo uniqueness check
+  ///
   pub async fn add_follower(&self, pool: &SqlitePool, actor: &str) -> Result<(), AnyError> {
     let result = sqlx::query!("INSERT INTO followers (feed_id, actor, created_at, updated_at) VALUES($1, $2, datetime(CURRENT_TIMESTAMP, 'utc'), datetime(CURRENT_TIMESTAMP, 'utc'))",
                  self.id, actor)
@@ -403,26 +425,37 @@ impl Feed {
     } 
   }
 
+  ///
+  /// handle follow activity
+  ///
   pub async fn follow(&self, pool: &SqlitePool, actor: &str, activity: &AcceptedActivity) -> Result<(), AnyError> {
+    // store follower in the db
     self.add_follower(pool, actor).await?;
 
-    // deliver an Accept message
-    let (_actor, _object, original_follow) = activity.clone().into_parts();
+    // now let's deliver an Accept message
 
-    let inbox = format!("{}/inbox", actor);
-    let follow_id: &IriString = original_follow.id_unchecked().ok_or(FeedError)?;
+
+    // reconstruct original follow activity
+    let (_actor, _object, original_follow) = activity.clone().into_parts();
 
     let mut follow = Follow::new(actor.clone(), self.ap_url());
 
+    let inbox = format!("{}/inbox", actor);
+    let follow_id: &IriString = original_follow.id_unchecked().ok_or(FeedError)?;
     follow.set_id(follow_id.clone());
 
+    // generate accept message for follow activity
     let mut accept = Accept::new(self.ap_url(), follow.into_any_base()?);
     accept.set_context(context());
 
+    // deliver to the user
     let msg = serde_json::to_string(&accept).unwrap();
     deliver_to_inbox(&Url::parse(&inbox)?, &self.ap_url(), &self.private_key, &msg).await
   }
 
+  ///
+  /// handle unfollow activity
+  ///
   pub async fn unfollow(&self, pool: &SqlitePool, actor: &str) -> Result<(), AnyError>  {
     sqlx::query!("DELETE FROM followers WHERE feed_id = ? AND actor = ?",
                  self.id, actor)
@@ -432,6 +465,9 @@ impl Feed {
     Ok(())
   }
 
+  ///
+  /// handle any incoming events. we're just handling follow/unfollows for now
+  ///
   pub async fn handle_activity(&self, pool: &SqlitePool, activity: &AcceptedActivity)  -> Result<(), AnyError> {
     let (actor, _object, act) = activity.clone().into_parts();
 
@@ -447,6 +483,9 @@ impl Feed {
     }
   }
 
+  ///
+  /// figure out how many people are following the feed
+  ///
   pub async fn follower_count(&self, pool: &SqlitePool)  -> Result<u64, AnyError>{
     let result = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = ?", self.id)
       .fetch_one(pool)
@@ -458,12 +497,18 @@ impl Feed {
     }
   }
 
+  ///
+  /// get a list of all followers
+  ///
   pub async fn followers_list(&self, pool: &SqlitePool)  -> Result<Vec<Follower>, sqlx::Error>{
     sqlx::query_as!(Follower, "SELECT * FROM followers WHERE feed_id = ?", self.id)
       .fetch_all(pool)
       .await
   }
   
+  ///
+  /// generate AP data to represent follower information
+  ///
   pub async fn followers(&self, pool: &SqlitePool)  -> Result<ApObject<OrderedCollection>, AnyError>{
     let count = self.follower_count(pool).await?;
     let total_pages = ((count / PER_PAGE as u64) + 1 ) as u32;
@@ -489,6 +534,9 @@ impl Feed {
     Ok(collection)
   }
 
+  ///
+  /// generate actual AP page of followes 
+  ///
   pub async fn followers_paged(&self, page: u32, pool: &SqlitePool)  -> Result<ApObject<OrderedCollectionPage>, AnyError>{
     let count = self.follower_count(pool).await?;
     let total_pages = ((count / PER_PAGE as u64) + 1 ) as u32;
@@ -637,9 +685,8 @@ mod test {
   #[sqlx::test]
   async fn test_exists_by_url(pool: SqlitePool) -> sqlx::Result<()> {
     let url: String = "https://foo.com/rss.xml".to_string();
-    let name: String = "testfeed".to_string();
 
-    let feed:Feed = real_feed(&pool).await?;
+    let _feed:Feed = real_feed(&pool).await?;
     let result = Feed::exists_by_url(&url, &pool).await?;
     
     assert_eq!(true, result);
