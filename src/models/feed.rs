@@ -25,6 +25,9 @@ use serde::{Serialize};
 use reqwest;
 use feed_rs::parser;
 
+use chrono::{Duration, Utc, prelude::*};
+
+
 use std::{error::Error, fmt};
 
 use crate::models::user::User;
@@ -54,7 +57,8 @@ pub struct Feed {
   pub site_url: Option<String>,
 
   pub created_at: chrono::NaiveDateTime,
-  pub updated_at: chrono::NaiveDateTime
+  pub updated_at: chrono::NaiveDateTime,
+  pub refreshed_at: chrono::NaiveDateTime
 }
 
 impl PartialEq for Feed {
@@ -98,7 +102,14 @@ impl Feed {
     .fetch_one(pool)
     .await
   }
-  
+
+  pub async fn stale(pool: &SqlitePool, age:i64, limit: u8) -> Result<Vec<Feed>, sqlx::Error> {
+    let age = Utc::now().naive_utc() - Duration::seconds(age);
+    sqlx::query_as!(Feed, "SELECT * FROM feeds WHERE refreshed_at < ? LIMIT ?", age, limit)
+    .fetch_all(pool)
+    .await
+  }
+
   pub async fn for_user(user: &User, pool: &SqlitePool) -> Result<Vec<Feed>, sqlx::Error> {
     sqlx::query_as!(Feed, "SELECT * FROM feeds WHERE user_id = ?", user.id)
     .fetch_all(pool)
@@ -145,10 +156,11 @@ impl Feed {
 
     // generate keypair used for signing AP requests
     let (private_key_str, public_key_str) = generate_key();
+    let old = Utc.with_ymd_and_hms(1900, 1, 1, 0, 0, 0).unwrap();
 
-    let feed_id = sqlx::query!("INSERT INTO feeds (user_id, url, name, private_key, public_key, created_at, updated_at)
-                                VALUES($1, $2, $3, $4, $5, datetime(CURRENT_TIMESTAMP, 'utc'), datetime(CURRENT_TIMESTAMP, 'utc'))",
-                               user.id, url, name, private_key_str, public_key_str)
+    let feed_id = sqlx::query!("INSERT INTO feeds (user_id, url, name, private_key, public_key, created_at, updated_at, refreshed_at)
+                                VALUES($1, $2, $3, $4, $5, datetime(CURRENT_TIMESTAMP, 'utc'), datetime(CURRENT_TIMESTAMP, 'utc'), ?)",
+                               user.id, url, name, private_key_str, public_key_str, old)
       .execute(pool)
       .await?
       .last_insert_rowid();
@@ -194,6 +206,31 @@ impl Feed {
     
     old_feed   
   }
+
+  pub async fn mark_stale(&self, pool: &SqlitePool) -> Result<(), sqlx::Error> {
+    let old = Utc.with_ymd_and_hms(1900, 1, 1, 0, 0, 0).unwrap();
+    let result = sqlx::query!("UPDATE feeds SET refreshed_at = $1 WHERE id = $2", old, self.id)
+      .execute(pool)
+      .await;
+
+    match result {
+      Ok(_result) => Ok(()),
+      Err(why) => Err(why)
+    }
+  }
+
+  pub async fn mark_fresh(&self, pool: &SqlitePool) -> Result<(), sqlx::Error> {
+    let old = Utc.with_ymd_and_hms(1900, 1, 1, 0, 0, 0).unwrap();
+    let result = sqlx::query!("UPDATE feeds SET refreshed_at = datetime(CURRENT_TIMESTAMP, 'utc') WHERE id = $1", self.id)
+      .execute(pool)
+      .await;
+
+    match result {
+      Ok(_result) => Ok(()),
+      Err(why) => Err(why)
+    }
+  }
+
 
   
   pub async fn entries_count(&self, pool: &SqlitePool)  -> Result<u64, AnyError>{
@@ -615,7 +652,10 @@ mod test {
       icon_url: Some("https://foo.com/image.ico".to_string()),
       description: None,
       site_url: None,
-      title: None, created_at: Utc::now().naive_utc(), updated_at: Utc::now().naive_utc()
+      title: None,
+      created_at: Utc::now().naive_utc(),
+      updated_at: Utc::now().naive_utc(),
+      refreshed_at: Utc::now().naive_utc()
     }
   }
 
@@ -706,6 +746,28 @@ mod test {
     assert_eq!(feed, feed2);
     assert_eq!(feed2.url, feed.url);
     
+    Ok(())
+  }
+
+  #[sqlx::test]
+  async fn test_stale(pool: SqlitePool) -> sqlx::Result<()> {
+    let feed: Feed = real_feed(&pool).await?;
+    let feed2: Feed = real_feed(&pool).await?;
+    
+
+    let stale = Feed::stale(&pool, 100, 100).await?;
+    assert_eq!(stale.len(), 2);
+
+    feed2.mark_fresh(&pool).await?;
+
+    let stale2 = Feed::stale(&pool, 100, 100).await?;
+    assert_eq!(stale2.len(), 1);
+
+    feed2.mark_stale(&pool).await?;
+
+    let stale3 = Feed::stale(&pool, 100, 100).await?;
+    assert_eq!(stale3.len(), 2);
+
     Ok(())
   }
 

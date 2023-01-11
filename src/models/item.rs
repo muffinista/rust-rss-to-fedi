@@ -225,7 +225,10 @@ mod test {
       icon_url: Some("https://foo.com/image.ico".to_string()),
       description: None,
       site_url: None,
-      title: None, created_at: Utc::now().naive_utc(), updated_at: Utc::now().naive_utc()
+      title: None,
+      created_at: Utc::now().naive_utc(),
+      updated_at: Utc::now().naive_utc(),
+      refreshed_at: Utc::now().naive_utc()
     }
   }
 

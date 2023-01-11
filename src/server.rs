@@ -7,7 +7,6 @@ use rocket_dyn_templates::Template;
 
 
 pub async fn build_server(pool: SqlitePool) -> Rocket<Build> {
-
   sqlx::migrate!("./migrations")
     .run(&pool)
     .await
