@@ -1,0 +1,20 @@
+{
+  "type": "OrderedCollection",
+  "totalItems": 46,
+  "id": "https://rss.friend.camp/u/hometown_releases/followers",
+  "first": {
+    "type": "OrderedCollectionPage",
+    "totalItems": 46,
+    "partOf": "https://rss.friend.camp/u/hometown_releases/followers",
+    "orderedItems": [
+      "https://saturation.social/users/irwin",
+      "https://silvan.cloud/users/gersande",
+      "https://argon.city/users/sysop",
+      "https://ottawa.place/users/andrew"
+    ],
+    "id": "https://rss.friend.camp/u/hometown_releases/followers?page=1"
+  },
+  "@context": [
+    "https://www.w3.org/ns/activitystreams"
+  ]
+}
