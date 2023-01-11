@@ -1,10 +1,22 @@
+use anyhow::{anyhow};
+use anyhow::Error as AnyError;
+
+use rocket::uri;
+use url::Url;
+
 use activitystreams_ext::{Ext1};
-use activitystreams::{actor::{ApActor, ApActorExt, Service}, iri};
 
 use activitystreams::{
+  activity::*,
+  actor::{ApActor, ApActorExt, Service},
+  base::BaseExt,
+  iri,
+  iri_string::types::IriString,
   prelude::*,
   security,
-  context
+  context,
+  collection::{OrderedCollection, OrderedCollectionPage},
+  object::ApObject
 };
 
 use sqlx::sqlite::SqlitePool;
@@ -19,28 +31,9 @@ use crate::models::user::User;
 use crate::models::item::Item;
 use crate::models::follower::Follower;
 use crate::utils::keys::*;
-use crate::utils::mailer::*;
 use crate::utils::utils::*;
+use crate::services::mailer::*;
 
-
-use activitystreams::base::BaseExt;
-use activitystreams::activity::*;
-
-use activitystreams::collection::OrderedCollection;
-use activitystreams::collection::OrderedCollectionPage;
-use activitystreams::object::ApObject;
-
-use activitystreams::{
-  iri_string::types::IriString,
-};
-
-use url::Url;
-
-
-use anyhow::{anyhow};
-use anyhow::Error as AnyError;
-
-use rocket::uri;
 use crate::routes::feeds::*;
 use crate::routes::ap::inbox::*;
 use crate::routes::ap::outbox::*;
@@ -598,9 +591,9 @@ mod test {
   use feed_rs::parser;
 
   use crate::models::user::User;
-  use crate::Feed;
+  use crate::models::feed::Feed;
   use crate::models::feed::AcceptedActivity;
-  use crate::utils::*;
+  use crate::utils::utils::*;
   
   use crate::routes::feeds::*;
   use chrono::Utc;

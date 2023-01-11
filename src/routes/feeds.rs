@@ -149,7 +149,7 @@ mod test {
   use rocket::{Rocket, Build};
   use crate::models::user::User;
   use crate::models::feed::Feed;
-  use crate::utils::*;
+  use crate::utils::utils::*;
   use chrono::Utc;
 
   use sqlx::sqlite::SqlitePool;

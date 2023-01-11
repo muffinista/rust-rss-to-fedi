@@ -1,8 +1,6 @@
 use serde::{Serialize};
 use serde_json::Value;
 
-//use crate::mailer::*;
-
 use reqwest::header::{HeaderValue, HeaderMap};
 
 use anyhow::Error as AnyError;
@@ -59,8 +57,8 @@ impl Follower {
 
 #[cfg(test)]
 mod test {
-  use crate::Feed;
-  use crate::models::follower;
+  use crate::models::feed::Feed;
+  use crate::models::follower::Follower;
   use crate::utils::keys::*;
   use chrono::Utc;
   use mockito::mock;

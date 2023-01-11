@@ -148,7 +148,7 @@ mod test {
   use url::Url;
   use webfinger::Webfinger;
 
-  use crate::mailer::parse_webfinger;
+  use crate::services::mailer::parse_webfinger;
 
   #[tokio::test]
   async fn test_parse_webfinger() {

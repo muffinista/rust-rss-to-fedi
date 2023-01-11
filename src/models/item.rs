@@ -3,7 +3,7 @@ use serde::{Serialize};
 use feed_rs::model::Entry;
 
 use crate::models::feed::Feed;
-use crate::utils::mailer::*;
+use crate::services::mailer::*;
 
 use activitystreams::activity::*;
 use activitystreams::object::ApObject;
@@ -203,8 +203,8 @@ impl Item {
 mod test {
   use sqlx::sqlite::SqlitePool;
 
-  use crate::Item;
-  use crate::Feed;
+  use crate::models::feed::Feed;
+  use crate::models::item::Item;
   use crate::utils::keys::*;
 
   use chrono::Utc;
