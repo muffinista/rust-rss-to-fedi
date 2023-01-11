@@ -311,6 +311,24 @@ impl Feed {
   }
 
   ///
+  /// grab new data for this feed, and deliver any new entries to followers
+  ///
+  pub async fn refresh(&mut self, pool: &SqlitePool) -> Result<(), AnyError> {
+    let items = self.parse(pool).await;
+    match items {
+      Ok(items) => {
+        for item in items {
+          item.deliver(&self, &pool).await?;
+        }
+        self.mark_fresh(pool).await?;
+
+        Ok(())
+      },
+      Err(why) => Err(anyhow!(why.to_string()))
+    }
+  }
+
+  ///
   /// load and parse feed
   /// returns a list of any new items
   ///
@@ -538,7 +556,7 @@ impl Feed {
   ///
   /// generate AP data to represent follower information
   ///
-  pub async fn followers(&self, pool: &SqlitePool)  -> Result<ApObject<OrderedCollection>, AnyError>{
+  pub async fn followers(&self, pool: &SqlitePool)  -> Result<ApObject<OrderedCollection>, AnyError> {
     let count = self.follower_count(pool).await?;
     let total_pages = ((count / PER_PAGE as u64) + 1 ) as u32;
 
