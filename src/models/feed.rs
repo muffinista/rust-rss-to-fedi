@@ -220,7 +220,6 @@ impl Feed {
   }
 
   pub async fn mark_fresh(&self, pool: &SqlitePool) -> Result<(), sqlx::Error> {
-    let old = Utc.with_ymd_and_hms(1900, 1, 1, 0, 0, 0).unwrap();
     let result = sqlx::query!("UPDATE feeds SET refreshed_at = datetime(CURRENT_TIMESTAMP, 'utc') WHERE id = $1", self.id)
       .execute(pool)
       .await;
@@ -635,6 +634,8 @@ mod test {
   use crate::routes::feeds::*;
   use chrono::Utc;
 
+  use mockito::mock;
+
 
   fn fake_user() -> User {
     User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()), created_at: Utc::now().naive_utc(), updated_at: Utc::now().naive_utc() }
@@ -751,7 +752,7 @@ mod test {
 
   #[sqlx::test]
   async fn test_stale(pool: SqlitePool) -> sqlx::Result<()> {
-    let feed: Feed = real_feed(&pool).await?;
+    let _feed: Feed = real_feed(&pool).await?;
     let feed2: Feed = real_feed(&pool).await?;
     
 
@@ -879,6 +880,17 @@ mod test {
 
     let json = format!(r#"{{"id": "{}/1/2/3", "actor":"{}","object":{{ "id": "{}" }} ,"type":"Follow"}}"#, &mockito::server_url(), actor, actor).to_string();
     let act:AcceptedActivity = serde_json::from_str(&json).unwrap();
+
+
+    let _m = mock("GET", "/users/colin")
+      .with_status(200)
+      .with_header("Accept", "application/ld+json")
+      .create();
+
+    let _m2 = mock("POST", "/users/colin/inbox")
+      .with_status(202)
+      .create();
+
 
     let feed:Feed = real_feed(&pool).await.unwrap();
 
