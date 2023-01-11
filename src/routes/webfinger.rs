@@ -7,12 +7,12 @@ use rocket::uri;
 
 use sqlx::sqlite::SqlitePool;
 
-use crate::feed::Feed;
-
 use webfinger::*;
-use crate::routes::feeds::*;
 
-use crate::utils::*;
+use crate::models::feed::Feed;
+use crate::routes::feeds::*;
+use crate::utils::utils::path_to_url;
+
 
 #[get("/.well-known/webfinger?<resource>")]
 pub async fn lookup_webfinger(resource: &str, db: &State<SqlitePool>) -> Result<String, Status> {
@@ -70,8 +70,8 @@ mod test {
   use rocket::http::Status;
   use rocket::uri;
   use rocket::{Rocket, Build};
-  use crate::user::User;
-  use crate::feed::Feed;
+  use crate::models::user::User;
+  use crate::models::feed::Feed;
   use sqlx::sqlite::SqlitePool;
   use std::env;
   use chrono::Utc;

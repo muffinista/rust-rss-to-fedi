@@ -5,8 +5,8 @@ use rocket::State;
 
 use sqlx::sqlite::SqlitePool;
 
-use crate::user::User;
-use crate::feed::Feed;
+use crate::models::user::User;
+use crate::models::feed::Feed;
 
 #[get("/")]
 pub async fn index_logged_in(user: User, db: &State<SqlitePool>) -> Template {

@@ -9,7 +9,7 @@ use rocket_dyn_templates::{Template, context};
 
 use sqlx::sqlite::SqlitePool;
 
-use crate::user::User;
+use crate::models::user::User;
 
 #[derive(FromForm)]
 pub struct LoginForm {

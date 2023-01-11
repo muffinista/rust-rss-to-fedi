@@ -2,8 +2,8 @@ use sqlx::sqlite::SqlitePool;
 use serde::{Serialize};
 use feed_rs::model::Entry;
 
-use crate::feed::Feed;
-use crate::mailer::*;
+use crate::models::feed::Feed;
+use crate::utils::mailer::*;
 
 use activitystreams::activity::*;
 use activitystreams::object::ApObject;
@@ -205,7 +205,7 @@ mod test {
 
   use crate::Item;
   use crate::Feed;
-  use crate::keys::*;
+  use crate::utils::keys::*;
 
   use chrono::Utc;
   use mockito::mock;

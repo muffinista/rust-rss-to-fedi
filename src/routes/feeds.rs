@@ -8,8 +8,8 @@ use rocket::uri;
 
 use sqlx::sqlite::SqlitePool;
 
-use crate::user::User;
-use crate::feed::Feed;
+use crate::models::user::User;
+use crate::models::feed::Feed;
 
 #[derive(FromForm)]
 pub struct FeedForm {
@@ -147,8 +147,8 @@ mod test {
   use rocket::http::{Header, Status};
   use rocket::uri;
   use rocket::{Rocket, Build};
-  use crate::user::User;
-  use crate::feed::Feed;
+  use crate::models::user::User;
+  use crate::models::feed::Feed;
   use crate::utils::*;
   use chrono::Utc;
 

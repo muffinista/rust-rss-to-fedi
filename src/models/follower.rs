@@ -60,8 +60,8 @@ impl Follower {
 #[cfg(test)]
 mod test {
   use crate::Feed;
-  use crate::Follower;
-  use crate::keys::*;
+  use crate::models::follower;
+  use crate::utils::keys::*;
   use chrono::Utc;
   use mockito::mock;
 

@@ -15,11 +15,12 @@ use feed_rs::parser;
 
 use std::{error::Error, fmt};
 
-use crate::user::User;
-use crate::item::Item;
-use crate::follower::Follower;
-use crate::keys::*;
-use crate::mailer::*;
+use crate::models::user::User;
+use crate::models::item::Item;
+use crate::models::follower::Follower;
+use crate::utils::keys::*;
+use crate::utils::mailer::*;
+use crate::utils::utils::*;
 
 
 use activitystreams::base::BaseExt;
@@ -40,7 +41,6 @@ use anyhow::{anyhow};
 use anyhow::Error as AnyError;
 
 use rocket::uri;
-use crate::utils::*;
 use crate::routes::feeds::*;
 use crate::routes::ap::inbox::*;
 use crate::routes::ap::outbox::*;
@@ -597,9 +597,9 @@ mod test {
   use rocket::uri;
   use feed_rs::parser;
 
-  use crate::user::User;
+  use crate::models::user::User;
   use crate::Feed;
-  use crate::feed::AcceptedActivity;
+  use crate::models::feed::AcceptedActivity;
   use crate::utils::*;
   
   use crate::routes::feeds::*;

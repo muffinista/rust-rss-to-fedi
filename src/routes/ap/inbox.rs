@@ -5,8 +5,8 @@ use rocket::State;
 
 use sqlx::sqlite::SqlitePool;
 
-use crate::feed::Feed;
-use crate::feed::AcceptedActivity;
+use crate::models::feed::Feed;
+use crate::models::feed::AcceptedActivity;
 
 use rocket::serde::json::Json;
 
@@ -41,8 +41,8 @@ pub async fn user_inbox(username: &str, activity: Json<AcceptedActivity>, db: &S
 //   use rocket::http::Status;
 //   use rocket::uri;
 //   use rocket::{Rocket, Build};
-//   use crate::user::User;
-//   use crate::feed::Feed;
+//   use crate::models::user::User;
+//   use crate::models::feed::Feed;
 //   use chrono::Utc;
 
 //   use sqlx::sqlite::SqlitePool;

@@ -6,8 +6,8 @@ use chrono::prelude::*;
 use std::env;
 
 // use rustypub::user::User;
-use rustypub::feed::Feed;
-use rustypub::Item;
+use rustypub::models::feed::Feed;
+use rustypub::models::Item;
 
 #[tokio::main]
 async fn main() -> Result<(), reqwest::Error>  {
