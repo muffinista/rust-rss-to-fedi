@@ -83,7 +83,8 @@ impl Item {
     
     // println!("Create: {:?}", entry.id);
 
-    let item_id = sqlx::query!("INSERT INTO items (feed_id, guid, title, content, url, created_at, updated_at) VALUES($1, $2, $3, $4, $5, datetime(CURRENT_TIMESTAMP, 'utc'), datetime(CURRENT_TIMESTAMP, 'utc'))",
+    let item_id = sqlx::query!("INSERT INTO items (feed_id, guid, title, content, url, created_at, updated_at)
+                                VALUES($1, $2, $3, $4, $5, datetime(CURRENT_TIMESTAMP, 'utc'), datetime(CURRENT_TIMESTAMP, 'utc'))",
                                feed.id,
                                entry.id,
                                title,
