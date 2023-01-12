@@ -24,17 +24,13 @@ pub async fn show_item(username: &str, id: i64, db: &State<SqlitePool>) -> Resul
             if item.is_some() {
               let data = item.unwrap();
               if data.url.is_some() {
-                Ok(Redirect::to(data.url.unwrap()))
+                return Ok(Redirect::to(data.url.unwrap()))
               } else if feed.site_url.is_some() {
-                Ok(Redirect::to(feed.site_url.unwrap()))                
-              }
-              else {
-                Err(Status::NotFound)
+                return Ok(Redirect::to(feed.site_url.unwrap()))                
               }
             }
-            else {
-              Err(Status::NotFound)
-            }
+
+            Err(Status::NotFound)
           },
           Err(_why) => Err(Status::NotFound)
         }
@@ -42,7 +38,6 @@ pub async fn show_item(username: &str, id: i64, db: &State<SqlitePool>) -> Resul
       else {
         Err(Status::NotFound)
       }
-         
     },
     Err(_why) => Err(Status::NotFound)
   }
