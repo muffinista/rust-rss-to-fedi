@@ -53,7 +53,13 @@ impl Item {
     .fetch_one(pool)
     .await
   }
-  
+
+  pub async fn find_by_feed_and_id(feed: &Feed, id: i64, pool: &SqlitePool) -> Result<Option<Item>, sqlx::Error> {
+    sqlx::query_as!(Item, "SELECT * FROM items WHERE feed_id = ? AND id = ?", feed.id, id)
+    .fetch_optional(pool)
+    .await
+  }
+
   pub async fn find_by_guid(guid: &String, feed: &Feed, pool: &SqlitePool) -> Result<Item, sqlx::Error> {
     sqlx::query_as!(Item, "SELECT * FROM items WHERE feed_id = ? AND guid = ?", feed.id, guid)
     .fetch_one(pool)
@@ -203,68 +209,11 @@ impl Item {
 #[cfg(test)]
 mod test {
   use sqlx::sqlite::SqlitePool;
-
   use crate::models::feed::Feed;
   use crate::models::item::Item;
-  use crate::utils::keys::*;
+  use crate::utils::test_helpers::{real_item, fake_feed, fake_item};
 
-  use chrono::Utc;
   use mockito::mock;
-  use uuid::Uuid;
-
-  fn fake_feed() -> Feed {
-    let (private_key_str, public_key_str) = generate_key();
-
-    Feed {
-      id: 1,
-      user_id: 1,
-      name: "muffinfeed".to_string(),
-      url: "https://foo.com/rss.xml".to_string(),
-      private_key: private_key_str.to_string(),
-      public_key: public_key_str.to_string(),
-      image_url: Some("https://foo.com/image.png".to_string()),
-      icon_url: Some("https://foo.com/image.ico".to_string()),
-      description: None,
-      site_url: None,
-      title: None,
-      created_at: Utc::now().naive_utc(),
-      updated_at: Utc::now().naive_utc(),
-      refreshed_at: Utc::now().naive_utc()
-    }
-  }
-
-  fn fake_item() -> Item {
-    Item {
-      id: 1,
-      feed_id: 1,
-      guid: "12345".to_string(),
-      title: Some("Hello!".to_string()),
-      content: Some("Hey!".to_string()),
-      url: Some("http://google.com".to_string()),
-      created_at: Utc::now().naive_utc(),
-      updated_at: Utc::now().naive_utc()
-    }
-  }
-
-  async fn real_item(feed: &Feed, pool: &SqlitePool) -> sqlx::Result<Item> {
-    let id = Uuid::new_v4().to_string();
-    let item_url = format!("https://foo.com/{}", id);
-
-    let item_id = sqlx::query!("INSERT INTO items
-                              (feed_id, guid, title, content, url, created_at, updated_at)
-                              VALUES($1, $2, $3, $4, $5, datetime(CURRENT_TIMESTAMP, 'utc'), datetime(CURRENT_TIMESTAMP, 'utc'))",
-                               feed.id,
-                               id,
-                               id,
-                               id,
-                               item_url
-    )
-      .execute(pool)
-      .await?
-      .last_insert_rowid();
-
-    Item::find(item_id, &pool).await
-  }
 
   #[sqlx::test]
   async fn test_find(pool: SqlitePool) -> sqlx::Result<()> {
@@ -274,6 +223,18 @@ mod test {
     let item2 = Item::find(item.id, &pool).await?;
     
     assert_eq!(item, item2);
+    
+    Ok(())
+  }
+
+  #[sqlx::test]
+  async fn find_by_feed_and_id(pool: SqlitePool) -> sqlx::Result<()> {
+    let feed: Feed = fake_feed();
+    let item: Item = real_item(&feed, &pool).await?;
+
+    let item2 = Item::find_by_feed_and_id(&feed, item.id, &pool).await?;
+    
+    assert_eq!(item, item2.unwrap());
     
     Ok(())
   }
