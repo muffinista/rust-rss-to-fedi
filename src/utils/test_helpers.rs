@@ -1,6 +1,7 @@
 use sqlx::sqlite::SqlitePool;
 use crate::models::user::User;
 use crate::models::feed::Feed;
+use crate::models::follower::Follower;
 use crate::models::item::Item;
 use crate::models::keys::generate_key;
 
@@ -42,6 +43,16 @@ pub fn fake_feed() -> Feed {
     created_at: Utc::now().naive_utc(),
     updated_at: Utc::now().naive_utc(),
     refreshed_at: Utc::now().naive_utc()
+  }
+}
+
+pub fn fake_follower(feed: &Feed) -> Follower {
+  Follower {
+    id: 1,
+    feed_id: feed.id,
+    actor: format!("{}/users/muffinista", &mockito::server_url()),
+    created_at: Utc::now().naive_utc(),
+    updated_at: Utc::now().naive_utc()
   }
 }
 

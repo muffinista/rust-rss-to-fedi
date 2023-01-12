@@ -59,40 +59,9 @@ impl Follower {
 mod test {
   use crate::models::feed::Feed;
   use crate::models::follower::Follower;
-  use crate::utils::keys::*;
-  use chrono::Utc;
+  use crate::utils::test_helpers::{fake_feed, fake_follower};
+
   use mockito::mock;
-
-  fn fake_feed() -> Feed {
-    let (private_key_str, public_key_str) = generate_key();
-
-    Feed {
-      id: 1,
-      user_id: 1,
-      name: "muffinfeed".to_string(),
-      url: "https://foo.com/rss.xml".to_string(),
-      private_key: private_key_str.to_string(),
-      public_key: public_key_str.to_string(),
-      image_url: Some("https://foo.com/image.png".to_string()),
-      icon_url: Some("https://foo.com/image.ico".to_string()),
-      description: None,
-      site_url: None,
-      title: None,
-      created_at: Utc::now().naive_utc(),
-      updated_at: Utc::now().naive_utc(),
-      refreshed_at: Utc::now().naive_utc()
-    }
-  }
-
-  fn fake_follower(feed: &Feed) -> Follower {
-    Follower {
-      id: 1,
-      feed_id: feed.id,
-      actor: format!("{}/users/muffinista", &mockito::server_url()),
-      created_at: Utc::now().naive_utc(),
-      updated_at: Utc::now().naive_utc()
-    }
-  }
 
 
   #[sqlx::test]
