@@ -78,8 +78,19 @@ impl Item {
   }
 
   pub async fn create_from_entry(entry: &Entry, feed: &Feed, pool: &SqlitePool) -> Result<Item, sqlx::Error> {
+    println!("{:?}", entry);
+
     let title = &entry.title.as_ref().unwrap().content;
-    let body = &entry.content.as_ref().unwrap().body;
+
+    // default to summary if we have it
+    let body = if entry.summary.is_some() {
+      Some(&entry.summary.as_ref().unwrap().content)
+    }
+    else if entry.content.is_some() {
+      Some(entry.content.as_ref().unwrap().body.as_ref().unwrap())
+    } else {
+      None
+    };
 
     let item_url = if entry.links.len() > 0 {
       Some(&entry.links[0].href)
@@ -87,7 +98,6 @@ impl Item {
       None
     };
     
-    // println!("Create: {:?}", entry.id);
 
     let item_id = sqlx::query!("INSERT INTO items (feed_id, guid, title, content, url, created_at, updated_at)
                                 VALUES($1, $2, $3, $4, $5, datetime(CURRENT_TIMESTAMP, 'utc'), datetime(CURRENT_TIMESTAMP, 'utc'))",
