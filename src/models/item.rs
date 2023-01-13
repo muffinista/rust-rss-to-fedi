@@ -77,6 +77,12 @@ impl Item {
     }
   }
 
+  pub async fn for_feed(feed: &Feed, limit: i64, pool: &SqlitePool) -> Result<Vec<Item>, sqlx::Error> {
+    sqlx::query_as!(Item, "SELECT * FROM items WHERE feed_id = ? LIMIT ?", feed.id, limit)
+    .fetch_all(pool)
+    .await
+  }
+
   pub async fn create_from_entry(entry: &Entry, feed: &Feed, pool: &SqlitePool) -> Result<Item, sqlx::Error> {
     println!("{:?}", entry);
 
@@ -275,6 +281,22 @@ mod test {
 
     Ok(())
   }
+
+  #[sqlx::test]
+  pub async fn test_for_feed(pool: SqlitePool) -> sqlx::Result<()> {
+    let feed: Feed = fake_feed();
+    let item: Item = real_item(&feed, &pool).await?;
+
+    let result = Item::for_feed(&feed, 10, &pool).await?;
+    assert_eq!(result.len(), 1);
+
+    let item2: Item = real_item(&feed, &pool).await?;
+    let result2 = Item::for_feed(&feed, 10, &pool).await?;
+    assert_eq!(result2.len(), 2);
+
+    Ok(())
+  }
+
 
 
   #[sqlx::test]
