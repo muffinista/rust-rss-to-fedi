@@ -4,11 +4,11 @@ body {
   -webkit-font-smoothing: antialiased; 
 }
 
-header, footer {
+body > header, body > footer {
   background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAkAAAAJCAYAAADgkQYQAAAALklEQVQoU2NkIAIwEqGGgZAiYwYGhrOEFIEtIlsR2Apkt5JtEoaHYSZhWIGsEgB+QQMKUesOpwAAAABJRU5ErkJggg==) repeat;
 }
 
-footer {
+body > footer {
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -37,4 +37,8 @@ form > .form-row {
 }
 .form-row > input {
   flex: 2;
+}
+
+main > header.feed {
+  display: flex;
 }

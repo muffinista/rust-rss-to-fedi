@@ -89,7 +89,7 @@ pub async fn show_feed(user: Option<User>, username: &str, db: &State<SqlitePool
         Some(feed) => {
           let logged_in = user.is_some();
           let owned_by = logged_in && user.unwrap().id == feed.user_id;
-          let feed_url = uri!(show_feed(&feed.name));
+          let follow_url = feed.permalink_url();
           let items = Item::for_feed(&feed, 10, &db).await;
 
           match items {
@@ -99,7 +99,7 @@ pub async fn show_feed(user: Option<User>, username: &str, db: &State<SqlitePool
                 owned_by: owned_by,
                 feed: feed,
                 items: items,
-                feed_url: feed_url
+                follow_url: follow_url
               }))    
             },
             Err(_why) => Err(Status::NotFound)        

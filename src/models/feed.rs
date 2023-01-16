@@ -431,6 +431,14 @@ impl Feed {
   pub fn ap_url(&self) -> String {
     path_to_url(&uri!(render_feed(&self.name)))
   }
+
+  ///
+  /// Return URL to use in HTML output for this feed
+  ///
+  pub fn permalink_url(&self) -> String {
+    path_to_url(&uri!(show_feed(&self.name)))
+  }
+
   
   ///
   /// Generate valid ActivityPub data for this feed

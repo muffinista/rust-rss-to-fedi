@@ -2,22 +2,25 @@
 {% block title %}Feed for {{feed.name}}{% endblock title %}
 
 {% block content %}
-  <h1>{{feed.title}}</h1>
+<header class="feed">
   <img src="{{feed.image_url}}" width="200" />
+  <div>
+    <h1>{{feed.title}}</h1>
+    <p>{{feed.description}}</p>
 
-  <b>{{feed.name}}</b>
-  <a href="{{feed.url}}">{{feed.url}}</a>
-  <p>{{feed.description}}</p>
-  website: <a href="{{feed.site_url}}">{{feed.site_url}}</a>
-  updated at: {{feed.refreshed_at}}
-
+    <b>{{feed.name}}</b> -- {{follow_url}}
+    <a href="{{feed.url}}">{{feed.url}}</a>
+    website: <a href="{{feed.site_url}}">{{feed.site_url}}</a>
+    updated at: {{feed.refreshed_at}}
+  </div>
+</header>
 
   <ul>
     {% for item in items %}
     <li>
-      <a href="{{ item.url }}">{{ item.title }}</a> <!-- - {{item.content}} -->
+      <a href="{{ item.url }}">{{ item.title }}</a>
     </li>
-    {%- endfor %}
+    {% endfor %}
   </ul>
 
 
