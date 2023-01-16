@@ -1,15 +1,25 @@
 {% extends "default" %}
-{% block title %}Feed{% endblock title %}
+{% block title %}Feed for {{feed.name}}{% endblock title %}
 
 {% block content %}
-  <h1>Index</h1>
-  <p class="important">
-    Welcome to the feed page.
-  </p>
+  <h1>{{feed.title}}</h1>
+  <img src="{{feed.image_url}}" width="200" />
 
-  {{feed.name}}
+  <b>{{feed.name}}</b>
+  <a href="{{feed.url}}">{{feed.url}}</a>
+  <p>{{feed.description}}</p>
+  website: <a href="{{feed.site_url}}">{{feed.site_url}}</a>
+  updated at: {{feed.refreshed_at}}
 
-  {{feed.url}}
+
+  <ul>
+    {% for item in items %}
+    <li>
+      <a href="{{ item.url }}">{{ item.title }}</a> <!-- - {{item.content}} -->
+    </li>
+    {%- endfor %}
+  </ul>
+
 
   {% if logged_in %}
   {% else %}

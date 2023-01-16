@@ -367,6 +367,24 @@ impl Feed {
           self.image_url = Some(data.logo.as_ref().unwrap().uri.clone());
         }
 
+        // parse out a likely site link
+        if data.links.len() > 0 {
+          let query:Option<feed_rs::model::Link> = data.links
+            .clone()
+            .into_iter()
+            .find(|link| 
+              (link.media_type.is_none() && link.rel.is_none()) ||
+              (link.media_type.is_some() && link.media_type.as_ref().unwrap() == "text/html") ||
+              (link.rel.is_some() && link.rel.as_ref().unwrap() == "self")
+            );
+      
+          self.site_url = if query.is_some() {
+            Some(query.unwrap().href)
+          } else {
+            None
+          }
+        }
+
         // todo snag link too
 
         let update = self.save(pool).await;

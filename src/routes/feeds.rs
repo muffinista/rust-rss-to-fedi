@@ -10,6 +10,7 @@ use sqlx::sqlite::SqlitePool;
 
 use crate::models::user::User;
 use crate::models::feed::Feed;
+use crate::models::item::Item;
 
 #[derive(FromForm)]
 pub struct FeedForm {
@@ -89,13 +90,21 @@ pub async fn show_feed(user: Option<User>, username: &str, db: &State<SqlitePool
           let logged_in = user.is_some();
           let owned_by = logged_in && user.unwrap().id == feed.user_id;
           let feed_url = uri!(show_feed(&feed.name));
+          let items = Item::for_feed(&feed, 10, &db).await;
 
-          Ok(Template::render("feed", context! {
-            logged_in: logged_in,
-            owned_by: owned_by,
-            feed: feed,
-            feed_url: feed_url
-          }))
+          match items {
+            Ok(items) => {
+              Ok(Template::render("feed", context! {
+                logged_in: logged_in,
+                owned_by: owned_by,
+                feed: feed,
+                items: items,
+                feed_url: feed_url
+              }))    
+            },
+            Err(_why) => Err(Status::NotFound)        
+          }
+
         },
         None => Err(Status::NotFound)
       }
