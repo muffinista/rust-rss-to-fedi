@@ -182,7 +182,7 @@ mod test {
     
     let body = response.into_string().await.unwrap();
     println!("{:?}", body);
-    assert!(body.contains("Welcome to the feed page"));
+    assert!(body.contains("Feed for testfeed"));
     assert!(body.contains(&name));
 
     Ok(())

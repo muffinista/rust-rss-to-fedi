@@ -58,7 +58,9 @@ pub struct Feed {
 
   pub created_at: chrono::NaiveDateTime,
   pub updated_at: chrono::NaiveDateTime,
-  pub refreshed_at: chrono::NaiveDateTime
+  pub refreshed_at: chrono::NaiveDateTime,
+
+  pub error: Option<String>
 }
 
 impl PartialEq for Feed {
@@ -179,8 +181,9 @@ impl Feed {
           title = $7,
           description = $8,
           site_url = $9,
+          error = $10,
           updated_at = datetime(CURRENT_TIMESTAMP, 'utc')
-      WHERE id = $10",
+      WHERE id = $11",
       self.url,
       self.name,
       self.private_key,
@@ -189,7 +192,8 @@ impl Feed {
       self.icon_url,
       self.title,
       self.description,
-      self.site_url,
+                 self.site_url,
+                 self.error,
       self.id
     ).execute(pool)
       .await?;
@@ -210,6 +214,17 @@ impl Feed {
   pub async fn mark_stale(&self, pool: &SqlitePool) -> Result<(), sqlx::Error> {
     let old = Utc.with_ymd_and_hms(1900, 1, 1, 0, 0, 0).unwrap();
     let result = sqlx::query!("UPDATE feeds SET refreshed_at = $1 WHERE id = $2", old, self.id)
+      .execute(pool)
+      .await;
+
+    match result {
+      Ok(_result) => Ok(()),
+      Err(why) => Err(why)
+    }
+  }
+
+  pub async fn mark_error(&self, err:&String, pool: &SqlitePool) -> Result<(), sqlx::Error> {
+    let result = sqlx::query!("UPDATE feeds SET error = $1 WHERE id = $2", err, self.id)
       .execute(pool)
       .await;
 
@@ -339,10 +354,16 @@ impl Feed {
         let work = self.parse_from_data(body.to_string(), pool).await;
         match work {
           Ok(entries) => Ok(entries),
-          Err(_why) => Err(FeedError)
+          Err(why) => {
+            self.mark_error(&why.to_string(), pool).await.unwrap();
+            Err(FeedError)
+          }
         }
       },
-      Err(_why) => Err(FeedError)
+      Err(why) => {
+        self.mark_error(&why.to_string(), pool).await.unwrap();
+        Err(FeedError)
+      }
     }   
   }
 

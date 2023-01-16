@@ -5,6 +5,7 @@ CREATE TABLE feeds (
   user_id INTEGER NOT NULL,
   name VARCHAR NOT NULL,
   url VARCHAR NOT NULL,
+  error VARCHAR,
   public_key VARCHAR NOT NULL,
   private_key VARCHAR NOT NULL,
   image_url VARCHAR,

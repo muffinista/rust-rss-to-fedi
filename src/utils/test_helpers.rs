@@ -42,7 +42,8 @@ pub fn fake_feed() -> Feed {
     title: None,
     created_at: Utc::now().naive_utc(),
     updated_at: Utc::now().naive_utc(),
-    refreshed_at: Utc::now().naive_utc()
+    refreshed_at: Utc::now().naive_utc(),
+    error: None
   }
 }
 

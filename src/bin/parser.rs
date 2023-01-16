@@ -5,7 +5,7 @@ use sqlx::sqlite::SqlitePool;
 
 use std::env;
 
-// use rustypub::user::User;
+use rustypub::models::user::User;
 use rustypub::models::feed::Feed;
 // use rustypub::models::Item;
 
@@ -20,8 +20,19 @@ async fn main() -> Result<(), reqwest::Error>  {
     .await
     .ok();
 
-  let mut feed = Feed::find(2, &pool).await.unwrap();
-  feed.refresh(&pool).await.unwrap();
+  //let user = User::create_by_email(&"colin@muffinlabs.com".to_string(), &pool).await.unwrap();
+  //  let _feed = Feed::create(&user, &"https://secretbroadcast.net/feed.rss".to_string(), &"secretbroadcast".to_string(), &pool).await.unwrap();
+  let mut feed = Feed::find(1, &pool).await.unwrap();
+
+  let result = feed.refresh(&pool).await;
+  match result {
+    Ok(_result) => {
+      println!("It worked!");
+    },
+    Err(why) => {
+      println!("Something went wrong: {:}", why.to_string());
+    }
+  }
 
 //   let item = Item {
 //     id: 1,
