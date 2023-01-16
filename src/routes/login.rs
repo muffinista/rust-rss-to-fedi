@@ -9,6 +9,7 @@ use rocket_dyn_templates::{Template, context};
 
 use sqlx::sqlite::SqlitePool;
 
+
 use crate::models::user::User;
 
 #[derive(FromForm)]
@@ -58,13 +59,22 @@ pub async fn do_login(db: &State<SqlitePool>, form: Form<LoginForm>) -> Result<R
   
   match user {
     Ok(user) => {
-      let auth_url = uri!(attempt_login(user.login_token));
-      println!("{:?}", auth_url);
-      // just log the user in for now
-      // Ok(Redirect::to(format!("/user/auth/{}", user.login_token)))
-
-      let dest = uri!(login_result());
-      Ok(Redirect::to(dest))
+      if user.should_send_login_email() {
+        let result = user.send_login_email();
+        match result {
+          Ok(_result) => {
+            let dest = uri!(login_result());
+            Ok(Redirect::to(dest))
+          },
+          Err(_why) => {
+            let dest = uri!(login_result());
+            Ok(Redirect::to(dest))
+          }
+        }
+      } else {
+        let dest = uri!(login_result());
+        Ok(Redirect::to(dest))
+      }
     },
     Err(why) => {
       print!("{}", why);

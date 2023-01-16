@@ -4,6 +4,19 @@ use rand::{distributions::Alphanumeric, Rng};
 use rocket::request::{self, FromRequest, Request};
 use rocket::outcome::{Outcome};
 
+use rocket::uri;
+
+use crate::routes::login::*;
+use crate::utils::utils::*;
+
+use rocket_dyn_templates::tera::Tera;
+use rocket_dyn_templates::tera::Context;
+
+use ohmysmtp::{Email, OhMySmtp};
+
+use anyhow::anyhow;
+use anyhow::Error as AnyError;
+
 #[derive(Debug)]
 pub struct User {
   pub id: i64,
@@ -95,8 +108,45 @@ impl User {
     .sample_iter(&Alphanumeric)
     .take(40)
     .map(char::from)
-    .collect()
+    .collect()    
+  }
+
+  pub fn should_send_login_email(&self) -> bool {
+    true
+  }
+
+  pub fn send_login_email(&self) -> Result<(), AnyError> {
+    let auth_url = path_to_url(&uri!(attempt_login(&self.login_token)));
+    println!("{:?}", auth_url);
+
+
+    let tera = match Tera::new("templates/email/*.*") {
+      Ok(t) => t,
+      Err(e) => {
+        println!("Parsing error(s): {}", e);
+        ::std::process::exit(1);
+      }
+    };
     
+    let mut context = Context::new();
+    context.insert("link", &auth_url);
+    
+    let body = tera.render("send-login.text.tera", &context).unwrap();
+
+    println!("{:}", body);
+  
+    let email_service = OhMySmtp::new("OHMY_API_KEY");
+    
+    let result = email_service.send(&Email::new(
+      "from@email.address",
+      &self.email,
+      &body,
+    ));
+
+    match result {
+      Ok(_result) => Ok(()),
+      Err(why) => Err(anyhow!("Something went wrong"))
+    }
   }
 }
 
