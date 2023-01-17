@@ -111,6 +111,9 @@ impl User {
     .collect()    
   }
 
+  //
+  // @todo add some code here to prevent abuse
+  //
   pub fn should_send_login_email(&self) -> bool {
     true
   }
@@ -118,7 +121,6 @@ impl User {
   pub fn send_login_email(&self) -> Result<(), AnyError> {
     let auth_url = path_to_url(&uri!(attempt_login(&self.login_token)));
     println!("{:?}", auth_url);
-
 
     let tera = match Tera::new("templates/email/*.*") {
       Ok(t) => t,

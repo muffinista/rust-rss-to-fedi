@@ -52,11 +52,6 @@ pub async fn attempt_login(db: &State<SqlitePool>, cookies: &CookieJar<'_>, logi
 pub async fn do_login(db: &State<SqlitePool>, form: Form<LoginForm>) -> Result<Redirect, Status> {
   let user = User::find_or_create_by_email(&form.email, &**db).await;
   
-  // generate login token
-  // send email
-  // redirect
-  
-  
   match user {
     Ok(user) => {
       if user.should_send_login_email() {
