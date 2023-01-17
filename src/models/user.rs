@@ -12,10 +12,13 @@ use crate::utils::utils::*;
 use rocket_dyn_templates::tera::Tera;
 use rocket_dyn_templates::tera::Context;
 
-use ohmysmtp::{Email, OhMySmtp};
+use lettre::transport::smtp::authentication::Credentials;
+use lettre::{Message, SmtpTransport, Transport};
 
 use anyhow::anyhow;
 use anyhow::Error as AnyError;
+
+use std::env;
 
 #[derive(Debug)]
 pub struct User {
@@ -157,18 +160,39 @@ impl User {
     let body = tera.render("send-login.text.tera", &context).unwrap();
 
     println!("{:}", body);
-  
-    let email_service = OhMySmtp::new("OHMY_API_KEY");
-    
-    let result = email_service.send(&Email::new(
-      "from@email.address",
-      &self.email,
-      &body,
-    ));
 
-    match result {
-      Ok(_result) => Ok(()),
-      Err(why) => Err(anyhow!("Something went wrong"))
+    if !env::var("SMTP_USERNAME").is_ok() ||
+      !env::var("SMTP_PASSWORD").is_ok() ||
+      !env::var("SMTP_HOST").is_ok() ||
+      !env::var("SMTP_FROM").is_ok() {
+      println!("Not sending mail because env vars are missing");
+      return Ok(())        
+    }
+
+    let smtp_username = env::var("SMTP_USERNAME").expect("SMTP_USERNAME is not set");
+    let smtp_password = env::var("SMTP_PASSWORD").expect("SMTP_PASSWORD is not set");
+    let smtp_host = env::var("SMTP_HOST").expect("SMTP_HOST is not set");
+    let mail_from = env::var("SMTP_FROM").expect("SMTP_FROM is not set");
+
+    let email = Message::builder()
+      .from(mail_from.parse().unwrap()) // "NoBody <nobody@domain.tld>"
+      .to(self.email.parse().unwrap())
+      .subject("Your login email")
+      .body(body)
+      .unwrap();
+
+    let creds = Credentials::new(smtp_username, smtp_password);
+
+    // Open a remote connection to gmail
+    let mailer = SmtpTransport::relay(&smtp_host)
+        .unwrap()
+        .credentials(creds)
+        .build();
+
+    // Send the email
+    match mailer.send(&email) {
+      Ok(_) => Ok(()),
+      Err(e) => Err(anyhow!(format!("Could not send email: {:?}", e))),
     }
   }
 }

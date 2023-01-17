@@ -285,19 +285,17 @@ mod test {
   #[sqlx::test]
   pub async fn test_for_feed(pool: SqlitePool) -> sqlx::Result<()> {
     let feed: Feed = fake_feed();
-    let item: Item = real_item(&feed, &pool).await?;
+    let _item: Item = real_item(&feed, &pool).await?;
 
     let result = Item::for_feed(&feed, 10, &pool).await?;
     assert_eq!(result.len(), 1);
 
-    let item2: Item = real_item(&feed, &pool).await?;
+    let _item2: Item = real_item(&feed, &pool).await?;
     let result2 = Item::for_feed(&feed, 10, &pool).await?;
     assert_eq!(result2.len(), 2);
 
     Ok(())
   }
-
-
 
   #[sqlx::test]
   async fn test_to_activity_pub() -> Result<(), String> {
