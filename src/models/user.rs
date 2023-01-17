@@ -35,30 +35,45 @@ impl PartialEq for User {
 }
 
 impl User {
+  ///
+  /// Find user by ID. This assumes that the user exists!
+  ///
   pub async fn find(id: i64, pool: &SqlitePool) -> Result<User, sqlx::Error> {
     sqlx::query_as!(User, "SELECT * FROM users WHERE id = ?", id)
     .fetch_one(pool)
     .await
   }
   
+  ///
+  /// Find user by email
+  ///
   pub async fn find_by_email(email: &String, pool: &SqlitePool) -> Result<Option<User>, sqlx::Error> {
     sqlx::query_as!(User, "SELECT * FROM users WHERE email = ?", email)
     .fetch_optional(pool)
     .await
   }
   
+  ///
+  /// Find user by login
+  ///
   pub async fn find_by_login(token: &String, pool: &SqlitePool) -> Result<Option<User>, sqlx::Error> {
     sqlx::query_as!(User, "SELECT * FROM users WHERE login_token = ?", token)
     .fetch_optional(pool)
     .await
   }
   
+  ///
+  /// Find user by access token
+  ///
   pub async fn find_by_access(token: &String, pool: &SqlitePool) -> Result<Option<User>, sqlx::Error> {
     sqlx::query_as!(User, "SELECT * FROM users WHERE access_token = ?", token)
     .fetch_optional(pool)
     .await
   }
   
+  ///
+  /// generate and apply access token to the current object
+  ///
   pub async fn apply_access_token(&self, pool: &SqlitePool) -> Result<String, sqlx::Error> {
     let token = User::generate_access_token();
     let query_check = sqlx::query!(
@@ -72,6 +87,9 @@ impl User {
     }
   }
     
+  ///
+  /// create a user with the given email address
+  ///
   pub async fn create_by_email(email: &String, pool: &SqlitePool) -> Result<User, sqlx::Error> {
     let token = User::generate_login_token();
     let user_id = sqlx::query!(
@@ -84,6 +102,9 @@ impl User {
     User::find(user_id, pool).await
   }
     
+  ///
+  /// look for a user with the given email address. if none exists, create one
+  ///
   pub async fn find_or_create_by_email(email: &String, pool: &SqlitePool) -> Result<User, sqlx::Error> {
     let user_check = sqlx::query_as!(User, "SELECT * FROM users WHERE email = ?", email)
     .fetch_one(pool)
