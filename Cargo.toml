@@ -40,6 +40,7 @@ base64 = "0.13.1"
 chrono = { version = "0.4.23", features = ["serde"] }
 mockito = "0.31.1"
 lettre = "0.10.1"
+scraper = "0.14.0"
 
 
 # chrono = "~0.4.23"
