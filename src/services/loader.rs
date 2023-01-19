@@ -9,7 +9,8 @@ pub async fn update_stale_feeds(pool: &SqlitePool) -> Result<(), AnyError>{
   let feeds = Feed::stale(pool, 3600, 5).await;
   match feeds {
     Ok(feeds) => {
-      for mut feed in feeds { 
+      for mut feed in feeds {
+        println!("{:}", feed.url);
         feed.refresh(pool).await?
       };
 
