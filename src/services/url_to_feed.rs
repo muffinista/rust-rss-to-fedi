@@ -14,7 +14,7 @@ pub fn is_valid_feed(data:&String) -> bool {
 /// given a URL, determine if it's a valid feed, or try and find a feed
 /// from any HTML returned
 ///
-pub async fn url_to_feed_url(url:&String) -> Result<String, AnyError>{
+pub async fn url_to_feed_url(url:&String) -> Result<Option<String>, AnyError>{
   // grab the URL contents
   let res = reqwest::get(url).await;
   if let Err(err) = res {
@@ -40,7 +40,7 @@ pub async fn url_to_feed_url(url:&String) -> Result<String, AnyError>{
     Ok(contents) => {
       // if it's a valid feed, we're good
       if is_valid_feed(&contents) {
-        return Ok(url.clone())
+        return Ok(Some(url.clone()))
       }
 
       // otherwise, parse and look for a link to a feed
@@ -54,8 +54,8 @@ pub async fn url_to_feed_url(url:&String) -> Result<String, AnyError>{
       let selector = Selector::parse(r#"link[rel="alternate"][href]"#).unwrap();
       let link = document.select(&selector).next();
       match link {
-        Some(link) => Ok(link.value().attr("href").unwrap().to_string()),
-        None => Err(anyhow!("Nothing found"))
+        Some(link) => Ok(Some(link.value().attr("href").unwrap().to_string())),
+        None => Ok(None) //Err(anyhow!("Nothing found"))
       }
     },
     Err(err) => Err(anyhow!(err.to_string()))
@@ -85,7 +85,10 @@ mod test {
     let result = url_to_feed_url(&feed_url).await.unwrap();
     println!("{:?}", result);
 
-    assert_eq!(feed_url, result);
+    match result {
+      Some(result) => assert_eq!(feed_url, result),
+      None => assert_eq!(false, true)
+    }
 
     Ok(())
   }
@@ -106,7 +109,26 @@ mod test {
     let result = url_to_feed_url(&page_url).await.unwrap();
     println!("{:?}", result);
 
-    assert_eq!(feed_url, result);
+    match result {
+      Some(result) => assert_eq!(feed_url, result),
+      None => assert_eq!(false, true)
+    }
+
+    Ok(())
+  }
+
+  #[tokio::test]
+  async fn test_404_feed_url() -> Result<(), String>  {
+    let _m = mock("GET", "/feed.xml")
+      .with_status(404)
+      .create();
+
+    let feed_url = format!("{}/feed.xml", &mockito::server_url()).to_string();
+
+    let result = url_to_feed_url(&feed_url).await.unwrap();
+    println!("{:?}", result);
+
+    assert!(result.is_none());
 
     Ok(())
   }
