@@ -61,3 +61,53 @@ pub async fn url_to_feed_url(url:&String) -> Result<String, AnyError>{
     Err(err) => Err(anyhow!(err.to_string()))
   }
 }
+
+
+#[cfg(test)]
+mod test {
+  use mockito::mock;
+  use std::fs;
+
+  use crate::services::url_to_feed::url_to_feed_url;
+
+  #[tokio::test]
+  async fn test_valid_direct_feed_url() -> Result<(), String>  {
+    let path = "fixtures/test_feed_to_entries.xml";
+    let data = fs::read_to_string(path).unwrap();
+
+    let _m = mock("GET", "/feed.xml")
+      .with_status(200)
+      .with_body(data)
+      .create();
+
+    let feed_url = format!("{}/feed.xml", &mockito::server_url()).to_string();
+
+    let result = url_to_feed_url(&feed_url).await.unwrap();
+    println!("{:?}", result);
+
+    assert_eq!(feed_url, result);
+
+    Ok(())
+  }
+
+  #[tokio::test]
+  async fn test_html_with_feed_link() -> Result<(), String>  {
+    let path = "fixtures/test_html_with_feed_link.html";
+    let data = fs::read_to_string(path).unwrap();
+
+    let _m = mock("GET", "/")
+      .with_status(200)
+      .with_body(data)
+      .create();
+
+    let page_url = format!("{}/", &mockito::server_url()).to_string();
+    let feed_url = "http://testfeed.com/atom.xml";
+
+    let result = url_to_feed_url(&page_url).await.unwrap();
+    println!("{:?}", result);
+
+    assert_eq!(feed_url, result);
+
+    Ok(())
+  }
+}

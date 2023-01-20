@@ -63,7 +63,6 @@ mod test {
 
   use mockito::mock;
 
-
   #[sqlx::test]
   async fn test_find_inbox() -> Result<(), String> {
     let feed: Feed = fake_feed();
