@@ -118,6 +118,43 @@ mod test {
   }
 
   #[tokio::test]
+  async fn test_html_with_no_feed_link() -> Result<(), String>  {
+    let path = "fixtures/test_html_with_no_feed_link.html";
+    let data = fs::read_to_string(path).unwrap();
+
+    let _m = mock("GET", "/")
+      .with_status(200)
+      .with_body(data)
+      .create();
+
+    let page_url = format!("{}/", &mockito::server_url()).to_string();
+
+    let result = url_to_feed_url(&page_url).await.unwrap();
+    println!("{:?}", result);
+
+    assert!(result.is_none());
+
+    Ok(())
+  }
+
+  #[tokio::test]
+  async fn test_html_with_server_error() -> Result<(), String>  {
+    let _m = mock("GET", "/")
+      .with_status(500)
+      .create();
+
+    let page_url = format!("{}/", &mockito::server_url()).to_string();
+
+    let result = url_to_feed_url(&page_url).await.unwrap();
+    println!("{:?}", result);
+
+    assert!(result.is_none());
+
+    Ok(())
+  }
+
+
+  #[tokio::test]
   async fn test_404_feed_url() -> Result<(), String>  {
     let _m = mock("GET", "/feed.xml")
       .with_status(404)
