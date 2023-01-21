@@ -5,6 +5,7 @@ use rocket::response::Redirect;
 use rocket::State;
 use rocket_dyn_templates::{Template, context};
 use rocket::uri;
+use rocket::serde::{Serialize, json::Json};
 
 use sqlx::sqlite::SqlitePool;
 
@@ -12,9 +13,18 @@ use crate::models::user::User;
 use crate::models::feed::Feed;
 use crate::models::item::Item;
 
+use crate::services::url_to_feed::url_to_feed_url;
+
 #[derive(FromForm)]
 pub struct FeedForm {
   name: String,
+  url: String
+}
+
+#[derive(Serialize)]
+#[serde(crate = "rocket::serde")]
+pub struct FeedLookup {
+  src: String,
   url: String
 }
 
@@ -33,6 +43,23 @@ pub async fn add_feed(user: User, db: &State<SqlitePool>, form: Form<FeedForm>) 
     }
   }
 }
+
+#[post("/feed/test", data = "<form>")]
+pub async fn test_feed(_user: User, form: Form<FeedForm>) -> Result<Json<FeedLookup>, Status> {
+  let url = url_to_feed_url(&form.url).await;
+
+  match url {
+    Err(_why) => Err(Status::NotFound),
+    Ok(result) => {
+      if result.is_some() {
+        Ok(Json(FeedLookup { src: form.url.to_string(), url: result.unwrap() }))
+      } else {
+        Err(Status::NotFound)
+      }
+    }
+  }
+}
+
 
 
 // @todo use proper verb
