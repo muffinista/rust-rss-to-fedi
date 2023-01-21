@@ -139,7 +139,7 @@ impl User {
   // @todo add some code here to prevent abuse
   //
   pub fn should_send_login_email(&self) -> bool {
-    true
+    !env::var("DISABLE_EMAIL").is_ok()
   }
 
   pub fn send_login_email(&self) -> Result<(), AnyError> {
