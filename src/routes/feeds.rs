@@ -15,7 +15,8 @@ use crate::models::item::Item;
 
 use crate::services::url_to_feed::url_to_feed_url;
 
-#[derive(FromForm)]
+#[derive(FromForm, serde::Deserialize)]
+#[serde(crate = "rocket::serde")]
 pub struct FeedForm {
   name: String,
   url: String
@@ -44,8 +45,8 @@ pub async fn add_feed(user: User, db: &State<SqlitePool>, form: Form<FeedForm>) 
   }
 }
 
-#[post("/feed/test", data = "<form>")]
-pub async fn test_feed(_user: User, form: Form<FeedForm>) -> Result<Json<FeedLookup>, Status> {
+#[post("/test-feed", data = "<form>")]
+pub async fn test_feed(_user: User, form: Json<FeedForm>) -> Result<Json<FeedLookup>, Status> {
   let url = url_to_feed_url(&form.url).await;
 
   match url {
@@ -187,6 +188,7 @@ mod test {
   use crate::models::feed::Feed;
   use crate::utils::utils::*;
   use chrono::Utc;
+  use crate::utils::test_helpers::{real_user, fake_feed, real_feed};
 
   use sqlx::sqlite::SqlitePool;
   
@@ -242,6 +244,34 @@ mod test {
     Ok(())
   }
 
+    #[sqlx::test]
+  async fn test_test_feed(pool: SqlitePool) -> sqlx::Result<()> {
+    let user = real_user(&pool).await.unwrap();
+
+    let server: Rocket<Build> = build_server(pool).await;
+    let client = Client::tracked(server).await.unwrap();
+
+    // login the user
+    let post = client.get(uri!(crate::routes::login::attempt_login(&user.login_token)));
+    post.dispatch().await;
+    
+    let url: String = "https://muffinlabs.com/".to_string();
+    let name: String = "testfeed".to_string();
+
+    let json = format!(r#"{{"name":"{}","url": "{}"}}"#, name, url).to_string();
+    
+    let post = client.post(uri!(super::test_feed())).body(json);
+    let response = post.dispatch().await;
+
+    assert_eq!(response.status(), Status::Ok);
+
+    let body = response.into_string().await.unwrap();
+    println!("{:}", body);
+    assert!(body.contains(r#"{"src":"https://muffinlabs.com/","url":"http://muffinlabs.com/atom.xml"}"#));
+
+    Ok(())
+  }
+
   #[sqlx::test]
   async fn test_render_feed_followers(pool: SqlitePool) -> sqlx::Result<()> {
     let user = User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()), created_at: Utc::now().naive_utc(), updated_at: Utc::now().naive_utc() };
@@ -271,8 +301,8 @@ mod test {
     let body = response.into_string().await.unwrap();
     println!("{:?}", body);
 
-
-    assert!(body.contains("OrderedCollectionPage"));
+ 
+   assert!(body.contains("OrderedCollectionPage"));
     assert!(body.contains("/colin11"));
     assert!(body.contains("/colin12"));
     assert!(body.contains("/colin13"));

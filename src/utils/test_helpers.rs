@@ -14,6 +14,12 @@ pub fn fake_user() -> User {
   User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()), created_at: Utc::now().naive_utc(), updated_at: Utc::now().naive_utc() }
 }
 
+pub async fn real_user(pool: &SqlitePool) -> sqlx::Result<User> {
+  let user:User = User::find_or_create_by_email(&"foo@bar.com".to_string(), &pool).await?;
+  
+  Ok(user)
+}
+
 pub async fn real_feed(pool: &SqlitePool) -> sqlx::Result<Feed> {
   let user = fake_user();
   

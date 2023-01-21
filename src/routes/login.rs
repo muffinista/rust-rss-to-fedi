@@ -20,7 +20,7 @@ pub struct LoginForm {
 
 #[get("/user/auth/<login_token>")]
 pub async fn attempt_login(db: &State<SqlitePool>, cookies: &CookieJar<'_>, login_token: &str) -> Result<Redirect, Status> {
-  let user = User::find_by_login(&login_token.to_string(), &**db).await;
+  let user = User::find_by_login(&login_token.to_string(), &db).await;
   
   match user {
     Ok(user) => {
