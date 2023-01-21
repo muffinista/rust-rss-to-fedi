@@ -188,13 +188,13 @@ mod test {
   use crate::models::feed::Feed;
   use crate::utils::utils::*;
   use chrono::Utc;
-  use crate::utils::test_helpers::{real_user, fake_feed, real_feed};
+  use crate::utils::test_helpers::{real_user, fake_user, fake_feed, real_feed};
 
   use sqlx::sqlite::SqlitePool;
   
   #[sqlx::test]
   async fn test_show_feed(pool: SqlitePool) -> sqlx::Result<()> {
-    let user = User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()), created_at: Utc::now().naive_utc(), updated_at: Utc::now().naive_utc() };
+    let user = fake_user();
 
     let url: String = "https://foo.com/rss.xml".to_string();
     let name: String = "testfeed".to_string();
@@ -221,7 +221,7 @@ mod test {
 
   #[sqlx::test]
   async fn test_render_feed(pool: SqlitePool) -> sqlx::Result<()> {
-    let user = User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()), created_at: Utc::now().naive_utc(), updated_at: Utc::now().naive_utc() };
+    let user = fake_user();
 
     let url: String = "https://foo.com/rss.xml".to_string();
     let name: String = "testfeed".to_string();
@@ -244,7 +244,7 @@ mod test {
     Ok(())
   }
 
-    #[sqlx::test]
+  #[sqlx::test]
   async fn test_test_feed(pool: SqlitePool) -> sqlx::Result<()> {
     let user = real_user(&pool).await.unwrap();
 
@@ -274,7 +274,7 @@ mod test {
 
   #[sqlx::test]
   async fn test_render_feed_followers(pool: SqlitePool) -> sqlx::Result<()> {
-    let user = User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()), created_at: Utc::now().naive_utc(), updated_at: Utc::now().naive_utc() };
+    let user = fake_user();
 
     let url: String = "https://foo.com/rss.xml".to_string();
     let name: String = "testfeed".to_string();
@@ -300,9 +300,8 @@ mod test {
 
     let body = response.into_string().await.unwrap();
     println!("{:?}", body);
-
  
-   assert!(body.contains("OrderedCollectionPage"));
+    assert!(body.contains("OrderedCollectionPage"));
     assert!(body.contains("/colin11"));
     assert!(body.contains("/colin12"));
     assert!(body.contains("/colin13"));
