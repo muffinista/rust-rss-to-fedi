@@ -179,16 +179,15 @@ pub async fn render_feed_followers(username: &str, page: Option<u32>, db: &State
 
 #[cfg(test)]
 mod test {
-  use crate::server::build_server;
   use rocket::local::asynchronous::Client;
   use rocket::http::{Header, Status};
   use rocket::uri;
   use rocket::{Rocket, Build};
-  use crate::models::user::User;
+
+  use crate::server::build_server;
   use crate::models::feed::Feed;
   use crate::utils::utils::*;
-  use chrono::Utc;
-  use crate::utils::test_helpers::{real_user, fake_user, fake_feed, real_feed};
+  use crate::utils::test_helpers::{real_user, fake_user};
 
   use sqlx::sqlite::SqlitePool;
   
@@ -251,9 +250,7 @@ mod test {
     let server: Rocket<Build> = build_server(pool).await;
     let client = Client::tracked(server).await.unwrap();
 
-    // login the user
-    let post = client.get(uri!(crate::routes::login::attempt_login(&user.login_token)));
-    post.dispatch().await;
+    crate::models::test_helpers::login_user(&client, &user).await;   
     
     let url: String = "https://muffinlabs.com/".to_string();
     let name: String = "testfeed".to_string();

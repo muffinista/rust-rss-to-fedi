@@ -6,9 +6,16 @@ use crate::models::item::Item;
 use crate::models::keys::generate_key;
 
 use chrono::Utc;
-//use mockito::mock;
 use uuid::Uuid;
 
+use rocket::uri;
+
+
+pub async fn login_user(client: &rocket::local::asynchronous::Client, user: &User) {
+  // login the user
+  let post = client.get(uri!(crate::routes::login::attempt_login(&user.login_token)));
+  post.dispatch().await;
+}
 
 pub fn fake_user() -> User {
   User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()), created_at: Utc::now().naive_utc(), updated_at: Utc::now().naive_utc() }
