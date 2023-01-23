@@ -10,6 +10,15 @@ use crate::models::feed::AcceptedActivity;
 
 use rocket::serde::json::Json;
 
+/// The inbox stream contains all activities received by the actor. The server
+/// SHOULD filter content according to the requester's permission. In general,
+/// the owner of an inbox is likely to be able to access all of their inbox
+/// contents. Depending on access control, some other content may be public,
+/// whereas other content may require authentication for non-owner users, if
+/// they can access the inbox at all. 
+///
+/// https://www.w3.org/TR/activitypub/#inbox
+///
 #[post("/feed/<username>/inbox", data="<activity>")]
 pub async fn user_inbox(username: &str, activity: Json<AcceptedActivity>, db: &State<SqlitePool>) -> Result<(), Status> {
   let feed_lookup = Feed::find_by_name(&username.to_string(), db).await;
@@ -41,20 +50,15 @@ pub async fn user_inbox(username: &str, activity: Json<AcceptedActivity>, db: &S
 //   use rocket::http::Status;
 //   use rocket::uri;
 //   use rocket::{Rocket, Build};
-//   use crate::models::user::User;
-//   use crate::models::feed::Feed;
 //   use chrono::Utc;
 
 //   use sqlx::sqlite::SqlitePool;
 
+//   use crate::utils::test_helpers::{real_feed};
+
 //   #[sqlx::test]
-//   async fn test_user_outbox(pool: SqlitePool) -> sqlx::Result<()> {
-//     let user = User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()), created_at: Utc::now().naive_utc(), updated_at: Utc::now().naive_utc() };
-
-//     let url: String = "https://foo.com/rss.xml".to_string();
-//     let name: String = "testfeed".to_string();
-
-//     let _feed = Feed::create(&user, &url, &name, &pool).await?;
+//   async fn test_user_inbox(pool: SqlitePool) -> sqlx::Result<()> {
+//     let feed = real_feed(&pool).await.unwrap();
 
 //     let actor = "https://activitypub.pizza/users/colin".to_string();
 //     let json = format!(r#"{{"actor":"{}","object":"{}/feed","type":"Follow"}}"#, actor, actor).to_string();
@@ -62,7 +66,7 @@ pub async fn user_inbox(username: &str, activity: Json<AcceptedActivity>, db: &S
 //     let server:Rocket<Build> = build_server(pool).await;
 //     let client = Client::tracked(server).await.unwrap();
 
-//     let req = client.post(uri!(super::user_outbox(&name))).body(json);
+//     let req = client.post(uri!(super::user_inbox(&feed.name))).body(json);
 //     let response = req.dispatch().await;
 
 //     assert_eq!(response.status(), Status::Ok);

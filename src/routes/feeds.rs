@@ -183,7 +183,6 @@ mod test {
   use rocket::{Rocket, Build};
 
   use crate::server::build_server;
-  use crate::models::feed::Feed;
   use crate::utils::utils::*;
   use crate::utils::test_helpers::{real_user, real_feed};
 

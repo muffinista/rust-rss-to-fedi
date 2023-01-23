@@ -28,6 +28,9 @@ mod test {
   use rocket::{Rocket, Build};
   use sqlx::sqlite::SqlitePool;
   
+  use crate::utils::test_helpers::{real_user};
+
+
   #[sqlx::test]
   async fn index_not_logged_in(pool: SqlitePool) {
     let server:Rocket<Build> = build_server(pool).await;
@@ -36,13 +39,30 @@ mod test {
     let req = client.get(uri!(super::index));
     let response = req.dispatch().await;
 
-    // running multiple requests:
-    // let (r1, r2) = rocket::tokio::join!(req.clone().dispatch(), req.dispatch());
-
     assert_eq!(response.status(), Status::Ok);
     let output = response.into_string().await;
     match output {
       Some(output) => assert!(output.contains("Email:")),
+      None => panic!()
+    }
+  }
+
+  #[sqlx::test]
+  async fn index_logged_in(pool: SqlitePool) {
+    let user = real_user(&pool).await.unwrap();
+
+    let server: Rocket<Build> = build_server(pool).await;
+    let client = Client::tracked(server).await.unwrap();
+
+    crate::models::test_helpers::login_user(&client, &user).await;   
+
+    let req = client.get(uri!(super::index));
+    let response = req.dispatch().await;
+
+    assert_eq!(response.status(), Status::Ok);
+    let output = response.into_string().await;
+    match output {
+      Some(output) => assert!(output.contains("Add a new feed:")),
       None => panic!()
     }
   }

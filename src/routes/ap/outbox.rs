@@ -40,28 +40,22 @@ mod test {
   use rocket::http::Status;
   use rocket::uri;
   use rocket::{Rocket, Build};
-  use crate::models::user::User;
-  use crate::models::feed::Feed;
-  use chrono::Utc;
 
   use sqlx::sqlite::SqlitePool;
 
+  use crate::utils::test_helpers::{real_feed};
+
   #[sqlx::test]
   async fn test_user_outbox(pool: SqlitePool) -> sqlx::Result<()> {
-    let user = User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()), created_at: Utc::now().naive_utc(), updated_at: Utc::now().naive_utc() };
-
-    let url: String = "https://foo.com/rss.xml".to_string();
-    let name: String = "testfeed".to_string();
-
-    let _feed = Feed::create(&user, &url, &name, &pool).await?;
+    let feed = real_feed(&pool).await.unwrap();
 
     let actor = "https://activitypub.pizza/users/colin".to_string();
     let json = format!(r#"{{"actor":"{}","object":"{}/feed","type":"Follow"}}"#, actor, actor).to_string();
     
-    let server:Rocket<Build> = build_server(pool).await;
+    let server: Rocket<Build> = build_server(pool).await;
     let client = Client::tracked(server).await.unwrap();
 
-    let req = client.post(uri!(super::user_outbox(&name))).body(json);
+    let req = client.post(uri!(super::user_outbox(&feed.name))).body(json);
     let response = req.dispatch().await;
 
     assert_eq!(response.status(), Status::Ok);

@@ -70,11 +70,9 @@ mod test {
   use rocket::http::Status;
   use rocket::uri;
   use rocket::{Rocket, Build};
-  use crate::models::user::User;
-  use crate::models::feed::Feed;
   use sqlx::sqlite::SqlitePool;
   use std::env;
-  use chrono::Utc;
+  use crate::utils::test_helpers::{real_feed};
 
   
   #[sqlx::test]
@@ -92,17 +90,12 @@ mod test {
   async fn test_lookup_webfinger_valid(pool: SqlitePool) -> sqlx::Result<()> {
     let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
 
-    let user = User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()), created_at: Utc::now().naive_utc(), updated_at: Utc::now().naive_utc() };
-
-    let url: String = "https://foo.com/rss.xml".to_string();
-    let name: String = "testfeed".to_string();
-
-    Feed::create(&user, &url, &name, &pool).await?;
+    let feed = real_feed(&pool).await.unwrap();
     
     let server: Rocket<Build> = build_server(pool).await;
     let client = Client::tracked(server).await.unwrap();
     
-    let req = client.get(uri!(super::lookup_webfinger(format!("acct:{}@{}", name, instance_domain))));
+    let req = client.get(uri!(super::lookup_webfinger(format!("acct:{}@{}", &feed.name, instance_domain))));
     let response = req.dispatch().await;
 
     assert_eq!(response.status(), Status::Ok);
