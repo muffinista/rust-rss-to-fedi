@@ -55,7 +55,7 @@ main > header.feed > * {
   margin-right: 10px;
 }
 
-section.feed > ul {
+section > ul {
   list-style-type: none;
   padding-left: 0px;
 }

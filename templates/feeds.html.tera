@@ -1,3 +1,8 @@
-{% for feed in feeds %}
-  {{loop.index}}. {{feed.url}} <a href="/feed/{{feed.id}}/delete">delete</a>
-{% endfor %}
+<section class="feeds">
+  <h1>Your Feeds</h1>
+  <ul>
+    {% for feed in feeds %}
+      <li><a href="/feed/{{feed.name}}">{{feed.name}}</a> <a href="/feed/{{feed.id}}/delete">delete</a></li>
+    {% endfor %}
+  </ul>
+</section>
