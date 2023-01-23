@@ -61,8 +61,6 @@ pub async fn test_feed(_user: User, form: Json<FeedForm>) -> Result<Json<FeedLoo
   }
 }
 
-
-
 // @todo use proper verb
 #[get("/feed/<id>/delete")]
 pub async fn delete_feed(user: User, id: i64, db: &State<SqlitePool>) -> Result<Redirect, Status> {
@@ -187,49 +185,36 @@ mod test {
   use crate::server::build_server;
   use crate::models::feed::Feed;
   use crate::utils::utils::*;
-  use crate::utils::test_helpers::{real_user, fake_user};
+  use crate::utils::test_helpers::{real_user, real_feed};
 
   use sqlx::sqlite::SqlitePool;
   
   #[sqlx::test]
   async fn test_show_feed(pool: SqlitePool) -> sqlx::Result<()> {
-    let user = fake_user();
+    let feed = real_feed(&pool).await.unwrap();
 
-    let url: String = "https://foo.com/rss.xml".to_string();
-    let name: String = "testfeed".to_string();
-
-    Feed::create(&user, &url, &name, &pool).await?;
-
-    let server:Rocket<Build> = build_server(pool).await;
+    let server: Rocket<Build> = build_server(pool).await;
     let client = Client::tracked(server).await.unwrap();
 
-    let req = client.get(uri!(super::show_feed(&name))).header(Header::new("Accept", "text/html"));
+    let req = client.get(uri!(super::show_feed(&feed.name))).header(Header::new("Accept", "text/html"));
     let response = req.dispatch().await;
 
     assert_eq!(response.status(), Status::Ok);
     
     let body = response.into_string().await.unwrap();
-    println!("{:?}", body);
-    assert!(body.contains("Feed for testfeed"));
-    assert!(body.contains(&name));
+    assert!(body.contains(&format!("Feed for {}", feed.name)));
 
     Ok(())
   }
 
-  // https://api.rocket.rs/v0.5-rc/rocket/local/blocking/struct.LocalRequest.html
-
   #[sqlx::test]
   async fn test_render_feed(pool: SqlitePool) -> sqlx::Result<()> {
-    let user = fake_user();
-
-    let url: String = "https://foo.com/rss.xml".to_string();
-    let name: String = "testfeed".to_string();
-
-    Feed::create(&user, &url, &name, &pool).await?;
+    let feed = real_feed(&pool).await.unwrap();
 
     let server: Rocket<Build> = build_server(pool).await;
     let client = Client::tracked(server).await.unwrap();
 
+    let name = feed.name;
     let req = client.get(uri!(super::render_feed(&name))).header(Header::new("Accept", "application/activity+json"));
     let response = req.dispatch().await;
 
@@ -271,12 +256,7 @@ mod test {
 
   #[sqlx::test]
   async fn test_render_feed_followers(pool: SqlitePool) -> sqlx::Result<()> {
-    let user = fake_user();
-
-    let url: String = "https://foo.com/rss.xml".to_string();
-    let name: String = "testfeed".to_string();
-
-    let feed = Feed::create(&user, &url, &name, &pool).await?;
+    let feed = real_feed(&pool).await.unwrap();
 
     for i in 1..35 {
       let actor = format!("https://activitypub.pizza/users/colin{}", i);
@@ -290,6 +270,7 @@ mod test {
     let server: Rocket<Build> = build_server(pool).await;
     let client = Client::tracked(server).await.unwrap();
 
+    let name = feed.name;
     let req = client.get(uri!(super::render_feed_followers(&name, Some(2))));
     let response = req.dispatch().await;
 
