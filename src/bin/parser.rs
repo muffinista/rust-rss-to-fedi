@@ -1,13 +1,11 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
 use sqlx::sqlite::SqlitePool;
-// use chrono::prelude::*;
 
 use std::env;
 
 use rustypub::models::user::User;
 use rustypub::models::feed::Feed;
-// use rustypub::models::Item;
 
 #[tokio::main]
 async fn main() -> Result<(), reqwest::Error>  {
@@ -20,8 +18,6 @@ async fn main() -> Result<(), reqwest::Error>  {
     .await
     .ok();
 
-  //let user = User::create_by_email(&"colin@muffinlabs.com".to_string(), &pool).await.unwrap();
-  //  let _feed = Feed::create(&user, &"https://secretbroadcast.net/feed.rss".to_string(), &"secretbroadcast".to_string(), &pool).await.unwrap();
   let mut feed = Feed::find(1, &pool).await.unwrap();
 
   let result = feed.refresh(&pool).await;
