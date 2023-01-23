@@ -1,7 +1,7 @@
 
 Add a new feed:
 
-<form method="post" action="/feed">
+<form method="post" action="/feed" class="add-feed">
   <div class="form-row">
     <label for="url">url:</label> <input type="text" name="url" required />
   </div>
@@ -9,6 +9,10 @@ Add a new feed:
     <label for="name">name:</label> <input type="text" name="name" required />
   </div>
   <div class="form-row">
-    <button type="submit">go</button>
+    <button class="check" type="button">go</button>
   </div>
 </form>
+
+<div class="add-feed-results">
+
+</div>

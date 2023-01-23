@@ -2,10 +2,18 @@ body {
   font-size: 14px;
   font-family: Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased; 
+  margin: 0px;
 }
 
 body > header, body > footer {
   background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAkAAAAJCAYAAADgkQYQAAAALklEQVQoU2NkIAIwEqGGgZAiYwYGhrOEFIEtIlsR2Apkt5JtEoaHYSZhWIGsEgB+QQMKUesOpwAAAABJRU5ErkJggg==) repeat;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+body > header {
+  padding-left: 5px;
+  margin-bottom: 10px;
 }
 
 body > footer {
@@ -41,4 +49,13 @@ form > .form-row {
 
 main > header.feed {
   display: flex;
+}
+
+main > header.feed > * {
+  margin-right: 10px;
+}
+
+section.feed > ul {
+  list-style-type: none;
+  padding-left: 0px;
 }

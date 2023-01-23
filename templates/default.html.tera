@@ -21,5 +21,6 @@
       &copy; Copyright 2008 by <a href="http://domain.invalid/">you</a>.
       {% endblock footer %}
     </footer>
+    <script src="/assets/script.js"></script>
   </body>
 </html>

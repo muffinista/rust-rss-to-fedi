@@ -34,7 +34,10 @@ pub async fn add_feed(user: User, db: &State<SqlitePool>, form: Form<FeedForm>) 
   let feed = Feed::create(&user, &form.url, &form.name, &db).await;
   
   match feed {
-    Ok(feed) => {
+    Ok(mut feed) => {
+      // @todo handle issues here
+      let _refresh_result = feed.refresh(&db).await;
+
       let dest = uri!(show_feed(feed.name));
       Ok(Redirect::to(dest))
     },

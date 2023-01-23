@@ -319,7 +319,7 @@ impl Feed {
         match item {
           Ok(item) => result.push(item),
           Err(_why) => return Err(FeedError)
-        }
+        };
       }
     }
     Ok(result)
@@ -411,6 +411,7 @@ impl Feed {
         let update = self.save(pool).await;
         match update {
           Ok(_update) => {
+            println!("updating feed entries");
             let result = self.feed_to_entries(data, pool).await;
             match result {
               Ok(result) => Ok(result),

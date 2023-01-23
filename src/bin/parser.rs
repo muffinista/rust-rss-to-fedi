@@ -18,7 +18,7 @@ async fn main() -> Result<(), reqwest::Error>  {
     .await
     .ok();
 
-  let mut feed = Feed::find(1, &pool).await.unwrap();
+  let mut feed = Feed::find(2, &pool).await.unwrap();
 
   let result = feed.refresh(&pool).await;
   match result {

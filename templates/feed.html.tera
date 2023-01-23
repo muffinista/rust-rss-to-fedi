@@ -2,27 +2,30 @@
 {% block title %}Feed for {{feed.name}}{% endblock title %}
 
 {% block content %}
-<header class="feed">
-  <img src="{{feed.image_url}}" width="200" />
-  <div>
-    <h1>{{feed.title}}</h1>
-    <p>{{feed.description}}</p>
+  <header class="feed">
+    <img src="{{feed.image_url}}" width="200" />
+    <div>
+      <h1>{{feed.title}}</h1>
+      <p>{{feed.description}}</p>
 
-    <b>{{feed.name}}</b> -- {{follow_url}}
-    <a href="{{feed.url}}">{{feed.url}}</a>
-    website: <a href="{{feed.site_url}}">{{feed.site_url}}</a>
-    updated at: {{feed.refreshed_at}}
-  </div>
-</header>
+      <b>Fediverse URL:</b> {{follow_url}}<br />
+      <b>Feed URL:</b> <a href="{{feed.url}}">{{feed.url}}</a><br />
+      <b>website:</b> <a href="{{feed.site_url}}">{{feed.site_url}}</a><br />
+      <b>refreshed at:</b> {{feed.refreshed_at}}<br />
+    </div>
+  </header>
 
-  <ul>
-    {% for item in items %}
-    <li>
-      <a href="{{ item.url }}">{{ item.title }}</a>
-    </li>
-    {% endfor %}
-  </ul>
 
+  <section class="feed">
+    <h1>Entries</h1>
+    <ul>
+      {% for item in items %}
+      <li>
+        <a href="{{ item.url }}">{{ item.title }}</a>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
 
   {% if logged_in %}
   {% else %}
