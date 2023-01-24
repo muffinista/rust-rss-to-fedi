@@ -235,7 +235,8 @@ impl Feed {
   }
 
   pub async fn mark_fresh(&self, pool: &SqlitePool) -> Result<(), sqlx::Error> {
-    let result = sqlx::query!("UPDATE feeds SET refreshed_at = datetime(CURRENT_TIMESTAMP, 'utc') WHERE id = $1", self.id)
+    let now = Utc::now().naive_utc();
+    let result = sqlx::query!("UPDATE feeds SET refreshed_at = $1 WHERE id = $2", now, self.id)
       .execute(pool)
       .await;
 
@@ -332,9 +333,16 @@ impl Feed {
     let items = self.parse(pool).await;
     match items {
       Ok(items) => {
-        for item in items {
-          item.deliver(&self, &pool).await?;
+        let count = self.follower_count(pool).await?;
+        if count > 0 {
+          println!("delivering {} items to {} users", items.len(), count);
+          for item in items {
+            item.deliver(&self, &pool).await?;
+          }  
+        } else {
+          println!("skipping delivery of {} items because no followers :(", items.len());
         }
+
         self.mark_fresh(pool).await?;
 
         Ok(())

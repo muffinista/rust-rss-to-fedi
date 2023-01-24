@@ -84,8 +84,6 @@ impl Item {
   }
 
   pub async fn create_from_entry(entry: &Entry, feed: &Feed, pool: &SqlitePool) -> Result<Item, sqlx::Error> {
-    println!("{:?}", entry);
-
     let title = &entry.title.as_ref().unwrap().content;
 
     // default to summary if we have it
