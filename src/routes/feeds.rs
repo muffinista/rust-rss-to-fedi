@@ -7,6 +7,8 @@ use rocket_dyn_templates::{Template, context};
 use rocket::uri;
 use rocket::serde::{Serialize, json::Json};
 
+use std::env;
+
 use sqlx::sqlite::SqlitePool;
 
 use crate::models::user::User;
@@ -128,7 +130,8 @@ pub async fn show_feed(user: Option<User>, username: &str, db: &State<SqlitePool
                 owned_by: owned_by,
                 feed: feed,
                 items: items,
-                follow_url: follow_url
+                follow_url: follow_url,
+                domain_name: env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set")
               }))    
             },
             Err(_why) => Err(Status::NotFound)        

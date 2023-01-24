@@ -1,4 +1,4 @@
 #!/bin/bash
 
-rsync -av --delete --exclude target --exclude data . colin@$DEST:$DESTDIR
+rsync -av --delete --exclude target --exclude profile --exclude data . colin@$DEST:$DESTDIR
 

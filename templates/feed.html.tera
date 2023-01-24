@@ -8,6 +8,7 @@
       <h1>{{feed.title}}</h1>
       <p>{{feed.description}}</p>
 
+      <b>Fediverse name:</b> @{{feed.name}}@{{domain_name}}<br />
       <b>Fediverse URL:</b> {{follow_url}}<br />
       <b>Feed URL:</b> <a href="{{feed.url}}">{{feed.url}}</a><br />
       <b>website:</b> <a href="{{feed.site_url}}">{{feed.site_url}}</a><br />

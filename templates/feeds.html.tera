@@ -1,5 +1,5 @@
 <section class="feeds">
-  <h1>Your Feeds</h1>
+  <h1>Your feeds</h1>
   <ul>
     {% for feed in feeds %}
       <li><a href="/feed/{{feed.name}}">{{feed.name}}</a> <a href="/feed/{{feed.id}}/delete">delete</a></li>
