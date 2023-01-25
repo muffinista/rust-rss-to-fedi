@@ -78,13 +78,17 @@ impl Item {
   }
 
   pub async fn for_feed(feed: &Feed, limit: i64, pool: &SqlitePool) -> Result<Vec<Item>, sqlx::Error> {
-    sqlx::query_as!(Item, "SELECT * FROM items WHERE feed_id = ? LIMIT ?", feed.id, limit)
+    sqlx::query_as!(Item, "SELECT * FROM items WHERE feed_id = ? ORDER by id DESC LIMIT ?", feed.id, limit)
     .fetch_all(pool)
     .await
   }
 
   pub async fn create_from_entry(entry: &Entry, feed: &Feed, pool: &SqlitePool) -> Result<Item, sqlx::Error> {
-    let title = &entry.title.as_ref().unwrap().content;
+    let title = if entry.title.is_some() {
+      Some(&entry.title.as_ref().unwrap().content)
+    } else {
+      None
+    };
 
     // default to summary if we have it
     let body = if entry.summary.is_some() {
