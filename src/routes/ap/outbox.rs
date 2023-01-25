@@ -55,33 +55,31 @@ pub async fn render_feed_outbox(username: &str, page: Option<u32>, db: &State<Sq
   }
 }
 
-// #[cfg(test)]
-// mod test {
-//   use crate::server::build_server;
-//   use rocket::local::asynchronous::Client;
-//   use rocket::http::Status;
-//   use rocket::uri;
-//   use rocket::{Rocket, Build};
+#[cfg(test)]
+mod test {
+  use crate::server::build_server;
+  use rocket::local::asynchronous::Client;
+  use rocket::http::Status;
+  use rocket::uri;
+  use rocket::{Rocket, Build};
 
-//   use sqlx::sqlite::SqlitePool;
+  use sqlx::sqlite::SqlitePool;
 
-//   use crate::utils::test_helpers::{real_feed};
+  use crate::utils::test_helpers::{real_feed};
 
-//   #[sqlx::test]
-//   async fn test_render_feed_outbox(pool: SqlitePool) -> sqlx::Result<()> {
-//     let feed = real_feed(&pool).await.unwrap();
+  #[sqlx::test]
+  async fn test_render_feed_outbox(pool: SqlitePool) -> sqlx::Result<()> {
+    let feed = real_feed(&pool).await.unwrap();
 
-//     let actor = "https://activitypub.pizza/users/colin".to_string();
-//     let json = format!(r#"{{"actor":"{}","object":"{}/feed","type":"Follow"}}"#, actor, actor).to_string();
-    
-//     let server: Rocket<Build> = build_server(pool).await;
-//     let client = Client::tracked(server).await.unwrap();
+    let server: Rocket<Build> = build_server(pool).await;
+    let client = Client::tracked(server).await.unwrap();
 
-//     let req = client.post(uri!(super::render_feed_outbox(&feed.name))).body(json);
-//     let response = req.dispatch().await;
+    let name = feed.name;
+    let req = client.get(uri!(super::render_feed_outbox(&name, Some(2))));
+    let response = req.dispatch().await;
 
-//     assert_eq!(response.status(), Status::Ok);
+    assert_eq!(response.status(), Status::Ok);
 
-//     Ok(())
-//   }
-// }
+    Ok(())
+  }
+}

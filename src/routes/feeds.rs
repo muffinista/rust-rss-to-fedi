@@ -270,7 +270,6 @@ mod test {
         .await
         .unwrap();
     }
-
     
     let server: Rocket<Build> = build_server(pool).await;
     let client = Client::tracked(server).await.unwrap();
