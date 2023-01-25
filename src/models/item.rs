@@ -25,6 +25,9 @@ use activitystreams::time::OffsetDateTime;
 use rocket_dyn_templates::tera::Tera;
 use rocket_dyn_templates::tera::Context;
 
+use sanitize_html::sanitize_str;
+use sanitize_html::rules::predefined::RELAXED;
+
 use url::Url;
 
 
@@ -39,6 +42,12 @@ pub struct Item {
   pub created_at: chrono::NaiveDateTime,
   pub updated_at: chrono::NaiveDateTime
 
+}
+
+fn sanitize_string(input: &String) -> String {
+  // relaxed or basic makes sense here probably
+  // https://docs.rs/sanitize_html/latest/sanitize_html/rules/predefined/index.html
+  sanitize_str(&RELAXED, input).unwrap()
 }
 
 impl PartialEq for Item {
@@ -90,12 +99,16 @@ impl Item {
       None
     };
 
+    let clean_body;
+
     // default to summary if we have it
     let body = if entry.summary.is_some() {
-      Some(&entry.summary.as_ref().unwrap().content)
+      clean_body = sanitize_string(&entry.summary.as_ref().unwrap().content);
+      Some(&clean_body)
     }
     else if entry.content.is_some() {
-      Some(entry.content.as_ref().unwrap().body.as_ref().unwrap())
+      clean_body = sanitize_string(entry.content.as_ref().unwrap().body.as_ref().unwrap());
+      Some(&clean_body)
     } else {
       None
     };
