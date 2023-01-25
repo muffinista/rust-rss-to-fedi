@@ -1162,7 +1162,7 @@ mod test {
   async fn test_outbox(pool: SqlitePool) -> Result<(), AnyError> {
     let feed:Feed = real_feed(&pool).await?;
 
-    for i in 1..4 {
+    for _i in 1..4 {
       real_item(&feed, &pool).await?;
     }
     
@@ -1184,7 +1184,7 @@ mod test {
   async fn test_outbox_paged(pool: SqlitePool) -> Result<(), AnyError> {
     let feed:Feed = real_feed(&pool).await?;
 
-    for i in 1..35 {
+    for _i in 1..35 {
       real_item(&feed, &pool).await?;
     }
 

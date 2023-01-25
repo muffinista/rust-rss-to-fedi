@@ -16,7 +16,7 @@ use httpdate::fmt_http_date;
 use std::time::SystemTime;
 
 use sha2::{Digest, Sha256};
-use base64;
+use base64::{Engine as _, engine::general_purpose};
 
 use anyhow::{anyhow};
 
@@ -136,7 +136,7 @@ pub async fn sign_request(
         let mut signer = Signer::new(MessageDigest::sha256(), &private_key)?;
         signer.update(signing_string.as_bytes())?;
         
-        Ok(base64::encode(signer.sign_to_vec()?)) as Result<_, anyhow::Error>
+        Ok(general_purpose::STANDARD.encode(signer.sign_to_vec()?)) as Result<_, anyhow::Error>
       },
     )
     .await
