@@ -486,6 +486,8 @@ impl Feed {
     }
     if self.icon_url.is_some() {
       svc.set_icon(iri!(&self.icon_url.clone().unwrap()));
+    } else if self.image_url.is_some() {
+      svc.set_icon(iri!(&self.image_url.clone().unwrap()));
     }
 
     // generate JSON and return
