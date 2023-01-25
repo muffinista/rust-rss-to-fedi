@@ -784,9 +784,12 @@ mod test {
   use crate::models::feed::Feed;
   use crate::models::feed::AcceptedActivity;
   use crate::utils::utils::*;
-  use crate::utils::test_helpers::{fake_user, fake_feed, real_feed};
+  use crate::utils::test_helpers::{fake_user, fake_feed, real_feed, real_item};
 
   use crate::routes::feeds::*;
+  use crate::routes::ap::outbox::*;
+
+  use crate::models::feed::AnyError;
 
   use mockito::mock;
 
@@ -1151,4 +1154,58 @@ mod test {
       Err(why) => Err(why.to_string())
     }
   }
+
+
+  #[sqlx::test]
+  async fn test_outbox(pool: SqlitePool) -> Result<(), AnyError> {
+    let feed:Feed = real_feed(&pool).await?;
+
+    for i in 1..4 {
+      real_item(&feed, &pool).await?;
+    }
+    
+    let result = feed.outbox(&pool).await;
+    match result {
+      Ok(result) => {
+        let s = serde_json::to_string(&result).unwrap();
+        // println!("{:?}", s);
+
+        assert!(s.contains("A list of outbox items"));
+        Ok(())
+      },
+
+      Err(why) => Err(why)
+    }
+  }
+
+  #[sqlx::test]
+  async fn test_outbox_paged(pool: SqlitePool) -> Result<(), AnyError> {
+    let feed:Feed = real_feed(&pool).await?;
+
+    for i in 1..35 {
+      real_item(&feed, &pool).await?;
+    }
+
+    let result = feed.outbox_paged(2, &pool).await;
+    match result {
+      Ok(result) => {
+        let s = serde_json::to_string(&result).unwrap();
+        println!("{:}", s);
+
+        assert!(s.contains("OrderedCollectionPage"));
+        assert!(s.contains("/items/15"));
+        assert!(s.contains("/items/16"));
+        assert!(s.contains("/items/17"));
+        assert!(s.contains(&format!(r#"first":"{}"#, path_to_url(&uri!(render_feed_outbox(feed.name.clone(), Some(1)))))));
+        assert!(s.contains(&format!(r#"prev":"{}"#, path_to_url(&uri!(render_feed_outbox(feed.name.clone(), Some(1)))))));      
+        assert!(s.contains(&format!(r#"next":"{}"#, path_to_url(&uri!(render_feed_outbox(feed.name.clone(), Some(3)))))));
+        assert!(s.contains(&format!(r#"last":"{}"#, path_to_url(&uri!(render_feed_outbox(feed.name.clone(), Some(4)))))));
+        assert!(s.contains(&format!(r#"current":"{}"#, path_to_url(&uri!(render_feed_outbox(feed.name.clone(), Some(2)))))));
+
+        Ok(())
+      },
+      Err(why) => Err(why)
+    }
+  }
+  
 }
