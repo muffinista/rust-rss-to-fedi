@@ -9,7 +9,7 @@ use activitystreams_ext::{Ext1};
 use activitystreams::{
   activity::*,
   actor::{ApActor, ApActorExt, Service},
-  base::BaseExt,
+  base::{AnyBase, BaseExt},
   iri,
   iri_string::types::IriString,
   prelude::*,
@@ -478,7 +478,7 @@ impl Feed {
       .set_name(self.name.clone())
       .set_preferred_username(self.name.clone())
       .set_inbox(iri!(path_to_url(&uri!(user_inbox(&self.name)))))
-      .set_outbox(iri!(path_to_url(&uri!(user_outbox(&self.name)))))
+      .set_outbox(iri!(path_to_url(&uri!(render_feed_outbox(&self.name, None::<u32>)))))
       .set_followers(iri!(path_to_url(&uri!(render_feed_followers(&self.name, None::<u32>)))));
 
     if self.image_url.is_some() {
@@ -692,6 +692,87 @@ impl Feed {
       Err(_why) => todo!()
     }
   }
+
+  ///
+  /// generate AP data to represent outbox information
+  ///
+  pub async fn outbox(&self, pool: &SqlitePool)  -> Result<ApObject<OrderedCollection>, AnyError> {
+    let count = self.entries_count(pool).await?;
+    let total_pages = ((count / PER_PAGE as u64) + 1 ) as u32;
+
+    let mut collection: ApObject<OrderedCollection> = ApObject::new(OrderedCollection::new());
+
+    // The first, next, prev, last, and current properties are used
+    // to reference other CollectionPage instances that contain 
+    // additional subsets of items from the parent collection. 
+
+    
+    // in theory we can drop the first page of data in here
+    // however, it's not required (mastodon doesn't do it)
+    // and activitystreams might not be wired for it
+    collection
+      .set_context(context())
+      .set_id(iri!(path_to_url(&uri!(render_feed(&self.name)))))
+      .set_summary("A list of outbox items".to_string())
+      .set_total_items(count)
+      .set_first(iri!(path_to_url(&uri!(render_feed_outbox(&self.name, Some(1))))))
+      .set_last(iri!(path_to_url(&uri!(render_feed_outbox(&self.name, Some(total_pages))))));
+
+    Ok(collection)
+  }
+
+  ///
+  /// generate actual AP page of followes 
+  ///
+  pub async fn outbox_paged(&self, page: u32, pool: &SqlitePool)  -> Result<ApObject<OrderedCollectionPage>, AnyError>{
+    let count = self.entries_count(pool).await?;
+    let total_pages = ((count / PER_PAGE as u64) + 1 ) as u32;
+    let mut collection: ApObject<OrderedCollectionPage> = ApObject::new(OrderedCollectionPage::new());
+
+    collection
+      .set_context(context())
+      .set_summary("A list of outbox items".to_string())
+      .set_part_of(iri!(path_to_url(&uri!(render_feed(&self.name)))))
+      .set_first(iri!(path_to_url(&uri!(render_feed_outbox(&self.name, Some(1))))))
+      .set_last(iri!(path_to_url(&uri!(render_feed_outbox(&self.name, Some(total_pages))))))
+      .set_current(iri!(path_to_url(&uri!(render_feed_outbox(&self.name, Some(page))))));
+
+    if page > 1 {
+      collection.set_prev(iri!(path_to_url(&uri!(render_feed_outbox(&self.name, Some(page - 1))))));
+    }
+
+    if page < total_pages {
+      collection.set_next(iri!(path_to_url(&uri!(render_feed_outbox(&self.name, Some(page + 1))))));
+    }
+
+    // return empty collection for invalid pages
+    if page == 0 || page > total_pages {
+      return Ok(collection)
+    }
+
+    // @todo handle page <= 0 and page > count
+    
+    let offset = (page - 1) * PER_PAGE;
+    let result = sqlx::query_as!(Item, "SELECT * FROM items WHERE feed_id = ? LIMIT ? OFFSET ?", self.id, PER_PAGE, offset )
+      .fetch_all(pool)
+      .await;
+  
+    match result {
+      Ok(result) => {
+        let v: Vec<AnyBase> = result
+          .into_iter()
+          .filter_map(|outbox| Some(outbox.to_activity_pub(&self).unwrap().into_any_base().ok()?))
+          .collect();
+        // collection.add_item(action.into_any_base()?);
+        collection.set_many_items(v);
+
+        Ok(collection)
+          
+      },
+      Err(_why) => todo!()
+    }
+  }
+
 }
 
 #[cfg(test)]

@@ -4,7 +4,7 @@ use sqlx::sqlite::SqlitePool;
 
 use std::env;
 
-use rustypub::models::user::User;
+// use rustypub::models::user::User;
 use rustypub::models::feed::Feed;
 
 #[tokio::main]

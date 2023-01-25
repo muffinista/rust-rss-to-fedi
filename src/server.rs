@@ -30,7 +30,7 @@ pub async fn build_server(pool: SqlitePool) -> Rocket<Build> {
       crate::routes::items::show_item,
       crate::routes::webfinger::lookup_webfinger,
       crate::routes::ap::inbox::user_inbox,
-      crate::routes::ap::outbox::user_outbox    
+      crate::routes::ap::outbox::render_feed_outbox    
     ])
     .attach(Template::fairing())
 }
