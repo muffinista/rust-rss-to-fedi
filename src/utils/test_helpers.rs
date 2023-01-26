@@ -78,6 +78,9 @@ pub fn fake_item() -> Item {
     title: Some("Hello!".to_string()),
     content: Some("Hey!".to_string()),
     url: Some("http://google.com".to_string()),
+    enclosure_url: None,
+    enclosure_content_type: None,
+    enclosure_size: None,
     created_at: Utc::now().naive_utc(),
     updated_at: Utc::now().naive_utc()
   }

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:media="http://search.yahoo.com/mrss/" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:sy="http://purl.org/rss/1.0/modules/syndication/">
+  <channel>
+    <title>The Secret Broadcast</title>
+    <description>A podcast of secret messages, in the style of a number station</description>
+    <link>https://secretbroadcast.net</link>
+    <pubDate>Mon, 23 Jan 2023 11:00:06 +0000</pubDate>
+    <lastBuildDate>Mon, 23 Jan 2023 11:00:06 +0000</lastBuildDate>
+    <atom:link href="https://secretbroadcast.net/feed.rss" rel="self"/>
+    <language>en</language>
+    <sy:updatePeriod>weekly</sy:updatePeriod>
+    <itunes:author>The Secret Broadcast</itunes:author>
+    <itunes:category text="Arts"/>
+    <itunes:explicit>clean</itunes:explicit>
+    <itunes:block>no</itunes:block>
+    <itunes:summary>A podcast of secret messages, in the style of a number station</itunes:summary>
+    <itunes:subtitle>A podcast of secret messages, in the style of a number station</itunes:subtitle>
+    <itunes:image href="https://secretbroadcast.net/images/image.jpg"/>
+    <image>
+      <url>https://secretbroadcast.net/images/image.jpg</url>
+      <title>The Secret Broadcast</title>
+      <link>https://secretbroadcast.net</link>
+    </image>
+    <itunes:owner>
+      <itunes:name>colin mitchell</itunes:name>
+      <itunes:email>colin+numbers@muffinlabs.com</itunes:email>
+    </itunes:owner>
+    <item>
+      <title>Episode 0232: And depraved the best</title>
+      <description>
+        <![CDATA[]]>
+      </description>
+      <itunes:image href="https://secretassets.colinlabs.com/images/0232.jpg"/>
+      <itunes:keywords>numbers station, number stations</itunes:keywords>
+      <pubDate>Mon, 23 Jan 2023 11:00:06 -0000</pubDate>
+      <guid>https://secretbroadcast.net/archive/0232.html</guid>
+      <link>https://secretbroadcast.net/archive/0232.html</link>
+      <enclosure url="https://secretassets.colinlabs.com/podcasts/0232.mp3" length="" type="audio/mp3"/>
+    </item>
+  </channel>
+</rss>

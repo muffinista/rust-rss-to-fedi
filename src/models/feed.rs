@@ -161,9 +161,11 @@ impl Feed {
     let (private_key_str, public_key_str) = generate_key();
     let old = Utc.with_ymd_and_hms(1900, 1, 1, 0, 0, 0).unwrap();
 
+    let now = Utc::now().naive_utc();
+
     let feed_id = sqlx::query!("INSERT INTO feeds (user_id, url, name, private_key, public_key, created_at, updated_at, refreshed_at)
-                                VALUES($1, $2, $3, $4, $5, datetime(CURRENT_TIMESTAMP, 'utc'), datetime(CURRENT_TIMESTAMP, 'utc'), ?)",
-                               user.id, url, name, private_key_str, public_key_str, old)
+                                VALUES($1, $2, $3, $4, $5, $6, $7, ?)",
+                               user.id, url, name, private_key_str, public_key_str, now, now, old)
       .execute(pool)
       .await?
       .last_insert_rowid();
@@ -172,6 +174,8 @@ impl Feed {
   }
 
   pub async fn save(&self, pool: &SqlitePool) -> Result<&Feed, sqlx::Error> {
+    let now = Utc::now().naive_utc();
+
     sqlx::query!("UPDATE feeds
       SET url = $1,
           name = $2,
@@ -183,8 +187,8 @@ impl Feed {
           description = $8,
           site_url = $9,
           error = $10,
-          updated_at = datetime(CURRENT_TIMESTAMP, 'utc')
-      WHERE id = $11",
+          updated_at = $11
+      WHERE id = $12",
       self.url,
       self.name,
       self.private_key,
@@ -193,8 +197,9 @@ impl Feed {
       self.icon_url,
       self.title,
       self.description,
-                 self.site_url,
-                 self.error,
+      self.site_url,
+      self.error,
+      now,
       self.id
     ).execute(pool)
       .await?;
@@ -774,6 +779,7 @@ mod test {
 
   use crate::models::feed::Feed;
   use crate::models::feed::AcceptedActivity;
+  use crate::models::item::Item;
   use crate::utils::utils::*;
   use crate::utils::test_helpers::{fake_user, fake_feed, real_feed, real_item};
 
@@ -966,6 +972,37 @@ mod test {
     assert_eq!(result2.len(), 4);
     
     assert_eq!(feed.entries_count(&pool).await.unwrap(), 7);
+
+    Ok(())
+  }
+ 
+
+  #[sqlx::test]
+  async fn test_feed_with_enclosure_to_entries(pool: SqlitePool) -> sqlx::Result<()> {
+    use std::fs;
+    let feed:Feed = real_feed(&pool).await?;
+
+    assert_eq!(feed.entries_count(&pool).await.unwrap(), 0);
+
+    let path = "fixtures/test_enclosures.xml";
+    let data = parser::parse(fs::read_to_string(path).unwrap().as_bytes()).unwrap();
+
+    let result = Feed::feed_to_entries(&feed, data, &pool).await.unwrap();
+
+    assert_eq!(result.len(), 1);
+    assert_eq!(feed.entries_count(&pool).await.unwrap(), 1);
+
+    // check that reloading the same feed doesn't create more records
+    let data2 = parser::parse(fs::read_to_string(path).unwrap().as_bytes()).unwrap();
+    let result2 = Feed::feed_to_entries(&feed, data2, &pool).await.unwrap();
+
+    assert_eq!(result2.len(), 0);
+    assert_eq!(feed.entries_count(&pool).await.unwrap(), 1);
+
+    let items = Item::for_feed(&feed, 10, &pool).await?;
+    assert_eq!(items[0].enclosure_url.as_ref().unwrap(), "https://secretassets.colinlabs.com/podcasts/0232.mp3");
+    assert_eq!(items[0].enclosure_content_type.as_ref().unwrap(), "audio/mp3");
+    assert_eq!(items[0].enclosure_size, None);
 
     Ok(())
   }

@@ -29,6 +29,7 @@ use sanitize_html::sanitize_str;
 use sanitize_html::rules::predefined::RELAXED;
 
 use url::Url;
+use chrono::Utc;
 
 
 #[derive(Debug, Serialize)]
@@ -39,6 +40,11 @@ pub struct Item {
   pub title: Option<String>,
   pub content: Option<String>,
   pub url: Option<String>,
+
+  pub enclosure_url: Option<String>,
+  pub enclosure_content_type: Option<String>,
+  pub enclosure_size: Option<i64>,
+  
   pub created_at: chrono::NaiveDateTime,
   pub updated_at: chrono::NaiveDateTime
 }
@@ -118,14 +124,47 @@ impl Item {
       None
     };
     
+    let enclosure_url;
+    let enclosure_content_type;
+    let enclosure_size;
+    
+    if entry.media.len() > 0 && entry.media[0].content.len() > 0 && entry.media[0].content[0].url.is_some() {
+      enclosure_url = Some(entry.media[0].content[0].url.as_ref().unwrap().as_str());
 
-    let item_id = sqlx::query!("INSERT INTO items (feed_id, guid, title, content, url, created_at, updated_at)
-                                VALUES($1, $2, $3, $4, $5, datetime(CURRENT_TIMESTAMP, 'utc'), datetime(CURRENT_TIMESTAMP, 'utc'))",
+      enclosure_content_type = if entry.media[0].content[0].content_type.is_some() {
+        Some(entry.media[0].content[0].content_type.as_ref().unwrap().essence_str())
+      } else {
+        None
+      };
+
+      enclosure_size = if entry.media[0].content[0].size.is_some() {
+        Some(entry.media[0].content[0].size.unwrap() as i64)
+      } else {
+        None
+      }
+      
+    } else {
+      enclosure_url = None;
+      enclosure_content_type = None;
+      enclosure_size = None;
+    };
+
+    let now = Utc::now().naive_utc();
+
+
+    let item_id = sqlx::query!("INSERT INTO items 
+                                (feed_id, guid, title, content, url, enclosure_url, enclosure_content_type, enclosure_size, created_at, updated_at)
+                                VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
                                feed.id,
                                entry.id,
                                title,
                                body,
-                               item_url
+                               item_url,
+                               enclosure_url,
+                               enclosure_content_type,
+                               enclosure_size,
+                               now,
+                               now
     )
       .execute(pool)
       .await?
