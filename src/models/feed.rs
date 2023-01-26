@@ -19,6 +19,7 @@ use activitystreams::{
   object::ApObject
 };
 
+use activitystreams::object::Image;
 use sqlx::sqlite::SqlitePool;
 use serde::{Serialize};
 
@@ -478,18 +479,21 @@ impl Feed {
       .set_outbox(iri!(path_to_url(&uri!(render_feed_outbox(&self.name, None::<u32>)))))
       .set_followers(iri!(path_to_url(&uri!(render_feed_followers(&self.name, None::<u32>)))));
 
-      if self.icon_url.is_some() {
-        svc.set_icon(iri!(&self.icon_url.clone().unwrap()));
-        svc.set_image(iri!(&self.icon_url.clone().unwrap()));
-      } else if self.image_url.is_some() {
-        svc.set_icon(iri!(&self.image_url.clone().unwrap()));
-        svc.set_image(iri!(&self.image_url.clone().unwrap()));
-      }
+    if self.icon_url.is_some() {
+      let mut icon = Image::new();
+      icon.set_url(iri!(self.icon_url.clone().unwrap()));
+      svc.set_icon(icon.into_any_base()?);
+    } else if self.image_url.is_some() {
+      let mut icon = Image::new();
+      icon.set_url(iri!(self.image_url.clone().unwrap()));
+      svc.set_icon(icon.into_any_base()?);
+    }
 
-      // if self.image_url.is_some() {
-      //   svc.set_image(iri!(&self.image_url.clone().unwrap()));
-      // }
-
+    if self.image_url.is_some() {
+      let mut image = Image::new();
+      image.set_url(iri!(self.image_url.clone().unwrap()));
+      svc.set_image(image.into_any_base()?);
+    }
 
     // in theory we could return an object here instead of JSON so we can
     // manipulate it if needed but i had trouble getting that to work because of
