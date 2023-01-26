@@ -86,6 +86,22 @@ pub fn fake_item() -> Item {
   }
 }
 
+pub fn fake_item_with_enclosure() -> Item {
+  Item {
+    id: 1,
+    feed_id: 1,
+    guid: "12345".to_string(),
+    title: Some("Hello!".to_string()),
+    content: Some("Hey!".to_string()),
+    url: Some("http://google.com".to_string()),
+    enclosure_url: Some("http://place.com/file.mp3".to_string()),
+    enclosure_content_type: Some("audio/mpeg".to_string()),
+    enclosure_size: Some(123456),
+    created_at: Utc::now().naive_utc(),
+    updated_at: Utc::now().naive_utc()
+  }
+}
+
 pub async fn real_item(feed: &Feed, pool: &SqlitePool) -> sqlx::Result<Item> {
   let id = Uuid::new_v4().to_string();
   let item_url = format!("https://foo.com/{}", id);

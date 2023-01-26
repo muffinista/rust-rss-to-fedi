@@ -7,6 +7,7 @@ use crate::services::mailer::*;
 
 use activitystreams::activity::*;
 use activitystreams::object::ApObject;
+use activitystreams::object::Document;
 use activitystreams::object::Note;
 use activitystreams::iri;
 use activitystreams::base::BaseExt;
@@ -30,6 +31,8 @@ use sanitize_html::rules::predefined::RELAXED;
 
 use url::Url;
 use chrono::Utc;
+
+use activitystreams::mime::Mime;
 
 
 #[derive(Debug, Serialize)]
@@ -213,6 +216,20 @@ impl Item {
       .set_id(iri!(item_url))
       .set_published(ts);
 
+    if self.enclosure_url.is_some() {
+      let mut attachment = Document::new();
+      let enclosure_url = self.enclosure_url.clone().unwrap();
+
+      attachment.set_url(iri!(&enclosure_url));
+
+      if self.enclosure_content_type.is_some() {
+        let content_type: &String = &self.enclosure_content_type.clone().unwrap();
+        attachment.set_media_type(content_type.parse::<Mime>().unwrap());
+      }
+
+      note.set_attachment(attachment.into_any_base()?);
+    }
+
     let mut action: ApObject<Create> = ApObject::new(
       Create::new(
         iri!(feed_url),
@@ -280,7 +297,7 @@ mod test {
   use sqlx::sqlite::SqlitePool;
   use crate::models::feed::Feed;
   use crate::models::item::Item;
-  use crate::utils::test_helpers::{real_item, fake_feed, fake_item};
+  use crate::utils::test_helpers::{real_item, fake_feed, fake_item, fake_item_with_enclosure};
 
   use mockito::mock;
 
@@ -362,6 +379,29 @@ mod test {
         
         assert!(s.contains("Hello!"));
         assert!(s.contains("<p>Hey!</p>"));
+
+        Ok(())
+      },
+      Err(why) => Err(why.to_string())
+    }
+  }
+
+  #[sqlx::test]
+  async fn test_to_activity_pub_with_enclosure() -> Result<(), String> {
+    let feed: Feed = fake_feed();
+    let item: Item = fake_item_with_enclosure();
+
+    let result = item.to_activity_pub(&feed);
+    match result {
+      Ok(result) => {
+        let s = serde_json::to_string(&result).unwrap();
+
+        println!("{:}", s);
+        
+        assert!(s.contains("Hello!"));
+        assert!(s.contains("<p>Hey!</p>"));
+        assert!(s.contains("file.mp3"));
+        assert!(s.contains("audio/mpeg"));
 
         Ok(())
       },
