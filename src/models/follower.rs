@@ -6,6 +6,7 @@ use reqwest::header::{HeaderValue, HeaderMap};
 use anyhow::Error as AnyError;
 use url::Url;
 
+use crate::utils::http::http_client;
 
 #[derive(Debug, Serialize)]
 pub struct Follower {
@@ -39,7 +40,7 @@ impl Follower {
     );
 
     // query that
-    let client = reqwest::Client::new();
+    let client = http_client();
     let res = client
       .get(profile_url)
       .headers(headers)

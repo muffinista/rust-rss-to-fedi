@@ -40,6 +40,7 @@ chrono = { version = "0.4.23", features = ["serde"] }
 lettre = "0.10.1"
 scraper = "0.14.0"
 sanitize_html = "0.7.0"
+reqwest-retry = "0.2.1"
 
 
 [dependencies.rocket_dyn_templates]

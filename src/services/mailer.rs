@@ -1,9 +1,11 @@
 use http_signature_normalization_reqwest::prelude::*;
 use reqwest::Request;
-use reqwest_middleware::{ClientBuilder, RequestBuilder};
-use reqwest::header::{HeaderValue, HeaderMap}; // , HeaderName
+use reqwest_middleware::RequestBuilder;
+use reqwest::header::{HeaderValue, HeaderMap};
 
 use webfinger::{resolve, Webfinger, WebfingerError};
+
+use crate::utils::http::http_client;
 
 use openssl::{
   hash::MessageDigest,
@@ -52,15 +54,11 @@ pub fn parse_webfinger(webfinger: Webfinger) -> Option<Url> {
   }
 }
 
-
 ///
 /// deliver a payload to an inbox
 ///
 pub async fn deliver_to_inbox(inbox: &Url, key_id: &str, private_key: &str, json: &str) -> Result<(), anyhow::Error> {
-  let client = ClientBuilder::new(reqwest::Client::new()).build();
-  // // Retry failed requests.
-  // .with(RetryTransientMiddleware::new_with_policy(retry_policy))
-
+  let client = http_client();
   let heads = generate_request_headers(&inbox);
 
   let request_builder = client
@@ -93,19 +91,6 @@ pub async fn deliver_to_inbox(inbox: &Url, key_id: &str, private_key: &str, json
 
 fn generate_request_headers(_inbox: &Url) -> HeaderMap {
   let mut headers = HeaderMap::new();
-  // let mut host = inbox.domain().expect("Domain is valid").to_string();
-  // if let Some(port) = inbox.port() {
-  //     host = format!("{}:{}", host, port);
-  // }
-
-  // headers.insert(
-  //   HeaderName::from_static("content-type"),
-  //   HeaderValue::from_static("application/activity+json"),
-  // );
-  // headers.insert(
-  //   HeaderName::from_static("host"),
-  //   HeaderValue::from_str(&host).expect("Hostname is valid"),
-  // );
   headers.insert(
     "date",
     HeaderValue::from_str(&fmt_http_date(SystemTime::now())).expect("Date is valid"),
