@@ -261,7 +261,7 @@ impl Feed {
 
     match result {
       Ok(result) => Ok(result.tally as u64),
-      Err(_why) => todo!()
+      Err(why) => Err(why.into())
     }
   }
 
@@ -592,7 +592,7 @@ impl Feed {
 
     match result {
       Ok(result) => Ok(result.tally as u64),
-      Err(_why) => todo!()
+      Err(why) => Err(why.into())
     }
   }
 
@@ -636,7 +636,7 @@ impl Feed {
   ///
   /// generate actual AP page of followes 
   ///
-  pub async fn followers_paged(&self, page: u32, pool: &SqlitePool)  -> Result<ApObject<OrderedCollectionPage>, AnyError>{
+  pub async fn followers_paged(&self, page: u32, pool: &SqlitePool)  -> Result<ApObject<OrderedCollectionPage>, AnyError> {
     let count = self.follower_count(pool).await?;
     let total_pages = ((count / PER_PAGE as u64) + 1 ) as u32;
     let mut collection: ApObject<OrderedCollectionPage> = ApObject::new(OrderedCollectionPage::new());
@@ -683,9 +683,8 @@ impl Feed {
         collection.set_many_items(v);
         
         Ok(collection)
-          
       },
-      Err(_why) => todo!()
+      Err(why) => Err(why.into())
     }
   }
 
@@ -765,7 +764,7 @@ impl Feed {
         Ok(collection)
           
       },
-      Err(_why) => todo!()
+      Err(why) => Err(why.into())
     }
   }
 

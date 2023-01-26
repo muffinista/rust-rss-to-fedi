@@ -86,7 +86,7 @@ pub async fn deliver_to_inbox(inbox: &Url, key_id: &str, private_key: &str, json
         Err(anyhow!(response.status().to_string()))
       }
     },
-    Err(_why) => todo!()
+    Err(why) => Err(why.into())
   }
 }
 
