@@ -41,7 +41,6 @@ pub struct Item {
   pub url: Option<String>,
   pub created_at: chrono::NaiveDateTime,
   pub updated_at: chrono::NaiveDateTime
-
 }
 
 fn sanitize_string(input: &String) -> String {

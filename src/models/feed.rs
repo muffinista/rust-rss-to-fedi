@@ -453,9 +453,6 @@ impl Feed {
   /// Generate valid ActivityPub data for this feed
   ///
   pub fn to_activity_pub(&self) -> Result<String, AnyError> {    
-    // we could return an object here instead of JSON so we can manipulate it if needed
-    // pub fn to_activity_pub(&self) -> Result<ExtendedService, AnyError> {    
-
     let feed_url = self.ap_url();
     let mut svc = Ext1::new(
       ApActor::new(
@@ -481,37 +478,25 @@ impl Feed {
       .set_outbox(iri!(path_to_url(&uri!(render_feed_outbox(&self.name, None::<u32>)))))
       .set_followers(iri!(path_to_url(&uri!(render_feed_followers(&self.name, None::<u32>)))));
 
-    if self.image_url.is_some() {
-      svc.set_image(iri!(&self.image_url.clone().unwrap()));
-    }
-    if self.icon_url.is_some() {
-      svc.set_icon(iri!(&self.icon_url.clone().unwrap()));
-    } else if self.image_url.is_some() {
-      svc.set_icon(iri!(&self.image_url.clone().unwrap()));
-    }
+      if self.icon_url.is_some() {
+        svc.set_icon(iri!(&self.icon_url.clone().unwrap()));
+        svc.set_image(iri!(&self.icon_url.clone().unwrap()));
+      } else if self.image_url.is_some() {
+        svc.set_icon(iri!(&self.image_url.clone().unwrap()));
+        svc.set_image(iri!(&self.image_url.clone().unwrap()));
+      }
+
+      // if self.image_url.is_some() {
+      //   svc.set_image(iri!(&self.image_url.clone().unwrap()));
+      // }
+
+
+    // in theory we could return an object here instead of JSON so we can
+    // manipulate it if needed but i had trouble getting that to work because of
+    // assorted traits throwing issues when calling into_any_base()
 
     // generate JSON and return
-    Ok(serde_json::to_string(&svc).unwrap())
-
-    // if returning an object makes sense we can do something like this:
-    // let any_base = svc.into_any_base();
-    // //    println!("any base: {:?}", any_base);
-    
-    // match any_base {
-    //   Ok(any_base) => {
-    //     let x = ExtendedService::from_any_base(any_base).unwrap();
-        
-    //     match x {
-    //       Some(x) => {
-    //         println!("JSON: {:?}", serde_json::to_string(&x).unwrap());
-    //         Ok(x)
-    //       },
-    //       None => todo!()
-    //     }
-    //   },
-    //   Err(_) => todo!()
-    // }
-    
+    Ok(serde_json::to_string(&svc).unwrap())   
   }
 
   ///
