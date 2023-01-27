@@ -1,6 +1,6 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
-use sqlx::sqlite::SqlitePool;
+use sqlx::postgres::PgPoolOptions;
 
 use std::env;
 
@@ -10,9 +10,13 @@ use rustypub::models::feed::Feed;
 #[tokio::main]
 async fn main() -> Result<(), reqwest::Error>  {
   let db_uri = env::var("DATABASE_URL").expect("DATABASE_URL is not set");
-  let pool = SqlitePool::connect(&db_uri)
+
+  let pool = PgPoolOptions::new()
+    .max_connections(5)
+    .connect(&db_uri)
     .await
     .expect("Failed to create pool");
+
   sqlx::migrate!("./migrations")
     .run(&pool)
     .await
@@ -37,8 +41,8 @@ async fn main() -> Result<(), reqwest::Error>  {
 //     title: Some("Hello!".to_string()),
 //     content: Some("Here is some content".to_string()),
 //     url: Some("http://google.com".to_string()),
-//     created_at: Utc::now().naive_utc(),
-//     updated_at: Utc::now().naive_utc()
+//     created_at: Utc::now(),
+//     updated_at: Utc::now()
 //   };
 
 // //  let _follower = feed.follow(&pool, "muffinista@botsin.space").await;
@@ -57,7 +61,7 @@ async fn main() -> Result<(), reqwest::Error>  {
 
 
 //   // let email:String = "foo@bar.com".to_string();
-//   // let user = User { id: 1, email: email, access_token: Some("".to_string()), login_token: "".to_string(), created_at: Utc::now().naive_utc(), updated_at: Utc::now().naive_utc() };
+//   // let user = User { id: 1, email: email, access_token: Some("".to_string()), login_token: "".to_string(), created_at: Utc::now(), updated_at: Utc::now() };
 //   // let feed = Feed::create(&user,
 //   //                         &"https://muffinlabs.com/atom.xml".to_string(),
 //   //                         &"muffinlabs".to_string(),

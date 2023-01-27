@@ -8,13 +8,15 @@ use url::Url;
 
 use crate::utils::http::http_client;
 
+use chrono::Utc;
+
 #[derive(Debug, Serialize)]
 pub struct Follower {
-  pub id: i64,
-  pub feed_id: i64,
+  pub id: i32,
+  pub feed_id: i32,
   pub actor: String,
-  pub created_at: chrono::NaiveDateTime,
-  pub updated_at: chrono::NaiveDateTime
+  pub created_at: chrono::DateTime::<Utc>,
+  pub updated_at: chrono::DateTime::<Utc>
 }
 
 impl PartialEq for Follower {

@@ -1,11 +1,11 @@
-use sqlx::sqlite::SqlitePool;
+use sqlx::postgres::PgPool;
 
 use anyhow::{anyhow};
 use anyhow::Error as AnyError;
 
 use crate::models::feed::Feed;
 
-pub async fn update_stale_feeds(pool: &SqlitePool) -> Result<(), AnyError>{
+pub async fn update_stale_feeds(pool: &PgPool) -> Result<(), AnyError>{
   let feeds = Feed::stale(pool, 3600, 5).await;
   match feeds {
     Ok(feeds) => {

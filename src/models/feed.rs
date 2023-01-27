@@ -20,7 +20,7 @@ use activitystreams::{
 };
 
 use activitystreams::object::Image;
-use sqlx::sqlite::SqlitePool;
+use sqlx::postgres::PgPool;
 use serde::{Serialize};
 
 use reqwest;
@@ -45,8 +45,8 @@ use crate::routes::ap::outbox::*;
 
 #[derive(Debug, Serialize)]
 pub struct Feed {
-  pub id: i64,
-  pub user_id: i64,
+  pub id: i32,
+  pub user_id: i32,
   pub name: String,
   pub url: String,
   pub private_key: String,
@@ -58,9 +58,9 @@ pub struct Feed {
   pub description: Option<String>,
   pub site_url: Option<String>,
 
-  pub created_at: chrono::NaiveDateTime,
-  pub updated_at: chrono::NaiveDateTime,
-  pub refreshed_at: chrono::NaiveDateTime,
+  pub created_at: chrono::DateTime::<Utc>,
+  pub updated_at: chrono::DateTime::<Utc>,
+  pub refreshed_at: chrono::DateTime::<Utc>,
 
   pub error: Option<String>
 }
@@ -81,7 +81,7 @@ impl fmt::Display for FeedError {
   }
 }
 
-const PER_PAGE:u32 = 10u32;
+const PER_PAGE:i32 = 10i32;
 
 // https://docs.rs/activitystreams/0.7.0-alpha.20/activitystreams/index.html#parse
 // also examples/handle_incoming.rs
@@ -101,81 +101,83 @@ pub type ExtendedService = Ext1<ApActor<Service>, PublicKey>;
 
 
 impl Feed {
-  pub async fn find(id: i64, pool: &SqlitePool) -> Result<Feed, sqlx::Error> {
-    sqlx::query_as!(Feed, "SELECT * FROM feeds WHERE id = ?", id)
+  pub async fn find(id: i32, pool: &PgPool) -> Result<Feed, sqlx::Error> {
+    sqlx::query_as!(Feed, "SELECT * FROM feeds WHERE id = $1", id)
     .fetch_one(pool)
     .await
   }
 
-  pub async fn stale(pool: &SqlitePool, age:i64, limit: u8) -> Result<Vec<Feed>, sqlx::Error> {
-    let age = Utc::now().naive_utc() - Duration::seconds(age);
-    sqlx::query_as!(Feed, "SELECT * FROM feeds WHERE refreshed_at < ? LIMIT ?", age, limit)
+  pub async fn stale(pool: &PgPool, age:i64, limit: i64) -> Result<Vec<Feed>, sqlx::Error> {
+    let age = Utc::now() - Duration::seconds(age);
+    sqlx::query_as!(Feed, "SELECT * FROM feeds WHERE refreshed_at < $1 LIMIT $2", age, limit)
     .fetch_all(pool)
     .await
   }
 
-  pub async fn for_user(user: &User, pool: &SqlitePool) -> Result<Vec<Feed>, sqlx::Error> {
-    sqlx::query_as!(Feed, "SELECT * FROM feeds WHERE user_id = ?", user.id)
+  pub async fn for_user(user: &User, pool: &PgPool) -> Result<Vec<Feed>, sqlx::Error> {
+    sqlx::query_as!(Feed, "SELECT * FROM feeds WHERE user_id = $1", user.id)
     .fetch_all(pool)
     .await
   }
   
-  pub async fn find_by_url(url: &String, pool: &SqlitePool) -> Result<Feed, sqlx::Error> {
-    sqlx::query_as!(Feed, "SELECT * FROM feeds WHERE url = ?", url)
+  pub async fn find_by_url(url: &String, pool: &PgPool) -> Result<Feed, sqlx::Error> {
+    sqlx::query_as!(Feed, "SELECT * FROM feeds WHERE url = $1", url)
     .fetch_one(pool)
     .await
   }
   
-  pub async fn find_by_name(name: &String, pool: &SqlitePool) -> Result<Option<Feed>, sqlx::Error> {
-    sqlx::query_as!(Feed, "SELECT * FROM feeds WHERE name = ?", name)
+  pub async fn find_by_name(name: &String, pool: &PgPool) -> Result<Option<Feed>, sqlx::Error> {
+    sqlx::query_as!(Feed, "SELECT * FROM feeds WHERE name = $1", name)
       .fetch_optional(pool)
       .await
   }
 
-  pub async fn exists_by_name(name: &String, pool: &SqlitePool) -> Result<bool, sqlx::Error> {
-    let result = sqlx::query!("SELECT count(1) AS tally FROM feeds WHERE name = ?", name)
+  pub async fn exists_by_name(name: &String, pool: &PgPool) -> Result<bool, sqlx::Error> {
+    let result = sqlx::query!("SELECT count(1) AS tally FROM feeds WHERE name = $1", name)
       .fetch_one(pool)
       .await;
 
     match result {
-      Ok(result) => Ok(result.tally > 0),
+      Ok(result) => Ok(result.tally.unwrap() > 0),
       Err(why) => Err(why)
     }
   }
 
-  pub async fn exists_by_url(url: &String, pool: &SqlitePool) -> Result<bool, sqlx::Error> {
-    let result = sqlx::query!("SELECT count(1) AS tally FROM feeds WHERE url = ?", url)
+  pub async fn exists_by_url(url: &String, pool: &PgPool) -> Result<bool, sqlx::Error> {
+    let result = sqlx::query!("SELECT count(1) AS tally FROM feeds WHERE url = $1", url)
       .fetch_one(pool)
       .await;
 
     match result {
-      Ok(result) => Ok(result.tally > 0),
+      Ok(result) => Ok(result.tally.unwrap() > 0),
       Err(why) => Err(why)
     }
   }
   
   pub async fn create(user: &User,
       url: &String,
-      name: &String, pool: &SqlitePool) -> Result<Feed, sqlx::Error> {
+      name: &String, pool: &PgPool) -> Result<Feed, sqlx::Error> {
 
     // generate keypair used for signing AP requests
     let (private_key_str, public_key_str) = generate_key();
     let old = Utc.with_ymd_and_hms(1900, 1, 1, 0, 0, 0).unwrap();
 
-    let now = Utc::now().naive_utc();
+    let now = Utc::now();
 
-    let feed_id = sqlx::query!("INSERT INTO feeds (user_id, url, name, private_key, public_key, created_at, updated_at, refreshed_at)
-                                VALUES($1, $2, $3, $4, $5, $6, $7, ?)",
-                               user.id, url, name, private_key_str, public_key_str, now, now, old)
-      .execute(pool)
+    let feed_id = sqlx::query!("INSERT INTO feeds
+        (user_id, url, name, private_key, public_key, created_at, updated_at, refreshed_at)
+        VALUES($1, $2, $3, $4, $5, $6, $7, $8)
+        RETURNING id",
+        user.id, url, name, private_key_str, public_key_str, now, now, old)
+      .fetch_one(pool)
       .await?
-      .last_insert_rowid();
+      .id;
     
     Feed::find(feed_id, pool).await
   }
 
-  pub async fn save(&self, pool: &SqlitePool) -> Result<&Feed, sqlx::Error> {
-    let now = Utc::now().naive_utc();
+  pub async fn save(&self, pool: &PgPool) -> Result<&Feed, sqlx::Error> {
+    let now = Utc::now();
 
     sqlx::query!("UPDATE feeds
       SET url = $1,
@@ -208,7 +210,7 @@ impl Feed {
     Ok(self)
   }
 
-  pub async fn delete(user: &User, id: i64, pool: &SqlitePool) -> Result<Feed, sqlx::Error> {
+  pub async fn delete(user: &User, id: i32, pool: &PgPool) -> Result<Feed, sqlx::Error> {
     let old_feed = Feed::find(id, pool).await;
     
     sqlx::query!("DELETE FROM feeds WHERE user_id = $1 AND id = $2", user.id, id)
@@ -218,7 +220,7 @@ impl Feed {
     old_feed   
   }
 
-  pub async fn mark_stale(&self, pool: &SqlitePool) -> Result<(), sqlx::Error> {
+  pub async fn mark_stale(&self, pool: &PgPool) -> Result<(), sqlx::Error> {
     let old = Utc.with_ymd_and_hms(1900, 1, 1, 0, 0, 0).unwrap();
     let result = sqlx::query!("UPDATE feeds SET refreshed_at = $1 WHERE id = $2", old, self.id)
       .execute(pool)
@@ -230,7 +232,7 @@ impl Feed {
     }
   }
 
-  pub async fn mark_error(&self, err:&String, pool: &SqlitePool) -> Result<(), sqlx::Error> {
+  pub async fn mark_error(&self, err:&String, pool: &PgPool) -> Result<(), sqlx::Error> {
     let result = sqlx::query!("UPDATE feeds SET error = $1 WHERE id = $2", err, self.id)
       .execute(pool)
       .await;
@@ -241,8 +243,8 @@ impl Feed {
     }
   }
 
-  pub async fn mark_fresh(&self, pool: &SqlitePool) -> Result<(), sqlx::Error> {
-    let now = Utc::now().naive_utc();
+  pub async fn mark_fresh(&self, pool: &PgPool) -> Result<(), sqlx::Error> {
+    let now = Utc::now();
     let result = sqlx::query!("UPDATE feeds SET refreshed_at = $1 WHERE id = $2", now, self.id)
       .execute(pool)
       .await;
@@ -255,18 +257,18 @@ impl Feed {
 
 
   
-  pub async fn entries_count(&self, pool: &SqlitePool)  -> Result<u64, AnyError>{
-    let result = sqlx::query!("SELECT COUNT(1) AS tally FROM items WHERE feed_id = ?", self.id)
+  pub async fn entries_count(&self, pool: &PgPool)  -> Result<i32, AnyError>{
+    let result = sqlx::query!("SELECT COUNT(1) AS tally FROM items WHERE feed_id = $1", self.id)
       .fetch_one(pool)
       .await;
 
     match result {
-      Ok(result) => Ok(result.tally as u64),
+      Ok(result) => Ok(result.tally.unwrap() as i32),
       Err(why) => Err(why.into())
     }
   }
 
-  pub async fn update_icon_url(&self, url:&str, pool: &SqlitePool) -> Result<(), sqlx::Error> {
+  pub async fn update_icon_url(&self, url:&str, pool: &PgPool) -> Result<(), sqlx::Error> {
     let result = sqlx::query!("UPDATE feeds SET icon_url = $1 WHERE id = $2", url, self.id)
       .execute(pool)
       .await;
@@ -277,7 +279,7 @@ impl Feed {
     }
   }
 
-  pub async fn update_image_url(&self, url:&str, pool: &SqlitePool) -> Result<(), sqlx::Error> {
+  pub async fn update_image_url(&self, url:&str, pool: &PgPool) -> Result<(), sqlx::Error> {
     let result = sqlx::query!("UPDATE feeds SET image_url = $1 WHERE id = $2", url, self.id)
       .execute(pool)
       .await;
@@ -315,7 +317,7 @@ impl Feed {
   ///
   /// check parsed feed data for any entries we should convert into new items
   ///
-  pub async fn feed_to_entries(&self, data: feed_rs::model::Feed, pool: &SqlitePool) -> Result<Vec<Item>, FeedError> {
+  pub async fn feed_to_entries(&self, data: feed_rs::model::Feed, pool: &PgPool) -> Result<Vec<Item>, FeedError> {
     let mut result: Vec<Item> = Vec::new();
     for entry in data.entries.iter() {
       let exists = Item::exists_by_guid(&entry.id, &self, pool).await.unwrap();
@@ -336,7 +338,7 @@ impl Feed {
   ///
   /// grab new data for this feed, and deliver any new entries to followers
   ///
-  pub async fn refresh(&mut self, pool: &SqlitePool) -> Result<(), AnyError> {
+  pub async fn refresh(&mut self, pool: &PgPool) -> Result<(), AnyError> {
     let items = self.parse(pool).await;
     match items {
       Ok(items) => {
@@ -362,7 +364,7 @@ impl Feed {
   /// load and parse feed
   /// returns a list of any new items
   ///
-  pub async fn parse(&mut self, pool: &SqlitePool) -> Result<Vec<Item>, FeedError> {        
+  pub async fn parse(&mut self, pool: &PgPool) -> Result<Vec<Item>, FeedError> {        
     let body = Feed::load(self).await;
     match body {
       Ok(body) => {
@@ -385,7 +387,7 @@ impl Feed {
   ///
   /// update our stored data from the downloaded feed data
   ///
-  pub async fn parse_from_data(&mut self, body: String, pool: &SqlitePool) -> Result<Vec<Item>, FeedError> {        
+  pub async fn parse_from_data(&mut self, body: String, pool: &PgPool) -> Result<Vec<Item>, FeedError> {        
     let data = parser::parse(body.as_bytes());
         
     match data {
@@ -482,8 +484,8 @@ impl Feed {
       .set_name(self.name.clone())
       .set_preferred_username(self.name.clone())
       .set_inbox(iri!(path_to_url(&uri!(user_inbox(&self.name)))))
-      .set_outbox(iri!(path_to_url(&uri!(render_feed_outbox(&self.name, None::<u32>)))))
-      .set_followers(iri!(path_to_url(&uri!(render_feed_followers(&self.name, None::<u32>)))));
+      .set_outbox(iri!(path_to_url(&uri!(render_feed_outbox(&self.name, None::<i32>)))))
+      .set_followers(iri!(path_to_url(&uri!(render_feed_followers(&self.name, None::<i32>)))));
 
     if self.icon_url.is_some() {
       let mut icon = Image::new();
@@ -513,9 +515,11 @@ impl Feed {
   /// add follower to feed
   /// @todo uniqueness check
   ///
-  pub async fn add_follower(&self, pool: &SqlitePool, actor: &str) -> Result<(), AnyError> {
-    let result = sqlx::query!("INSERT INTO followers (feed_id, actor, created_at, updated_at) VALUES($1, $2, datetime(CURRENT_TIMESTAMP, 'utc'), datetime(CURRENT_TIMESTAMP, 'utc'))",
-                 self.id, actor)
+  pub async fn add_follower(&self, pool: &PgPool, actor: &str) -> Result<(), AnyError> {
+    let now = Utc::now();
+
+    let result = sqlx::query!("INSERT INTO followers (feed_id, actor, created_at, updated_at) VALUES($1, $2, $3, $4)",
+                 self.id, actor, now, now)
       .execute(pool)
       .await;
 
@@ -528,7 +532,7 @@ impl Feed {
   ///
   /// handle follow activity
   ///
-  pub async fn follow(&self, pool: &SqlitePool, actor: &str, activity: &AcceptedActivity) -> Result<(), AnyError> {
+  pub async fn follow(&self, pool: &PgPool, actor: &str, activity: &AcceptedActivity) -> Result<(), AnyError> {
     // store follower in the db
     self.add_follower(pool, actor).await?;
 
@@ -556,8 +560,8 @@ impl Feed {
   ///
   /// handle unfollow activity
   ///
-  pub async fn unfollow(&self, pool: &SqlitePool, actor: &str) -> Result<(), AnyError>  {
-    sqlx::query!("DELETE FROM followers WHERE feed_id = ? AND actor = ?",
+  pub async fn unfollow(&self, pool: &PgPool, actor: &str) -> Result<(), AnyError>  {
+    sqlx::query!("DELETE FROM followers WHERE feed_id = $1 AND actor = $2",
                  self.id, actor)
       .execute(pool)
       .await?;
@@ -568,7 +572,7 @@ impl Feed {
   ///
   /// handle any incoming events. we're just handling follow/unfollows for now
   ///
-  pub async fn handle_activity(&self, pool: &SqlitePool, activity: &AcceptedActivity)  -> Result<(), AnyError> {
+  pub async fn handle_activity(&self, pool: &PgPool, activity: &AcceptedActivity)  -> Result<(), AnyError> {
     let (actor, _object, act) = activity.clone().into_parts();
 
     let actor_id = actor.as_single_id().unwrap().to_string();
@@ -586,13 +590,13 @@ impl Feed {
   ///
   /// figure out how many people are following the feed
   ///
-  pub async fn follower_count(&self, pool: &SqlitePool)  -> Result<u64, AnyError>{
-    let result = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = ?", self.id)
+  pub async fn follower_count(&self, pool: &PgPool)  -> Result<i32, AnyError>{
+    let result = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = $1", self.id)
       .fetch_one(pool)
       .await;
 
     match result {
-      Ok(result) => Ok(result.tally as u64),
+      Ok(result) => Ok(result.tally.unwrap() as i32),
       Err(why) => Err(why.into())
     }
   }
@@ -600,8 +604,8 @@ impl Feed {
   ///
   /// get a list of all followers
   ///
-  pub async fn followers_list(&self, pool: &SqlitePool)  -> Result<Vec<Follower>, sqlx::Error>{
-    sqlx::query_as!(Follower, "SELECT * FROM followers WHERE feed_id = ?", self.id)
+  pub async fn followers_list(&self, pool: &PgPool)  -> Result<Vec<Follower>, sqlx::Error>{
+    sqlx::query_as!(Follower, "SELECT * FROM followers WHERE feed_id = $1", self.id)
       .fetch_all(pool)
       .await
   }
@@ -609,9 +613,9 @@ impl Feed {
   ///
   /// generate AP data to represent follower information
   ///
-  pub async fn followers(&self, pool: &SqlitePool)  -> Result<ApObject<OrderedCollection>, AnyError> {
+  pub async fn followers(&self, pool: &PgPool)  -> Result<ApObject<OrderedCollection>, AnyError> {
     let count = self.follower_count(pool).await?;
-    let total_pages = ((count / PER_PAGE as u64) + 1 ) as u32;
+    let total_pages = ((count / PER_PAGE as i32) + 1 ) as i32;
 
     let mut collection: ApObject<OrderedCollection> = ApObject::new(OrderedCollection::new());
 
@@ -627,7 +631,7 @@ impl Feed {
       .set_context(context())
       .set_id(iri!(path_to_url(&uri!(render_feed(&self.name)))))
       .set_summary("A list of followers".to_string())
-      .set_total_items(count)
+      .set_total_items(count as u64)
       .set_first(iri!(path_to_url(&uri!(render_feed_followers(&self.name, Some(1))))))
       .set_last(iri!(path_to_url(&uri!(render_feed_followers(&self.name, Some(total_pages))))));
 
@@ -637,9 +641,9 @@ impl Feed {
   ///
   /// generate actual AP page of followes 
   ///
-  pub async fn followers_paged(&self, page: u32, pool: &SqlitePool)  -> Result<ApObject<OrderedCollectionPage>, AnyError> {
+  pub async fn followers_paged(&self, page: i32, pool: &PgPool)  -> Result<ApObject<OrderedCollectionPage>, AnyError> {
     let count = self.follower_count(pool).await?;
-    let total_pages = ((count / PER_PAGE as u64) + 1 ) as u32;
+    let total_pages:i32 = ((count / PER_PAGE) + 1 ) as i32;
     let mut collection: ApObject<OrderedCollectionPage> = ApObject::new(OrderedCollectionPage::new());
 
     collection
@@ -665,8 +669,8 @@ impl Feed {
 
     // @todo handle page <= 0 and page > count
     
-    let offset = (page - 1) * PER_PAGE;
-    let result = sqlx::query_as!(Follower, "SELECT * FROM followers WHERE feed_id = ? LIMIT ? OFFSET ?", self.id, PER_PAGE, offset )
+    let offset:i64 = ((page - 1) * PER_PAGE) as i64;
+    let result = sqlx::query_as!(Follower, "SELECT * FROM followers WHERE feed_id = $1 LIMIT $2 OFFSET $3", self.id, PER_PAGE as i64, offset )
       .fetch_all(pool)
       .await;
   
@@ -692,9 +696,9 @@ impl Feed {
   ///
   /// generate AP data to represent outbox information
   ///
-  pub async fn outbox(&self, pool: &SqlitePool)  -> Result<ApObject<OrderedCollection>, AnyError> {
+  pub async fn outbox(&self, pool: &PgPool)  -> Result<ApObject<OrderedCollection>, AnyError> {
     let count = self.entries_count(pool).await?;
-    let total_pages = ((count / PER_PAGE as u64) + 1 ) as u32;
+    let total_pages = ((count / PER_PAGE as i32) + 1 ) as i32;
 
     let mut collection: ApObject<OrderedCollection> = ApObject::new(OrderedCollection::new());
 
@@ -710,7 +714,7 @@ impl Feed {
       .set_context(context())
       .set_id(iri!(path_to_url(&uri!(render_feed(&self.name)))))
       .set_summary("A list of outbox items".to_string())
-      .set_total_items(count)
+      .set_total_items(count as u64)
       .set_first(iri!(path_to_url(&uri!(render_feed_outbox(&self.name, Some(1))))))
       .set_last(iri!(path_to_url(&uri!(render_feed_outbox(&self.name, Some(total_pages))))));
 
@@ -720,9 +724,9 @@ impl Feed {
   ///
   /// generate actual AP page of followes 
   ///
-  pub async fn outbox_paged(&self, page: u32, pool: &SqlitePool)  -> Result<ApObject<OrderedCollectionPage>, AnyError>{
+  pub async fn outbox_paged(&self, page: i32, pool: &PgPool)  -> Result<ApObject<OrderedCollectionPage>, AnyError>{
     let count = self.entries_count(pool).await?;
-    let total_pages = ((count / PER_PAGE as u64) + 1 ) as u32;
+    let total_pages = ((count / PER_PAGE as i32) + 1 ) as i32;
     let mut collection: ApObject<OrderedCollectionPage> = ApObject::new(OrderedCollectionPage::new());
 
     collection
@@ -749,7 +753,8 @@ impl Feed {
     // @todo handle page <= 0 and page > count
     
     let offset = (page - 1) * PER_PAGE;
-    let result = sqlx::query_as!(Item, "SELECT * FROM items WHERE feed_id = ? LIMIT ? OFFSET ?", self.id, PER_PAGE, offset )
+    let result = sqlx::query_as!(Item, "SELECT * FROM items WHERE feed_id = $1 LIMIT $2 OFFSET $3",
+      self.id as i32, PER_PAGE as i32, offset as i32)
       .fetch_all(pool)
       .await;
   
@@ -773,9 +778,10 @@ impl Feed {
 
 #[cfg(test)]
 mod test {
-  use sqlx::sqlite::SqlitePool;
+  use sqlx::postgres::PgPool;
   use rocket::uri;
   use feed_rs::parser;
+  use chrono::Utc;
 
   use crate::models::feed::Feed;
   use crate::models::feed::AcceptedActivity;
@@ -791,7 +797,7 @@ mod test {
   use mockito::mock;
 
   #[sqlx::test]
-  async fn test_create(pool: SqlitePool) -> sqlx::Result<()> {
+  async fn test_create(pool: PgPool) -> sqlx::Result<()> {
     let user = fake_user();
     let feed:Feed = real_feed(&pool).await?;
     
@@ -806,7 +812,7 @@ mod test {
   }
 
   #[sqlx::test]
-  async fn test_save(pool: SqlitePool) -> sqlx::Result<()> {
+  async fn test_save(pool: PgPool) -> sqlx::Result<()> {
    
     let mut feed:Feed = real_feed(&pool).await?;
     
@@ -821,7 +827,7 @@ mod test {
   }
 
   #[sqlx::test]
-  async fn test_find_by_url(pool: SqlitePool) -> sqlx::Result<()> {
+  async fn test_find_by_url(pool: PgPool) -> sqlx::Result<()> {
     let url: String = "https://foo.com/rss.xml".to_string();
     let name: String = "testfeed".to_string();
 
@@ -836,7 +842,7 @@ mod test {
   }
 
   #[sqlx::test]
-  async fn test_exists_by_url(pool: SqlitePool) -> sqlx::Result<()> {
+  async fn test_exists_by_url(pool: PgPool) -> sqlx::Result<()> {
     let url: String = "https://foo.com/rss.xml".to_string();
 
     let _feed:Feed = real_feed(&pool).await?;
@@ -848,7 +854,7 @@ mod test {
   }
 
   #[sqlx::test]
-  async fn test_find_by_name(pool: SqlitePool) -> sqlx::Result<()> {
+  async fn test_find_by_name(pool: PgPool) -> sqlx::Result<()> {
     let feed:Feed = real_feed(&pool).await?;
     let feed2 = Feed::find_by_url(&feed.url, &pool).await?;
     
@@ -859,7 +865,7 @@ mod test {
   }
 
   #[sqlx::test]
-  async fn test_find(pool: SqlitePool) -> sqlx::Result<()> {
+  async fn test_find(pool: PgPool) -> sqlx::Result<()> {
     let feed:Feed = real_feed(&pool).await?;
     let feed2 = Feed::find(feed.id, &pool).await?;
     
@@ -870,7 +876,7 @@ mod test {
   }
 
   #[sqlx::test]
-  async fn test_stale(pool: SqlitePool) -> sqlx::Result<()> {
+  async fn test_stale(pool: PgPool) -> sqlx::Result<()> {
     let _feed: Feed = real_feed(&pool).await?;
     let feed2: Feed = real_feed(&pool).await?;
     
@@ -892,7 +898,7 @@ mod test {
   }
 
   #[sqlx::test]
-  async fn test_for_user(pool: SqlitePool) -> sqlx::Result<()> {
+  async fn test_for_user(pool: PgPool) -> sqlx::Result<()> {
     let user = fake_user();
     
     let url: String = "https://foo.com/rss.xml".to_string();
@@ -910,7 +916,7 @@ mod test {
   }
 
   #[sqlx::test]
-  async fn test_delete(pool: SqlitePool) -> sqlx::Result<()> {
+  async fn test_delete(pool: PgPool) -> sqlx::Result<()> {
     let user = fake_user();
     let feed:Feed = real_feed(&pool).await?;
 
@@ -924,7 +930,7 @@ mod test {
   }
 
   #[sqlx::test]
-  async fn test_parse_from_data(pool: SqlitePool) -> sqlx::Result<()> {
+  async fn test_parse_from_data(pool: PgPool) -> sqlx::Result<()> {
     use std::fs;
     let mut feed:Feed = real_feed(&pool).await?;
 
@@ -942,7 +948,7 @@ mod test {
  
 
   #[sqlx::test]
-  async fn test_feed_to_entries(pool: SqlitePool) -> sqlx::Result<()> {
+  async fn test_feed_to_entries(pool: PgPool) -> sqlx::Result<()> {
     use std::fs;
     let feed:Feed = real_feed(&pool).await?;
 
@@ -978,7 +984,7 @@ mod test {
  
 
   #[sqlx::test]
-  async fn test_feed_with_enclosure_to_entries(pool: SqlitePool) -> sqlx::Result<()> {
+  async fn test_feed_with_enclosure_to_entries(pool: PgPool) -> sqlx::Result<()> {
     use std::fs;
     let feed:Feed = real_feed(&pool).await?;
 
@@ -1025,7 +1031,7 @@ mod test {
   }
 
   #[sqlx::test]
-  async fn test_follow(pool: SqlitePool) -> Result<(), String> {
+  async fn test_follow(pool: PgPool) -> Result<(), String> {
     let actor = format!("{}/users/colin", &mockito::server_url());
 
     let json = format!(r#"{{"id": "{}/1/2/3", "actor":"{}","object":{{ "id": "{}" }} ,"type":"Follow"}}"#, &mockito::server_url(), actor, actor).to_string();
@@ -1044,23 +1050,23 @@ mod test {
 
     let feed:Feed = real_feed(&pool).await.unwrap();
 
-    let result = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = ? AND actor = ?", feed.id, actor)
+    let result = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = $1 AND actor = $2", feed.id, actor)
       .fetch_one(&pool)
       .await
       .unwrap();
 
-    assert!(result.tally == 0);
+    assert!(result.tally.unwrap() == 0);
 
     let activity_result = feed.handle_activity(&pool, &act).await;
 
     match activity_result {
       Ok(_result) => {
-        let result2 = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = ? AND actor = ?", feed.id, actor)
+        let result2 = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = $1 AND actor = $2", feed.id, actor)
         .fetch_one(&pool)
         .await
         .unwrap();
   
-        assert!(result2.tally > 0);
+        assert!(result2.tally.unwrap() > 0);
 
         Ok(())
       },
@@ -1070,44 +1076,46 @@ mod test {
   }
 
   #[sqlx::test]
-  async fn test_unfollow(pool: SqlitePool) -> Result<(), String> {
+  async fn test_unfollow(pool: PgPool) -> Result<(), String> {
     let actor = "https://activitypub.pizza/users/colin".to_string();
     let json = format!(r#"{{"actor":"{}","object":"{}/feed","type":"Undo"}}"#, actor, actor).to_string();
     let act:AcceptedActivity = serde_json::from_str(&json).unwrap();
     
     let feed:Feed = real_feed(&pool).await.unwrap();
+    let now = Utc::now();
 
-    sqlx::query!("INSERT INTO followers (feed_id, actor, created_at, updated_at) VALUES($1, $2, datetime(CURRENT_TIMESTAMP, 'utc'), datetime(CURRENT_TIMESTAMP, 'utc'))", feed.id, actor)
+    sqlx::query!("INSERT INTO followers (feed_id, actor, created_at, updated_at) VALUES($1, $2, $3, $4)", feed.id, actor, now, now)
       .execute(&pool)
       .await
       .unwrap();
 
-    let result = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = ? AND actor = ?", feed.id, actor)
+    let result = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = $1 AND actor = $2", feed.id, actor)
       .fetch_one(&pool)
       .await
       .unwrap();
 
-    assert!(result.tally == 1);
+    assert!(result.tally.unwrap() == 1);
 
     feed.handle_activity(&pool, &act).await.unwrap();
 
-    let post_result = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = ? AND actor = ?", feed.id, actor)
+    let post_result = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = $1 AND actor = $2", feed.id, actor)
       .fetch_one(&pool)
       .await
       .unwrap();
 
-    assert!(post_result.tally == 0);
+    assert!(post_result.tally.unwrap() == 0);
       
     Ok(())
   }
 
   #[sqlx::test]
-  async fn test_followers(pool: SqlitePool) -> Result<(), String> {
+  async fn test_followers(pool: PgPool) -> Result<(), String> {
     let feed:Feed = fake_feed();
+    let now = Utc::now();
 
     for i in 1..4 {
       let actor = format!("https://activitypub.pizza/users/colin{}", i);
-      sqlx::query!("INSERT INTO followers (feed_id, actor, created_at, updated_at) VALUES($1, $2, datetime(CURRENT_TIMESTAMP, 'utc'), datetime(CURRENT_TIMESTAMP, 'utc'))", feed.id, actor)
+      sqlx::query!("INSERT INTO followers (feed_id, actor, created_at, updated_at) VALUES($1, $2, $3, $4)", feed.id, actor, now, now)
         .execute(&pool)
         .await
         .unwrap();
@@ -1128,12 +1136,13 @@ mod test {
   }
 
   #[sqlx::test]
-  async fn test_followers_paged(pool: SqlitePool) -> Result<(), String> {
+  async fn test_followers_paged(pool: PgPool) -> Result<(), String> {
     let feed:Feed = fake_feed();
+    let now = Utc::now();
 
     for i in 1..35 {
       let actor = format!("https://activitypub.pizza/users/colin{}", i);
-      sqlx::query!("INSERT INTO followers (feed_id, actor, created_at, updated_at) VALUES($1, $2, datetime(CURRENT_TIMESTAMP, 'utc'), datetime(CURRENT_TIMESTAMP, 'utc'))", feed.id, actor)
+      sqlx::query!("INSERT INTO followers (feed_id, actor, created_at, updated_at) VALUES($1, $2, $3, $4)", feed.id, actor, now, now)
         .execute(&pool)
         .await
         .unwrap();
@@ -1162,12 +1171,13 @@ mod test {
   }
 
   #[sqlx::test]
-  async fn test_follower_count(pool: SqlitePool) -> Result<(), String> {
+  async fn test_follower_count(pool: PgPool) -> Result<(), String> {
     let feed:Feed = fake_feed();
+    let now = Utc::now();
 
-    for i in 1..36{
+    for i in 1..36 {
       let actor = format!("https://activitypub.pizza/users/colin{}", i);
-      sqlx::query!("INSERT INTO followers (feed_id, actor, created_at, updated_at) VALUES($1, $2, datetime(CURRENT_TIMESTAMP, 'utc'), datetime(CURRENT_TIMESTAMP, 'utc'))", feed.id, actor)
+      sqlx::query!("INSERT INTO followers (feed_id, actor, created_at, updated_at) VALUES($1, $2, $3, $4)", feed.id, actor, now, now)
         .execute(&pool)
         .await
         .unwrap();
@@ -1185,7 +1195,7 @@ mod test {
 
 
   #[sqlx::test]
-  async fn test_outbox(pool: SqlitePool) -> Result<(), AnyError> {
+  async fn test_outbox(pool: PgPool) -> Result<(), AnyError> {
     let feed:Feed = real_feed(&pool).await?;
 
     for _i in 1..4 {
@@ -1207,7 +1217,7 @@ mod test {
   }
 
   #[sqlx::test]
-  async fn test_outbox_paged(pool: SqlitePool) -> Result<(), AnyError> {
+  async fn test_outbox_paged(pool: PgPool) -> Result<(), AnyError> {
     let feed:Feed = real_feed(&pool).await?;
 
     for _i in 1..35 {

@@ -1,4 +1,4 @@
-use sqlx::sqlite::SqlitePool;
+use sqlx::postgres::PgPool;
 use serde::{Serialize};
 use feed_rs::model::Entry;
 
@@ -37,8 +37,8 @@ use activitystreams::mime::Mime;
 
 #[derive(Debug, Serialize)]
 pub struct Item {
-  pub id: i64,
-  pub feed_id: i64,
+  pub id: i32,
+  pub feed_id: i32,
   pub guid: String,
   pub title: Option<String>,
   pub content: Option<String>,
@@ -46,10 +46,10 @@ pub struct Item {
 
   pub enclosure_url: Option<String>,
   pub enclosure_content_type: Option<String>,
-  pub enclosure_size: Option<i64>,
+  pub enclosure_size: Option<i32>,
   
-  pub created_at: chrono::NaiveDateTime,
-  pub updated_at: chrono::NaiveDateTime
+  pub created_at: chrono::DateTime::<Utc>,
+  pub updated_at: chrono::DateTime::<Utc>
 }
 
 fn sanitize_string(input: &String) -> String {
@@ -65,42 +65,42 @@ impl PartialEq for Item {
 }
 
 impl Item {
-  pub async fn find(id: i64, pool: &SqlitePool) -> Result<Item, sqlx::Error> {
-    sqlx::query_as!(Item, "SELECT * FROM items WHERE id = ?", id)
+  pub async fn find(id: i32, pool: &PgPool) -> Result<Item, sqlx::Error> {
+    sqlx::query_as!(Item, "SELECT * FROM items WHERE id = $1", id)
     .fetch_one(pool)
     .await
   }
 
-  pub async fn find_by_feed_and_id(feed: &Feed, id: i64, pool: &SqlitePool) -> Result<Option<Item>, sqlx::Error> {
-    sqlx::query_as!(Item, "SELECT * FROM items WHERE feed_id = ? AND id = ?", feed.id, id)
+  pub async fn find_by_feed_and_id(feed: &Feed, id: i32, pool: &PgPool) -> Result<Option<Item>, sqlx::Error> {
+    sqlx::query_as!(Item, "SELECT * FROM items WHERE feed_id = $1 AND id = $2", feed.id, id)
     .fetch_optional(pool)
     .await
   }
 
-  pub async fn find_by_guid(guid: &String, feed: &Feed, pool: &SqlitePool) -> Result<Item, sqlx::Error> {
-    sqlx::query_as!(Item, "SELECT * FROM items WHERE feed_id = ? AND guid = ?", feed.id, guid)
+  pub async fn find_by_guid(guid: &String, feed: &Feed, pool: &PgPool) -> Result<Item, sqlx::Error> {
+    sqlx::query_as!(Item, "SELECT * FROM items WHERE feed_id = $1 AND guid = $2", feed.id, guid)
     .fetch_one(pool)
     .await
   }
 
-  pub async fn exists_by_guid(guid: &String, feed: &Feed, pool: &SqlitePool) -> Result<bool, sqlx::Error> {
-    let result = sqlx::query!("SELECT COUNT(1) AS tally FROM items WHERE feed_id = ? AND guid = ?", feed.id, guid)
+  pub async fn exists_by_guid(guid: &String, feed: &Feed, pool: &PgPool) -> Result<bool, sqlx::Error> {
+    let result = sqlx::query!("SELECT COUNT(1) AS tally FROM items WHERE feed_id = $1 AND guid = $2", feed.id, guid)
       .fetch_one(pool)
       .await;
 
     match result {
-      Ok(result) => Ok(result.tally > 0),
+      Ok(result) => Ok(result.tally.unwrap() > 0),
       Err(why) => Err(why)
     }
   }
 
-  pub async fn for_feed(feed: &Feed, limit: i64, pool: &SqlitePool) -> Result<Vec<Item>, sqlx::Error> {
-    sqlx::query_as!(Item, "SELECT * FROM items WHERE feed_id = ? ORDER by id DESC LIMIT ?", feed.id, limit)
+  pub async fn for_feed(feed: &Feed, limit: i64, pool: &PgPool) -> Result<Vec<Item>, sqlx::Error> {
+    sqlx::query_as!(Item, "SELECT * FROM items WHERE feed_id = $1 ORDER by id DESC LIMIT $2", feed.id, limit)
     .fetch_all(pool)
     .await
   }
 
-  pub async fn create_from_entry(entry: &Entry, feed: &Feed, pool: &SqlitePool) -> Result<Item, sqlx::Error> {
+  pub async fn create_from_entry(entry: &Entry, feed: &Feed, pool: &PgPool) -> Result<Item, sqlx::Error> {
     let title = if entry.title.is_some() {
       Some(&entry.title.as_ref().unwrap().content)
     } else {
@@ -141,7 +141,7 @@ impl Item {
       };
 
       enclosure_size = if entry.media[0].content[0].size.is_some() {
-        Some(entry.media[0].content[0].size.unwrap() as i64)
+        Some(entry.media[0].content[0].size.unwrap() as i32)
       } else {
         None
       }
@@ -152,12 +152,12 @@ impl Item {
       enclosure_size = None;
     };
 
-    let now = Utc::now().naive_utc();
-
+    let now = Utc::now();
 
     let item_id = sqlx::query!("INSERT INTO items 
                                 (feed_id, guid, title, content, url, enclosure_url, enclosure_content_type, enclosure_size, created_at, updated_at)
-                                VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
+                                VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                                RETURNING id",
                                feed.id,
                                entry.id,
                                title,
@@ -169,9 +169,10 @@ impl Item {
                                now,
                                now
     )
-      .execute(pool)
+      .fetch_one(pool)
       .await?
-      .last_insert_rowid();
+      .id;
+
     Item::find(item_id, pool).await
   }
 
@@ -244,7 +245,7 @@ impl Item {
     Ok(action)
   }
 
-  pub async fn delete(feed: &Feed, id: i64, pool: &SqlitePool) -> Result<Item, sqlx::Error> {
+  pub async fn delete(feed: &Feed, id: i32, pool: &PgPool) -> Result<Item, sqlx::Error> {
     let old_item = Item::find(id, pool).await;
     
     sqlx::query!("DELETE FROM items WHERE feed_id = $1 AND id = $2", feed.id, id)
@@ -255,7 +256,7 @@ impl Item {
   }
 
 
-  pub async fn deliver(&self, feed: &Feed, pool: &SqlitePool) -> Result<(), AnyError> {
+  pub async fn deliver(&self, feed: &Feed, pool: &PgPool) -> Result<(), AnyError> {
     let message = self.to_activity_pub(feed).unwrap();
     let followers = feed.followers_list(pool).await?;
     for follower in followers { 
@@ -294,7 +295,7 @@ impl Item {
 
 #[cfg(test)]
 mod test {
-  use sqlx::sqlite::SqlitePool;
+  use sqlx::postgres::PgPool;
   use crate::models::feed::Feed;
   use crate::models::item::Item;
   use crate::utils::test_helpers::{real_item, fake_feed, fake_item, fake_item_with_enclosure};
@@ -302,7 +303,7 @@ mod test {
   use mockito::mock;
 
   #[sqlx::test]
-  async fn test_find(pool: SqlitePool) -> sqlx::Result<()> {
+  async fn test_find(pool: PgPool) -> sqlx::Result<()> {
     let feed: Feed = fake_feed();
     let item: Item = real_item(&feed, &pool).await?;
 
@@ -314,7 +315,7 @@ mod test {
   }
 
   #[sqlx::test]
-  async fn find_by_feed_and_id(pool: SqlitePool) -> sqlx::Result<()> {
+  async fn find_by_feed_and_id(pool: PgPool) -> sqlx::Result<()> {
     let feed: Feed = fake_feed();
     let item: Item = real_item(&feed, &pool).await?;
 
@@ -326,7 +327,7 @@ mod test {
   }
 
   #[sqlx::test]
-  async fn test_find_by_guid(pool: SqlitePool) -> sqlx::Result<()> {
+  async fn test_find_by_guid(pool: PgPool) -> sqlx::Result<()> {
     let feed: Feed = fake_feed();
     let item: Item = real_item(&feed, &pool).await?;
 
@@ -338,7 +339,7 @@ mod test {
   }
 
   #[sqlx::test]
-  async fn test_exists_by_guid(pool: SqlitePool) -> sqlx::Result<()> {
+  async fn test_exists_by_guid(pool: PgPool) -> sqlx::Result<()> {
     let feed: Feed = fake_feed();
     let item: Item = real_item(&feed, &pool).await?;
 
@@ -353,7 +354,7 @@ mod test {
   }
 
   #[sqlx::test]
-  pub async fn test_for_feed(pool: SqlitePool) -> sqlx::Result<()> {
+  pub async fn test_for_feed(pool: PgPool) -> sqlx::Result<()> {
     let feed: Feed = fake_feed();
     let _item: Item = real_item(&feed, &pool).await?;
 
@@ -410,7 +411,7 @@ mod test {
   }
   
   #[sqlx::test]
-  async fn test_deliver(pool: SqlitePool) -> Result<(), String> {
+  async fn test_deliver(pool: PgPool) -> Result<(), String> {
     let feed: Feed = fake_feed();
     let item: Item = fake_item();
 

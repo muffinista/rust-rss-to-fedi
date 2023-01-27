@@ -1,4 +1,4 @@
-use sqlx::sqlite::SqlitePool;
+use sqlx::postgres::PgPool;
 use crate::models::user::User;
 use crate::models::feed::Feed;
 use crate::models::follower::Follower;
@@ -18,16 +18,16 @@ pub async fn login_user(client: &rocket::local::asynchronous::Client, user: &Use
 }
 
 pub fn fake_user() -> User {
-  User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()), created_at: Utc::now().naive_utc(), updated_at: Utc::now().naive_utc() }
+  User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()), created_at: Utc::now(), updated_at: Utc::now() }
 }
 
-pub async fn real_user(pool: &SqlitePool) -> sqlx::Result<User> {
+pub async fn real_user(pool: &PgPool) -> sqlx::Result<User> {
   let user:User = User::find_or_create_by_email(&"foo@bar.com".to_string(), &pool).await?;
   
   Ok(user)
 }
 
-pub async fn real_feed(pool: &SqlitePool) -> sqlx::Result<Feed> {
+pub async fn real_feed(pool: &PgPool) -> sqlx::Result<Feed> {
   let user = fake_user();
   
   let url:String = "https://foo.com/rss.xml".to_string();
@@ -53,9 +53,9 @@ pub fn fake_feed() -> Feed {
     description: None,
     site_url: None,
     title: None,
-    created_at: Utc::now().naive_utc(),
-    updated_at: Utc::now().naive_utc(),
-    refreshed_at: Utc::now().naive_utc(),
+    created_at: Utc::now(),
+    updated_at: Utc::now(),
+    refreshed_at: Utc::now(),
     error: None
   }
 }
@@ -65,8 +65,8 @@ pub fn fake_follower(feed: &Feed) -> Follower {
     id: 1,
     feed_id: feed.id,
     actor: format!("{}/users/muffinista", &mockito::server_url()),
-    created_at: Utc::now().naive_utc(),
-    updated_at: Utc::now().naive_utc()
+    created_at: Utc::now(),
+    updated_at: Utc::now()
   }
 }
 
@@ -81,8 +81,8 @@ pub fn fake_item() -> Item {
     enclosure_url: None,
     enclosure_content_type: None,
     enclosure_size: None,
-    created_at: Utc::now().naive_utc(),
-    updated_at: Utc::now().naive_utc()
+    created_at: Utc::now(),
+    updated_at: Utc::now()
   }
 }
 
@@ -97,27 +97,31 @@ pub fn fake_item_with_enclosure() -> Item {
     enclosure_url: Some("http://place.com/file.mp3".to_string()),
     enclosure_content_type: Some("audio/mpeg".to_string()),
     enclosure_size: Some(123456),
-    created_at: Utc::now().naive_utc(),
-    updated_at: Utc::now().naive_utc()
+    created_at: Utc::now(),
+    updated_at: Utc::now()
   }
 }
 
-pub async fn real_item(feed: &Feed, pool: &SqlitePool) -> sqlx::Result<Item> {
+pub async fn real_item(feed: &Feed, pool: &PgPool) -> sqlx::Result<Item> {
   let id = Uuid::new_v4().to_string();
   let item_url = format!("https://foo.com/{}", id);
+  let now = Utc::now();
 
   let item_id = sqlx::query!("INSERT INTO items
                             (feed_id, guid, title, content, url, created_at, updated_at)
-                            VALUES($1, $2, $3, $4, $5, datetime(CURRENT_TIMESTAMP, 'utc'), datetime(CURRENT_TIMESTAMP, 'utc'))",
+                            VALUES($1, $2, $3, $4, $5, $6, $7)
+                            RETURNING id",
                             feed.id,
                             id,
                             id,
                             id,
-                            item_url
+                            item_url,
+                            now,
+                            now
   )
-    .execute(pool)
+    .fetch_one(pool)
     .await?
-    .last_insert_rowid();
+    .id;
 
   Item::find(item_id, &pool).await
 }

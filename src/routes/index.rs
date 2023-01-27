@@ -3,13 +3,13 @@ use rocket_dyn_templates::{Template, context};
 use rocket::get;
 use rocket::State;
 
-use sqlx::sqlite::SqlitePool;
+use sqlx::postgres::PgPool;
 
 use crate::models::user::User;
 use crate::models::feed::Feed;
 
 #[get("/")]
-pub async fn index_logged_in(user: User, db: &State<SqlitePool>) -> Template {
+pub async fn index_logged_in(user: User, db: &State<PgPool>) -> Template {
   let feeds = Feed::for_user(&user, &db).await.unwrap();
   Template::render("home", context! { logged_in: true, feeds: feeds })
 }
@@ -26,13 +26,13 @@ mod test {
   use rocket::http::Status;
   use rocket::uri;
   use rocket::{Rocket, Build};
-  use sqlx::sqlite::SqlitePool;
+  use sqlx::postgres::PgPool;
   
   use crate::utils::test_helpers::{real_user};
 
 
   #[sqlx::test]
-  async fn index_not_logged_in(pool: SqlitePool) {
+  async fn index_not_logged_in(pool: PgPool) {
     let server:Rocket<Build> = build_server(pool).await;
     let client = Client::tracked(server).await.unwrap();
 
@@ -48,7 +48,7 @@ mod test {
   }
 
   #[sqlx::test]
-  async fn index_logged_in(pool: SqlitePool) {
+  async fn index_logged_in(pool: PgPool) {
     let user = real_user(&pool).await.unwrap();
 
     let server: Rocket<Build> = build_server(pool).await;

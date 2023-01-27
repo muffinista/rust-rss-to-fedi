@@ -1,4 +1,4 @@
-use sqlx::sqlite::SqlitePool;
+use sqlx::postgres::PgPool;
 
 use rocket::routes;
 use rocket::{Rocket, Build};
@@ -6,7 +6,7 @@ use rocket::fs::{FileServer, relative};
 use rocket_dyn_templates::Template;
 
 
-pub async fn build_server(pool: SqlitePool) -> Rocket<Build> {
+pub async fn build_server(pool: PgPool) -> Rocket<Build> {
   sqlx::migrate!("./migrations")
     .run(&pool)
     .await

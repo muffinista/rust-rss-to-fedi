@@ -7,7 +7,7 @@ use rocket::http::{Cookie, CookieJar};
 use rocket::uri;
 use rocket_dyn_templates::{Template, context};
 
-use sqlx::sqlite::SqlitePool;
+use sqlx::postgres::PgPool;
 
 
 use crate::models::user::User;
@@ -19,7 +19,7 @@ pub struct LoginForm {
 
 
 #[get("/user/auth/<login_token>")]
-pub async fn attempt_login(db: &State<SqlitePool>, cookies: &CookieJar<'_>, login_token: &str) -> Result<Redirect, Status> {
+pub async fn attempt_login(db: &State<PgPool>, cookies: &CookieJar<'_>, login_token: &str) -> Result<Redirect, Status> {
   let user = User::find_by_login(&login_token.to_string(), &db).await;
   
   match user {
@@ -49,7 +49,7 @@ pub async fn attempt_login(db: &State<SqlitePool>, cookies: &CookieJar<'_>, logi
 }
 
 #[post("/login", data = "<form>")]
-pub async fn do_login(db: &State<SqlitePool>, form: Form<LoginForm>) -> Result<Redirect, Status> {
+pub async fn do_login(db: &State<PgPool>, form: Form<LoginForm>) -> Result<Redirect, Status> {
   let user = User::find_or_create_by_email(&form.email, &**db).await;
   
   match user {

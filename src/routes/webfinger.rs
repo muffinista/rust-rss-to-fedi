@@ -5,7 +5,7 @@ use rocket::http::Status;
 use rocket::State;
 use rocket::uri;
 
-use sqlx::sqlite::SqlitePool;
+use sqlx::postgres::PgPool;
 
 use webfinger::*;
 
@@ -15,7 +15,7 @@ use crate::utils::utils::path_to_url;
 
 
 #[get("/.well-known/webfinger?<resource>")]
-pub async fn lookup_webfinger(resource: &str, db: &State<SqlitePool>) -> Result<String, Status> {
+pub async fn lookup_webfinger(resource: &str, db: &State<PgPool>) -> Result<String, Status> {
   let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
   
   // https://github.com/Plume-org/webfinger/blob/main/src/async_resolver.rs
@@ -70,13 +70,13 @@ mod test {
   use rocket::http::Status;
   use rocket::uri;
   use rocket::{Rocket, Build};
-  use sqlx::sqlite::SqlitePool;
+  use sqlx::postgres::PgPool;
   use std::env;
   use crate::utils::test_helpers::{real_feed};
 
   
   #[sqlx::test]
-  async fn test_lookup_webfinger_404(pool: SqlitePool) {
+  async fn test_lookup_webfinger_404(pool: PgPool) {
     let server:Rocket<Build> = build_server(pool).await;
     let client = Client::tracked(server).await.unwrap();
 
@@ -87,7 +87,7 @@ mod test {
   }
   
   #[sqlx::test]
-  async fn test_lookup_webfinger_valid(pool: SqlitePool) -> sqlx::Result<()> {
+  async fn test_lookup_webfinger_valid(pool: PgPool) -> sqlx::Result<()> {
     let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
 
     let feed = real_feed(&pool).await.unwrap();

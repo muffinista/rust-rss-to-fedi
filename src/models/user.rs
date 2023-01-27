@@ -1,4 +1,4 @@
-use sqlx::sqlite::SqlitePool;
+use sqlx::postgres::PgPool;
 use rand::{distributions::Alphanumeric, Rng};
 
 use rocket::request::{self, FromRequest, Request};
@@ -20,14 +20,16 @@ use anyhow::Error as AnyError;
 
 use std::env;
 
+use chrono::Utc;
+
 #[derive(Debug)]
 pub struct User {
-  pub id: i64,
+  pub id: i32,
   pub email: String,
   pub login_token: String,
   pub access_token: Option<String>,
-  pub created_at: chrono::NaiveDateTime,
-  pub updated_at: chrono::NaiveDateTime
+  pub created_at: chrono::DateTime::<Utc>,
+  pub updated_at: chrono::DateTime::<Utc>
   
 }
 
@@ -41,8 +43,8 @@ impl User {
   ///
   /// Find user by ID. This assumes that the user exists!
   ///
-  pub async fn find(id: i64, pool: &SqlitePool) -> Result<User, sqlx::Error> {
-    sqlx::query_as!(User, "SELECT * FROM users WHERE id = ?", id)
+  pub async fn find(id: i32, pool: &PgPool) -> Result<User, sqlx::Error> {
+    sqlx::query_as!(User, "SELECT * FROM users WHERE id = $1", id)
     .fetch_one(pool)
     .await
   }
@@ -50,8 +52,8 @@ impl User {
   ///
   /// Find user by email
   ///
-  pub async fn find_by_email(email: &String, pool: &SqlitePool) -> Result<Option<User>, sqlx::Error> {
-    sqlx::query_as!(User, "SELECT * FROM users WHERE email = ?", email)
+  pub async fn find_by_email(email: &String, pool: &PgPool) -> Result<Option<User>, sqlx::Error> {
+    sqlx::query_as!(User, "SELECT * FROM users WHERE email = $1", email)
     .fetch_optional(pool)
     .await
   }
@@ -59,8 +61,8 @@ impl User {
   ///
   /// Find user by login
   ///
-  pub async fn find_by_login(token: &String, pool: &SqlitePool) -> Result<Option<User>, sqlx::Error> {
-    sqlx::query_as!(User, "SELECT * FROM users WHERE login_token = ?", token)
+  pub async fn find_by_login(token: &String, pool: &PgPool) -> Result<Option<User>, sqlx::Error> {
+    sqlx::query_as!(User, "SELECT * FROM users WHERE login_token = $1", token)
     .fetch_optional(pool)
     .await
   }
@@ -68,8 +70,8 @@ impl User {
   ///
   /// Find user by access token
   ///
-  pub async fn find_by_access(token: &String, pool: &SqlitePool) -> Result<Option<User>, sqlx::Error> {
-    sqlx::query_as!(User, "SELECT * FROM users WHERE access_token = ?", token)
+  pub async fn find_by_access(token: &String, pool: &PgPool) -> Result<Option<User>, sqlx::Error> {
+    sqlx::query_as!(User, "SELECT * FROM users WHERE access_token = $1", token)
     .fetch_optional(pool)
     .await
   }
@@ -77,7 +79,7 @@ impl User {
   ///
   /// generate and apply access token to the current object
   ///
-  pub async fn apply_access_token(&self, pool: &SqlitePool) -> Result<String, sqlx::Error> {
+  pub async fn apply_access_token(&self, pool: &PgPool) -> Result<String, sqlx::Error> {
     let token = User::generate_access_token();
     let query_check = sqlx::query!(
       "UPDATE users SET access_token = $1 WHERE id = $2", token, self.id)
@@ -93,14 +95,17 @@ impl User {
   ///
   /// create a user with the given email address
   ///
-  pub async fn create_by_email(email: &String, pool: &SqlitePool) -> Result<User, sqlx::Error> {
+  pub async fn create_by_email(email: &String, pool: &PgPool) -> Result<User, sqlx::Error> {
     let token = User::generate_login_token();
+    let now = Utc::now();
+
     let user_id = sqlx::query!(
       "INSERT INTO users (email, login_token, created_at, updated_at)
-      VALUES($1, $2, datetime(CURRENT_TIMESTAMP, 'utc'), datetime(CURRENT_TIMESTAMP, 'utc'))", email, token)
-      .execute(pool)
+      VALUES($1, $2, $3, $4)
+      RETURNING id", email, token, now, now)
+      .fetch_one(pool)
       .await?
-      .last_insert_rowid();
+      .id;
       
     User::find(user_id, pool).await
   }
@@ -108,8 +113,8 @@ impl User {
   ///
   /// look for a user with the given email address. if none exists, create one
   ///
-  pub async fn find_or_create_by_email(email: &String, pool: &SqlitePool) -> Result<User, sqlx::Error> {
-    let user_check = sqlx::query_as!(User, "SELECT * FROM users WHERE email = ?", email)
+  pub async fn find_or_create_by_email(email: &String, pool: &PgPool) -> Result<User, sqlx::Error> {
+    let user_check = sqlx::query_as!(User, "SELECT * FROM users WHERE email = $1", email)
     .fetch_one(pool)
     .await;
     
@@ -203,7 +208,7 @@ impl<'r> FromRequest<'r> for User {
   type Error = std::convert::Infallible;
   
   async fn from_request(request: &'r Request<'_>) -> request::Outcome<User, Self::Error> {
-    let pool = request.rocket().state::<SqlitePool>().unwrap();
+    let pool = request.rocket().state::<PgPool>().unwrap();
     let cookie = request.cookies().get_private("access_token");
     
     match cookie {
@@ -231,11 +236,11 @@ impl<'r> FromRequest<'r> for User {
     
 #[cfg(test)]
 mod test {
-  use sqlx::sqlite::SqlitePool;
+  use sqlx::postgres::PgPool;
   use crate::models::user::User;
 
   #[sqlx::test]
-  async fn test_find_or_create_by_email(pool: SqlitePool) -> sqlx::Result<()> {
+  async fn test_find_or_create_by_email(pool: PgPool) -> sqlx::Result<()> {
     let email:String = "foo@bar.com".to_string();
     let user = User::find_or_create_by_email(&email, &pool).await?;
     
@@ -245,7 +250,7 @@ mod test {
   }
 
   #[sqlx::test]
-  async fn test_find_by_login_token(pool: SqlitePool) -> sqlx::Result<()> {
+  async fn test_find_by_login_token(pool: PgPool) -> sqlx::Result<()> {
     let email:String = "foo@bar.com".to_string();
     let user = User::find_or_create_by_email(&email, &pool).await?;
     let user_find = User::find_by_login(&user.login_token.to_string(), &pool).await?.unwrap();
@@ -256,7 +261,7 @@ mod test {
   }
 
   #[sqlx::test]
-  async fn test_find_by_access(pool: SqlitePool) -> sqlx::Result<()> {
+  async fn test_find_by_access(pool: PgPool) -> sqlx::Result<()> {
     let email:String = "foo@bar.com".to_string();
     let user = User::find_or_create_by_email(&email, &pool).await?;
     let access_token = user.apply_access_token(&pool).await.unwrap().to_string();
@@ -272,7 +277,7 @@ mod test {
   }
 
   #[sqlx::test]
-  async fn test_find_by_email(pool: SqlitePool) -> sqlx::Result<()> {
+  async fn test_find_by_email(pool: PgPool) -> sqlx::Result<()> {
     let email:String = "foo@bar.com".to_string();
     let user = User::find_or_create_by_email(&email, &pool).await?;
     let user_find = User::find_by_email(&user.email, &pool).await?.unwrap();
@@ -283,7 +288,7 @@ mod test {
   }
 
   #[sqlx::test]
-  async fn test_find_by_email_doesnt_exist(pool: SqlitePool) -> sqlx::Result<()> {
+  async fn test_find_by_email_doesnt_exist(pool: PgPool) -> sqlx::Result<()> {
     let lookup:String = ("bar@baz.com").to_string();
     let user = User::find_by_email(&lookup, &pool).await;
     assert_eq!(false, user.unwrap().is_some());

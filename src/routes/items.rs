@@ -3,14 +3,14 @@ use rocket::http::Status;
 use rocket::response::Redirect;
 use rocket::State;
 
-use sqlx::sqlite::SqlitePool;
+use sqlx::postgres::PgPool;
 
 use crate::models::feed::Feed;
 use crate::models::item::Item;
 
 
 #[get("/feed/<username>/items/<id>", format = "text/html", rank = 2)]
-pub async fn show_item(username: &str, id: i64, db: &State<SqlitePool>) -> Result<Redirect, Status> {
+pub async fn show_item(username: &str, id: i32, db: &State<PgPool>) -> Result<Redirect, Status> {
   let lookup_feed = Feed::find_by_name(&username.to_string(), db).await;
 
   println!("{:?}", lookup_feed);
@@ -57,10 +57,10 @@ mod test {
   use crate::models::item::Item;
   use crate::utils::test_helpers::{real_item, real_feed};
 
-  use sqlx::sqlite::SqlitePool;
+  use sqlx::postgres::PgPool;
 
   #[sqlx::test]
-  async fn test_show_item(pool: SqlitePool) -> sqlx::Result<()> {
+  async fn test_show_item(pool: PgPool) -> sqlx::Result<()> {
     let feed: Feed = real_feed(&pool).await?;
     let item: Item = real_item(&feed, &pool).await?;
 

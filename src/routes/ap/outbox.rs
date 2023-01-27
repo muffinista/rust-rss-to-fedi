@@ -3,7 +3,7 @@ use rocket::get;
 use rocket::http::Status;
 use rocket::State;
 
-use sqlx::sqlite::SqlitePool;
+use sqlx::postgres::PgPool;
 
 use crate::models::feed::Feed;
 
@@ -20,7 +20,7 @@ use crate::models::feed::Feed;
 /// discretion of those implementing and deploying the server. 
 ///
 #[get("/feed/<username>/outbox?<page>")]
-pub async fn render_feed_outbox(username: &str, page: Option<u32>, db: &State<SqlitePool>) -> Result<String, Status> {
+pub async fn render_feed_outbox(username: &str, page: Option<i32>, db: &State<PgPool>) -> Result<String, Status> {
   let feed_lookup = Feed::find_by_name(&username.to_string(), db).await;
 
   match feed_lookup {
@@ -63,12 +63,12 @@ mod test {
   use rocket::uri;
   use rocket::{Rocket, Build};
 
-  use sqlx::sqlite::SqlitePool;
+  use sqlx::postgres::PgPool;
 
   use crate::utils::test_helpers::{real_feed};
 
   #[sqlx::test]
-  async fn test_render_feed_outbox(pool: SqlitePool) -> sqlx::Result<()> {
+  async fn test_render_feed_outbox(pool: PgPool) -> sqlx::Result<()> {
     let feed = real_feed(&pool).await.unwrap();
 
     let server: Rocket<Build> = build_server(pool).await;

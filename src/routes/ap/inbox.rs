@@ -3,7 +3,7 @@ use rocket::post;
 use rocket::http::Status;
 use rocket::State;
 
-use sqlx::sqlite::SqlitePool;
+use sqlx::postgres::PgPool;
 
 use crate::models::feed::Feed;
 use crate::models::feed::AcceptedActivity;
@@ -20,7 +20,7 @@ use rocket::serde::json::Json;
 /// https://www.w3.org/TR/activitypub/#inbox
 ///
 #[post("/feed/<username>/inbox", data="<activity>")]
-pub async fn user_inbox(username: &str, activity: Json<AcceptedActivity>, db: &State<SqlitePool>) -> Result<(), Status> {
+pub async fn user_inbox(username: &str, activity: Json<AcceptedActivity>, db: &State<PgPool>) -> Result<(), Status> {
   let feed_lookup = Feed::find_by_name(&username.to_string(), db).await;
 
   match feed_lookup {
@@ -52,12 +52,12 @@ pub async fn user_inbox(username: &str, activity: Json<AcceptedActivity>, db: &S
 //   use rocket::{Rocket, Build};
 //   use chrono::Utc;
 
-//   use sqlx::sqlite::SqlitePool;
+//   use sqlx::postgres::PgPool;
 
 //   use crate::utils::test_helpers::{real_feed};
 
 //   #[sqlx::test]
-//   async fn test_user_inbox(pool: SqlitePool) -> sqlx::Result<()> {
+//   async fn test_user_inbox(pool: PgPool) -> sqlx::Result<()> {
 //     let feed = real_feed(&pool).await.unwrap();
 
 //     let actor = "https://activitypub.pizza/users/colin".to_string();

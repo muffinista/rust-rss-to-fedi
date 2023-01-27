@@ -9,7 +9,7 @@ use rocket::serde::{Serialize, json::Json};
 
 use std::env;
 
-use sqlx::sqlite::SqlitePool;
+use sqlx::postgres::PgPool;
 
 use crate::models::user::User;
 use crate::models::feed::Feed;
@@ -32,7 +32,7 @@ pub struct FeedLookup {
 }
 
 #[post("/feed", data = "<form>")]
-pub async fn add_feed(user: User, db: &State<SqlitePool>, form: Form<FeedForm>) -> Result<Redirect, Status> {
+pub async fn add_feed(user: User, db: &State<PgPool>, form: Form<FeedForm>) -> Result<Redirect, Status> {
   let feed = Feed::create(&user, &form.url, &form.name, &db).await;
   
   match feed {
@@ -68,7 +68,7 @@ pub async fn test_feed(_user: User, form: Json<FeedForm>) -> Result<Json<FeedLoo
 
 // @todo use proper verb
 #[get("/feed/<id>/delete")]
-pub async fn delete_feed(user: User, id: i64, db: &State<SqlitePool>) -> Result<Redirect, Status> {
+pub async fn delete_feed(user: User, id: i32, db: &State<PgPool>) -> Result<Redirect, Status> {
   let feed = Feed::delete(&user, id, &db).await;
   
   match feed {
@@ -83,7 +83,7 @@ pub async fn delete_feed(user: User, id: i64, db: &State<SqlitePool>) -> Result<
 }
 
 #[get("/feed/<username>", format = "application/activity+json")]
-pub async fn render_feed(username: &str, db: &State<SqlitePool>) -> Result<String, Status> {
+pub async fn render_feed(username: &str, db: &State<PgPool>) -> Result<String, Status> {
   let feed_lookup = Feed::find_by_name(&username.to_string(), db).await;
 
   match feed_lookup {
@@ -111,7 +111,7 @@ pub async fn render_feed(username: &str, db: &State<SqlitePool>) -> Result<Strin
 }
 
 #[get("/feed/<username>", format = "text/html", rank = 2)]
-pub async fn show_feed(user: Option<User>, username: &str, db: &State<SqlitePool>) -> Result<Template, Status> {
+pub async fn show_feed(user: Option<User>, username: &str, db: &State<PgPool>) -> Result<Template, Status> {
   let feed_lookup = Feed::find_by_name(&username.to_string(), db).await;
 
   match feed_lookup {
@@ -146,7 +146,7 @@ pub async fn show_feed(user: Option<User>, username: &str, db: &State<SqlitePool
 }
 
 #[get("/feed/<username>/followers?<page>")]
-pub async fn render_feed_followers(username: &str, page: Option<u32>, db: &State<SqlitePool>) -> Result<String, Status> {
+pub async fn render_feed_followers(username: &str, page: Option<i32>, db: &State<PgPool>) -> Result<String, Status> {
   let feed_lookup = Feed::find_by_name(&username.to_string(), db).await;
 
   match feed_lookup {
@@ -188,14 +188,16 @@ mod test {
   use rocket::uri;
   use rocket::{Rocket, Build};
 
+  use chrono::Utc;
+
   use crate::server::build_server;
   use crate::utils::utils::*;
   use crate::utils::test_helpers::{real_user, real_feed};
 
-  use sqlx::sqlite::SqlitePool;
+  use sqlx::postgres::PgPool;
   
   #[sqlx::test]
-  async fn test_show_feed(pool: SqlitePool) -> sqlx::Result<()> {
+  async fn test_show_feed(pool: PgPool) -> sqlx::Result<()> {
     let feed = real_feed(&pool).await.unwrap();
 
     let server: Rocket<Build> = build_server(pool).await;
@@ -213,7 +215,7 @@ mod test {
   }
 
   #[sqlx::test]
-  async fn test_render_feed(pool: SqlitePool) -> sqlx::Result<()> {
+  async fn test_render_feed(pool: PgPool) -> sqlx::Result<()> {
     let feed = real_feed(&pool).await.unwrap();
 
     let server: Rocket<Build> = build_server(pool).await;
@@ -234,7 +236,7 @@ mod test {
   }
 
   #[sqlx::test]
-  async fn test_test_feed(pool: SqlitePool) -> sqlx::Result<()> {
+  async fn test_test_feed(pool: PgPool) -> sqlx::Result<()> {
     let user = real_user(&pool).await.unwrap();
 
     let server: Rocket<Build> = build_server(pool).await;
@@ -260,12 +262,13 @@ mod test {
   }
 
   #[sqlx::test]
-  async fn test_render_feed_followers(pool: SqlitePool) -> sqlx::Result<()> {
+  async fn test_render_feed_followers(pool: PgPool) -> sqlx::Result<()> {
     let feed = real_feed(&pool).await.unwrap();
+    let now = Utc::now();
 
     for i in 1..35 {
       let actor = format!("https://activitypub.pizza/users/colin{}", i);
-      sqlx::query!("INSERT INTO followers (feed_id, actor, created_at, updated_at) VALUES($1, $2, datetime(CURRENT_TIMESTAMP, 'utc'), datetime(CURRENT_TIMESTAMP, 'utc'))", feed.id, actor)
+      sqlx::query!("INSERT INTO followers (feed_id, actor, created_at, updated_at) VALUES($1, $2, $3, $4)", feed.id, actor, now, now)
         .execute(&pool)
         .await
         .unwrap();

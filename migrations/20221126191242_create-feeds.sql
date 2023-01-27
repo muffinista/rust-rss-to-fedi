@@ -1,7 +1,7 @@
 -- Add migration script here
 -- Your SQL goes here
 CREATE TABLE feeds (
-  id INTEGER PRIMARY KEY,
+  id SERIAL PRIMARY KEY,
   user_id INTEGER NOT NULL,
   name VARCHAR NOT NULL,
   url VARCHAR NOT NULL,
@@ -14,9 +14,8 @@ CREATE TABLE feeds (
   title VARCHAR,
   description VARCHAR,
   site_url VARCHAR,
-  created_at DATETIME NOT NULL,
-  updated_at DATETIME NOT NULL,
-  refreshed_at DATETIME NOT NULL
-
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
+  refreshed_at TIMESTAMP WITH TIME ZONE NOT NULL
 );
 
