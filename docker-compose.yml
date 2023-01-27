@@ -22,6 +22,8 @@ services:
     working_dir: /app
     env_file:
       .env
+    depends_on:
+      - db
     networks:
       - external_network
       - internal_network

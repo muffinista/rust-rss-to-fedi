@@ -33,3 +33,6 @@ psql -h localhost
 
 DOMAIN_NAME=test.com DATABASE_URL=postgres://postgres:FOFOFOFO@localhost/rusty cargo sqlx database reset
 
+
+
+docker compose run app cargo sqlx database reset

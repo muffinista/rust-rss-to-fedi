@@ -18,7 +18,8 @@ COPY . .
 
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/app/target \
-    cargo install --path .
-
+    # cargo install --path . && \
+    cargo install sqlx-cli --no-default-features --features rustls,postgres && \
+    cargo build
 
 CMD ["cargo", "run", "--bin", "server"]
