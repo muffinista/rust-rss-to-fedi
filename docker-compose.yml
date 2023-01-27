@@ -1,6 +1,18 @@
 ---
 version: '3.8'
 services:
+  db:
+    restart: always
+    image: postgres:14-alpine
+    shm_size: 256mb
+    networks:
+      - internal_network
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-U', 'postgres']
+    volumes:
+      - ./db:/var/lib/postgresql/data
+    environment:
+      - 'POSTGRES_HOST_AUTH_METHOD=trust'
   app:
     build:
       context: .
@@ -8,13 +20,17 @@ services:
     image: pubcrawl
     restart: on-failure
     working_dir: /app
-    volumes:
-      - ./data/:/app/data/
-    environment:
-      DATABASE_URL: sqlite:data/data.sqlite3
-      DOMAIN_NAME: foo.com
+    env_file:
+      .env
+    networks:
+      - external_network
+      - internal_network
   # mail:
   #   image: mailhog/mailhog:latest
   #   ports:
   #     - 8025:8025
   #     - 1025:1025
+networks:
+  external_network:
+  internal_network:
+    internal: true
