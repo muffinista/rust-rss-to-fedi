@@ -90,16 +90,9 @@ pub async fn render_feed(username: &str, db: &State<PgPool>) -> Result<String, S
     Ok(feed_lookup) => {
       match feed_lookup {
         Some(feed) => {
-          println!("generate output");
           let ap = feed.to_activity_pub();
           match ap {
-            Ok(ap) => {
-              //let output = serde_json::to_string(&ap).unwrap();
-              println!("{}", ap);
-  
-              //Ok(output)
-              Ok(ap)
-            },
+            Ok(ap) => Ok(ap),
             Err(_why) => Err(Status::NotFound)
           }
         },

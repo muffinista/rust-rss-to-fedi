@@ -487,6 +487,11 @@ impl Feed {
       .set_outbox(iri!(path_to_url(&uri!(render_feed_outbox(&self.name, None::<i32>)))))
       .set_followers(iri!(path_to_url(&uri!(render_feed_followers(&self.name, None::<i32>)))));
 
+    if self.description.is_some() {
+      svc.set_summary(self.description.clone().unwrap());
+    }
+
+
     if self.icon_url.is_some() {
       let mut icon = Image::new();
       icon.set_url(iri!(self.icon_url.clone().unwrap()));
