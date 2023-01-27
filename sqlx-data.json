@@ -1,0 +1,1541 @@
+{
+  "db": "PostgreSQL",
+  "1e2e2f7d777d421c1ec11ed8122b84cae27fa0fbb8dc6da33cb6691b0e9285c4": {
+    "describe": {
+      "columns": [
+        {
+          "name": "tally",
+          "ordinal": 0,
+          "type_info": "Int8"
+        }
+      ],
+      "nullable": [
+        null
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      }
+    },
+    "query": "SELECT count(1) AS tally FROM feeds WHERE url = $1"
+  },
+  "1e9045f52c002a19b815351fee1c7ee7520478ff4f5886b4523fb0dc4df0e204": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "feed_id",
+          "ordinal": 1,
+          "type_info": "Int4"
+        },
+        {
+          "name": "guid",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "title",
+          "ordinal": 3,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "content",
+          "ordinal": 4,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "url",
+          "ordinal": 5,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "created_at",
+          "ordinal": 6,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "ordinal": 7,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "enclosure_url",
+          "ordinal": 8,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "enclosure_content_type",
+          "ordinal": 9,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "enclosure_size",
+          "ordinal": 10,
+          "type_info": "Int4"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        false,
+        false,
+        true,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      }
+    },
+    "query": "SELECT * FROM items WHERE id = $1"
+  },
+  "2047f7e7d2eecb032b246b04c22896572968f5168c09c8ff9ed297886ff14304": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "user_id",
+          "ordinal": 1,
+          "type_info": "Int4"
+        },
+        {
+          "name": "name",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "url",
+          "ordinal": 3,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "error",
+          "ordinal": 4,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "public_key",
+          "ordinal": 5,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "private_key",
+          "ordinal": 6,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "image_url",
+          "ordinal": 7,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "icon_url",
+          "ordinal": 8,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "title",
+          "ordinal": 9,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "description",
+          "ordinal": 10,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "site_url",
+          "ordinal": 11,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "created_at",
+          "ordinal": 12,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "ordinal": 13,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "refreshed_at",
+          "ordinal": 14,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      }
+    },
+    "query": "SELECT * FROM feeds WHERE name = $1"
+  },
+  "22329219e084d217058fd149c107adf88f8ed33696c2d4a0e41931987a5b4895": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        }
+      ],
+      "nullable": [
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Timestamptz",
+          "Timestamptz",
+          "Timestamptz"
+        ]
+      }
+    },
+    "query": "INSERT INTO feeds\n        (user_id, url, name, private_key, public_key, created_at, updated_at, refreshed_at)\n        VALUES($1, $2, $3, $4, $5, $6, $7, $8)\n        RETURNING id"
+  },
+  "37a2b696a00c6ab96f8db9e9e3572d285843a3025e1ba7d6b4de9c6d599fc951": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Int4"
+        ]
+      }
+    },
+    "query": "UPDATE feeds SET image_url = $1 WHERE id = $2"
+  },
+  "39aadafcfc39f0a28c282ac7561cf6d3fbee9b03b3c84683e702fce730332939": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Text"
+        ]
+      }
+    },
+    "query": "DELETE FROM followers WHERE feed_id = $1 AND actor = $2"
+  },
+  "3ba6968cef828826b502e633c155ad165810b60ea7bdfed8324ce1712e12c793": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Varchar",
+          "Timestamptz",
+          "Timestamptz"
+        ]
+      }
+    },
+    "query": "INSERT INTO followers (feed_id, actor, created_at, updated_at) VALUES($1, $2, $3, $4)"
+  },
+  "51eb813de2b266dc47df6601ab8ac5d11603360037c4d8361a65dbf5a7b74c75": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Timestamptz",
+          "Int4"
+        ]
+      }
+    },
+    "query": "UPDATE feeds SET refreshed_at = $1 WHERE id = $2"
+  },
+  "6c43bccebdced34e2e07a88301c593b28a234b7a503a717c3257df862cb4f4a1": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        }
+      ],
+      "nullable": [
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Int4",
+          "Timestamptz",
+          "Timestamptz"
+        ]
+      }
+    },
+    "query": "INSERT INTO items \n                                (feed_id, guid, title, content, url, enclosure_url, enclosure_content_type, enclosure_size, created_at, updated_at)\n                                VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)\n                                RETURNING id"
+  },
+  "754ba153110d91c682dcb5b4b2424994922969e0e842ad57415407e57c792267": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        }
+      ],
+      "nullable": [
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Varchar",
+          "Timestamptz",
+          "Timestamptz"
+        ]
+      }
+    },
+    "query": "INSERT INTO users (email, login_token, created_at, updated_at)\n      VALUES($1, $2, $3, $4)\n      RETURNING id"
+  },
+  "77ebc2ef9481817d2977e2680f6d8e464fa4ff705d9d1461fd16c8274466712a": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "user_id",
+          "ordinal": 1,
+          "type_info": "Int4"
+        },
+        {
+          "name": "name",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "url",
+          "ordinal": 3,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "error",
+          "ordinal": 4,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "public_key",
+          "ordinal": 5,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "private_key",
+          "ordinal": 6,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "image_url",
+          "ordinal": 7,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "icon_url",
+          "ordinal": 8,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "title",
+          "ordinal": 9,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "description",
+          "ordinal": 10,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "site_url",
+          "ordinal": 11,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "created_at",
+          "ordinal": 12,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "ordinal": 13,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "refreshed_at",
+          "ordinal": 14,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Timestamptz",
+          "Int8"
+        ]
+      }
+    },
+    "query": "SELECT * FROM feeds WHERE refreshed_at < $1 LIMIT $2"
+  },
+  "79589d174eb487ea7ef94fa9dd217ff91f1c7f81250b55493c2d633bfc3c2803": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "feed_id",
+          "ordinal": 1,
+          "type_info": "Int4"
+        },
+        {
+          "name": "guid",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "title",
+          "ordinal": 3,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "content",
+          "ordinal": 4,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "url",
+          "ordinal": 5,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "created_at",
+          "ordinal": 6,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "ordinal": 7,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "enclosure_url",
+          "ordinal": 8,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "enclosure_content_type",
+          "ordinal": 9,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "enclosure_size",
+          "ordinal": 10,
+          "type_info": "Int4"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        false,
+        false,
+        true,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Int4"
+        ]
+      }
+    },
+    "query": "SELECT * FROM items WHERE feed_id = $1 AND id = $2"
+  },
+  "7a0b72b429dc4f603dcf08125dde2e1692e590bf7112db4ce61abecb35b2491b": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "user_id",
+          "ordinal": 1,
+          "type_info": "Int4"
+        },
+        {
+          "name": "name",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "url",
+          "ordinal": 3,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "error",
+          "ordinal": 4,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "public_key",
+          "ordinal": 5,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "private_key",
+          "ordinal": 6,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "image_url",
+          "ordinal": 7,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "icon_url",
+          "ordinal": 8,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "title",
+          "ordinal": 9,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "description",
+          "ordinal": 10,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "site_url",
+          "ordinal": 11,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "created_at",
+          "ordinal": 12,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "ordinal": 13,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "refreshed_at",
+          "ordinal": 14,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      }
+    },
+    "query": "SELECT * FROM feeds WHERE user_id = $1"
+  },
+  "843923b9a0257cf80f1dff554e7dc8fdfc05f489328e8376513124dfb42996e3": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "email",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "login_token",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "access_token",
+          "ordinal": 3,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "created_at",
+          "ordinal": 4,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "ordinal": 5,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      }
+    },
+    "query": "SELECT * FROM users WHERE id = $1"
+  },
+  "854d303e2d7790eab195c02ff22119058ab4e350e4606dae914a17eae9f4fd63": {
+    "describe": {
+      "columns": [
+        {
+          "name": "tally",
+          "ordinal": 0,
+          "type_info": "Int8"
+        }
+      ],
+      "nullable": [
+        null
+      ],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Text"
+        ]
+      }
+    },
+    "query": "SELECT COUNT(1) AS tally FROM items WHERE feed_id = $1 AND guid = $2"
+  },
+  "9aa6b7ce57128c554f39b68ef80c04b39b40a432baf7e3b913b8ee04f4c2a715": {
+    "describe": {
+      "columns": [
+        {
+          "name": "tally",
+          "ordinal": 0,
+          "type_info": "Int8"
+        }
+      ],
+      "nullable": [
+        null
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      }
+    },
+    "query": "SELECT COUNT(1) AS tally FROM items WHERE feed_id = $1"
+  },
+  "9b2ff8c5473d6ab25c49792ac614d8d7df846625ae9117f9b4f7c1e7af4d4f93": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Int4"
+        ]
+      }
+    },
+    "query": "DELETE FROM items WHERE feed_id = $1 AND id = $2"
+  },
+  "9cf388c806bc1abf3c34a18d476f5104848cac7a66c209f120cff6a22508a033": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Int4"
+        ]
+      }
+    },
+    "query": "DELETE FROM feeds WHERE user_id = $1 AND id = $2"
+  },
+  "a02481587547b67c70403e1b445bbb00ee0b4aec8006dd7bd17fbc8ed643abb0": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "email",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "login_token",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "access_token",
+          "ordinal": 3,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "created_at",
+          "ordinal": 4,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "ordinal": 5,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      }
+    },
+    "query": "SELECT * FROM users WHERE login_token = $1"
+  },
+  "a13d57ab0ca926d9afa5b08dbec4972da4ffca239d4d7a640d00aad4c2fde00a": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Int4"
+        ]
+      }
+    },
+    "query": "UPDATE users SET access_token = $1 WHERE id = $2"
+  },
+  "a1ce4a0312be5e653d856585b66ebd098ab738759473c2d9ca0240ab49f2b52c": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "user_id",
+          "ordinal": 1,
+          "type_info": "Int4"
+        },
+        {
+          "name": "name",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "url",
+          "ordinal": 3,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "error",
+          "ordinal": 4,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "public_key",
+          "ordinal": 5,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "private_key",
+          "ordinal": 6,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "image_url",
+          "ordinal": 7,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "icon_url",
+          "ordinal": 8,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "title",
+          "ordinal": 9,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "description",
+          "ordinal": 10,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "site_url",
+          "ordinal": 11,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "created_at",
+          "ordinal": 12,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "ordinal": 13,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "refreshed_at",
+          "ordinal": 14,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      }
+    },
+    "query": "SELECT * FROM feeds WHERE id = $1"
+  },
+  "a89acc5c74779f060c4ee3697baeccfea664e2877ff2ac522bcfe34c8ec69839": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "feed_id",
+          "ordinal": 1,
+          "type_info": "Int4"
+        },
+        {
+          "name": "guid",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "title",
+          "ordinal": 3,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "content",
+          "ordinal": 4,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "url",
+          "ordinal": 5,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "created_at",
+          "ordinal": 6,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "ordinal": 7,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "enclosure_url",
+          "ordinal": 8,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "enclosure_content_type",
+          "ordinal": 9,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "enclosure_size",
+          "ordinal": 10,
+          "type_info": "Int4"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        false,
+        false,
+        true,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Text"
+        ]
+      }
+    },
+    "query": "SELECT * FROM items WHERE feed_id = $1 AND guid = $2"
+  },
+  "a990e97b1d344803d703d91ee9a3159beb667cdc31dea9a0d50eeee2858816cd": {
+    "describe": {
+      "columns": [
+        {
+          "name": "tally",
+          "ordinal": 0,
+          "type_info": "Int8"
+        }
+      ],
+      "nullable": [
+        null
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      }
+    },
+    "query": "SELECT COUNT(1) AS tally FROM followers WHERE feed_id = $1"
+  },
+  "ba54f2cfdc62fa7daa7a69952dccb566f1e568c7721b7f43b85356fd64380c1d": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "user_id",
+          "ordinal": 1,
+          "type_info": "Int4"
+        },
+        {
+          "name": "name",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "url",
+          "ordinal": 3,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "error",
+          "ordinal": 4,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "public_key",
+          "ordinal": 5,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "private_key",
+          "ordinal": 6,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "image_url",
+          "ordinal": 7,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "icon_url",
+          "ordinal": 8,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "title",
+          "ordinal": 9,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "description",
+          "ordinal": 10,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "site_url",
+          "ordinal": 11,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "created_at",
+          "ordinal": 12,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "ordinal": 13,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "refreshed_at",
+          "ordinal": 14,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      }
+    },
+    "query": "SELECT * FROM feeds WHERE url = $1"
+  },
+  "c0d888f4223f17dfa375286a5932da8c00002bebdf397c17b0b013d50782363e": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "feed_id",
+          "ordinal": 1,
+          "type_info": "Int4"
+        },
+        {
+          "name": "actor",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "created_at",
+          "ordinal": 3,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "ordinal": 4,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Int8",
+          "Int8"
+        ]
+      }
+    },
+    "query": "SELECT * FROM followers WHERE feed_id = $1 LIMIT $2 OFFSET $3"
+  },
+  "c5d20d9c167556ef154b97c7b4510985a5571342d651a7d8c2bfb4e5aa7b09f6": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "email",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "login_token",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "access_token",
+          "ordinal": 3,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "created_at",
+          "ordinal": 4,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "ordinal": 5,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      }
+    },
+    "query": "SELECT * FROM users WHERE access_token = $1"
+  },
+  "cd83439596cf8776f95087d98fb6e31875a548f4cc9cb988661ba6ff39e85396": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "feed_id",
+          "ordinal": 1,
+          "type_info": "Int4"
+        },
+        {
+          "name": "guid",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "title",
+          "ordinal": 3,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "content",
+          "ordinal": 4,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "url",
+          "ordinal": 5,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "created_at",
+          "ordinal": 6,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "ordinal": 7,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "enclosure_url",
+          "ordinal": 8,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "enclosure_content_type",
+          "ordinal": 9,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "enclosure_size",
+          "ordinal": 10,
+          "type_info": "Int4"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        false,
+        false,
+        true,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Int8"
+        ]
+      }
+    },
+    "query": "SELECT * FROM items WHERE feed_id = $1 ORDER by id DESC LIMIT $2"
+  },
+  "e19336b810984550c60919f17e9db6a7ff89c9dac2a6616350cc582635c23ae1": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Timestamptz",
+          "Int4"
+        ]
+      }
+    },
+    "query": "UPDATE feeds\n      SET url = $1,\n          name = $2,\n          private_key = $3,\n          public_key = $4,\n          image_url = $5,\n          icon_url = $6,\n          title = $7,\n          description = $8,\n          site_url = $9,\n          error = $10,\n          updated_at = $11\n      WHERE id = $12"
+  },
+  "e5e5360ba6289f67f7838d67dec2a63af70ba7b50e9241cc9c120854eff537c4": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Int4"
+        ]
+      }
+    },
+    "query": "UPDATE feeds SET error = $1 WHERE id = $2"
+  },
+  "e6cc6b46f09f9e29fe3b9503a00b817e805161292a054ea970c2383fbf354af2": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "feed_id",
+          "ordinal": 1,
+          "type_info": "Int4"
+        },
+        {
+          "name": "actor",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "created_at",
+          "ordinal": 3,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "ordinal": 4,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      }
+    },
+    "query": "SELECT * FROM followers WHERE feed_id = $1"
+  },
+  "f167ad37d0a49ca2e8f31ad9ef251606d611c2630d5402c73bf7d9993b2cdca8": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Int4"
+        ]
+      }
+    },
+    "query": "UPDATE feeds SET icon_url = $1 WHERE id = $2"
+  },
+  "f2a80e26523db4e81c6f4e11250fbf913c4c65e1d14891775f0ea2f3fc931687": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "feed_id",
+          "ordinal": 1,
+          "type_info": "Int4"
+        },
+        {
+          "name": "guid",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "title",
+          "ordinal": 3,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "content",
+          "ordinal": 4,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "url",
+          "ordinal": 5,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "created_at",
+          "ordinal": 6,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "ordinal": 7,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "enclosure_url",
+          "ordinal": 8,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "enclosure_content_type",
+          "ordinal": 9,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "enclosure_size",
+          "ordinal": 10,
+          "type_info": "Int4"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        false,
+        false,
+        true,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Int8",
+          "Int8"
+        ]
+      }
+    },
+    "query": "SELECT * FROM items WHERE feed_id = $1 LIMIT $2 OFFSET $3"
+  },
+  "f3f58600e971f1be6cbe206bba24f77769f54c6230e28f5b3dc719b869d9cb3f": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "email",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "login_token",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "access_token",
+          "ordinal": 3,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "created_at",
+          "ordinal": 4,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "ordinal": 5,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      }
+    },
+    "query": "SELECT * FROM users WHERE email = $1"
+  },
+  "f83e85881589444a71660868fc4651581fc925d5c5c578cb9f703d1d4c7d927c": {
+    "describe": {
+      "columns": [
+        {
+          "name": "tally",
+          "ordinal": 0,
+          "type_info": "Int8"
+        }
+      ],
+      "nullable": [
+        null
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      }
+    },
+    "query": "SELECT count(1) AS tally FROM feeds WHERE name = $1"
+  }
+}

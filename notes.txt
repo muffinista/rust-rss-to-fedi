@@ -21,3 +21,15 @@ todo
 
 
   https://github.com/launchbadge/sqlx
+
+
+
+cargo install sqlx-cli --no-default-features --features rustls,sqlite
+
+docker run --name rustydb -e POSTGRES_PASSWORD=FOFOFOFO -v ${PWD}/db:/var/lib/postgresql/data  -d postgres:14.5
+
+psql -h localhost
+
+
+DOMAIN_NAME=test.com DATABASE_URL=postgres://postgres:FOFOFOFO@localhost/rusty cargo sqlx database reset
+
