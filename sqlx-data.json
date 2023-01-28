@@ -62,21 +62,6 @@
           "name": "updated_at",
           "ordinal": 7,
           "type_info": "Timestamptz"
-        },
-        {
-          "name": "enclosure_url",
-          "ordinal": 8,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "enclosure_content_type",
-          "ordinal": 9,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "enclosure_size",
-          "ordinal": 10,
-          "type_info": "Int4"
         }
       ],
       "nullable": [
@@ -87,10 +72,7 @@
         true,
         true,
         false,
-        false,
-        true,
-        true,
-        true
+        false
       ],
       "parameters": {
         "Left": [
@@ -285,7 +267,7 @@
     },
     "query": "UPDATE feeds SET refreshed_at = $1 WHERE id = $2"
   },
-  "6c43bccebdced34e2e07a88301c593b28a234b7a503a717c3257df862cb4f4a1": {
+  "64ab49a91806396f2a52d938c8a958161cf18cd96ca72cc3b663ffdef10b5309": {
     "describe": {
       "columns": [
         {
@@ -302,17 +284,13 @@
           "Int4",
           "Varchar",
           "Varchar",
-          "Varchar",
-          "Varchar",
-          "Varchar",
-          "Varchar",
           "Int4",
           "Timestamptz",
           "Timestamptz"
         ]
       }
     },
-    "query": "INSERT INTO items \n                                (feed_id, guid, title, content, url, enclosure_url, enclosure_content_type, enclosure_size, created_at, updated_at)\n                                VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)\n                                RETURNING id"
+    "query": "INSERT INTO enclosures \n            (item_id, url, content_type, size, created_at, updated_at)\n            VALUES($1, $2, $3, $4, $5, $6)\n            RETURNING id"
   },
   "754ba153110d91c682dcb5b4b2424994922969e0e842ad57415407e57c792267": {
     "describe": {
@@ -484,21 +462,6 @@
           "name": "updated_at",
           "ordinal": 7,
           "type_info": "Timestamptz"
-        },
-        {
-          "name": "enclosure_url",
-          "ordinal": 8,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "enclosure_content_type",
-          "ordinal": 9,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "enclosure_size",
-          "ordinal": 10,
-          "type_info": "Int4"
         }
       ],
       "nullable": [
@@ -509,10 +472,7 @@
         true,
         true,
         false,
-        false,
-        true,
-        true,
-        true
+        false
       ],
       "parameters": {
         "Left": [
@@ -953,21 +913,6 @@
           "name": "updated_at",
           "ordinal": 7,
           "type_info": "Timestamptz"
-        },
-        {
-          "name": "enclosure_url",
-          "ordinal": 8,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "enclosure_content_type",
-          "ordinal": 9,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "enclosure_size",
-          "ordinal": 10,
-          "type_info": "Int4"
         }
       ],
       "nullable": [
@@ -978,10 +923,7 @@
         true,
         true,
         false,
-        false,
-        true,
-        true,
-        true
+        false
       ],
       "parameters": {
         "Left": [
@@ -1254,21 +1196,6 @@
           "name": "updated_at",
           "ordinal": 7,
           "type_info": "Timestamptz"
-        },
-        {
-          "name": "enclosure_url",
-          "ordinal": 8,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "enclosure_content_type",
-          "ordinal": 9,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "enclosure_size",
-          "ordinal": 10,
-          "type_info": "Int4"
         }
       ],
       "nullable": [
@@ -1279,10 +1206,7 @@
         true,
         true,
         false,
-        false,
-        true,
-        true,
-        true
+        false
       ],
       "parameters": {
         "Left": [
@@ -1292,6 +1216,62 @@
       }
     },
     "query": "SELECT * FROM items WHERE feed_id = $1 ORDER by id DESC LIMIT $2"
+  },
+  "dc8ebf976f9fd72f9fa234b048639ed2708a1a1e0a1f1a5a4b4a4dacf9a54b40": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "item_id",
+          "ordinal": 1,
+          "type_info": "Int4"
+        },
+        {
+          "name": "url",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "content_type",
+          "ordinal": 3,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "size",
+          "ordinal": 4,
+          "type_info": "Int4"
+        },
+        {
+          "name": "created_at",
+          "ordinal": 5,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "ordinal": 6,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        true,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      }
+    },
+    "query": "SELECT * FROM enclosures WHERE item_id = $1 ORDER by id"
   },
   "e19336b810984550c60919f17e9db6a7ff89c9dac2a6616350cc582635c23ae1": {
     "describe": {
@@ -1428,21 +1408,6 @@
           "name": "updated_at",
           "ordinal": 7,
           "type_info": "Timestamptz"
-        },
-        {
-          "name": "enclosure_url",
-          "ordinal": 8,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "enclosure_content_type",
-          "ordinal": 9,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "enclosure_size",
-          "ordinal": 10,
-          "type_info": "Int4"
         }
       ],
       "nullable": [
@@ -1453,10 +1418,7 @@
         true,
         true,
         false,
-        false,
-        true,
-        true,
-        true
+        false
       ],
       "parameters": {
         "Left": [
@@ -1517,6 +1479,32 @@
       }
     },
     "query": "SELECT * FROM users WHERE email = $1"
+  },
+  "f618094cfe3f1cd0595e01df8de59b3eae9901c98f29ed469a3be07029a33894": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        }
+      ],
+      "nullable": [
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Timestamptz",
+          "Timestamptz"
+        ]
+      }
+    },
+    "query": "INSERT INTO items \n                                (feed_id, guid, title, content, url, created_at, updated_at)\n                                VALUES($1, $2, $3, $4, $5, $6, $7)\n                                RETURNING id"
   },
   "f83e85881589444a71660868fc4651581fc925d5c5c578cb9f703d1d4c7d927c": {
     "describe": {
