@@ -2,22 +2,28 @@
 
 FROM rustlang/rust:nightly
 
+ENV SQLX_OFFLINE true
+RUN cargo install sqlx-cli --no-default-features --features rustls,postgres
+
 WORKDIR /app
 
-ENV SQLX_OFFLINE true
+# create a minimal program so cargo can fetch/build deps
+# without building the entire app
+RUN mkdir -p src/bin && echo "fn main() {}" > src/bin/server.rs
 
-# COPY Cargo.toml Cargo.lock .
-COPY . .
+COPY Cargo.toml Cargo.lock .
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    cargo build
+
+COPY Rocket.toml Rocket.toml
+COPY sqlx-data.json sqlx-data.json
+COPY src src/
+COPY migrations migrations/
+COPY assets assets/
+COPY fixtures fixtures/
+COPY templates templates/
 
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/app/target \
-    cargo install sqlx-cli --no-default-features --features rustls,postgres && \
-    cargo fetch
-
-RUN echo "==============================="
-RUN cargo build
-
-# CMD ["cargo", "run", "--bin", "server"]
-RUN find /app
+    cargo build
 
 CMD ["target/debug/server"]
