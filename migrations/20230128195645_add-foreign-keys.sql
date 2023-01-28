@@ -1,0 +1,5 @@
+-- Add migration script here
+
+ALTER TABLE feeds ADD CONSTRAINT user_fk FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+ALTER TABLE items ADD CONSTRAINT feed_fk FOREIGN KEY (feed_id) REFERENCES feeds(id) ON DELETE CASCADE;
+ALTER TABLE enclosures ADD CONSTRAINT item_fk FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE;
