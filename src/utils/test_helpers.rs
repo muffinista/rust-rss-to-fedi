@@ -44,6 +44,7 @@ pub fn fake_feed() -> Feed {
 
   Feed {
     id: 1,
+    admin: false,
     user_id: 1,
     name: "testfeed".to_string(),
     url: "https://foo.com/rss.xml".to_string(),

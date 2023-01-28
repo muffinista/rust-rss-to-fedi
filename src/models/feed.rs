@@ -46,6 +46,7 @@ use crate::routes::ap::outbox::*;
 #[derive(Debug, Serialize)]
 pub struct Feed {
   pub id: i32,
+  pub admin: bool,
   pub user_id: i32,
   pub name: String,
   pub url: String,
@@ -805,7 +806,7 @@ mod test {
   use crate::models::item::Item;
   use crate::models::enclosure::Enclosure;
   use crate::utils::utils::*;
-  use crate::utils::test_helpers::{fake_user, fake_feed, real_feed, real_item};
+  use crate::utils::test_helpers::{fake_user, fake_feed, real_feed, real_user, real_item};
 
   use crate::routes::feeds::*;
   use crate::routes::ap::outbox::*;
@@ -913,7 +914,7 @@ mod test {
 
   #[sqlx::test]
   async fn test_for_user(pool: PgPool) -> sqlx::Result<()> {
-    let user = fake_user();
+    let user = real_user(&pool).await?;
     
     let url: String = "https://foo.com/rss.xml".to_string();
     let name: String = "testfeed".to_string();

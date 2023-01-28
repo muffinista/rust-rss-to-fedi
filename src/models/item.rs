@@ -297,13 +297,13 @@ mod test {
   use sqlx::postgres::PgPool;
   use crate::models::feed::Feed;
   use crate::models::item::Item;
-  use crate::utils::test_helpers::{real_item, fake_feed, fake_item, real_item_with_enclosure};
+  use crate::utils::test_helpers::{real_item, real_feed, fake_item, real_item_with_enclosure};
 
   use mockito::mock;
 
   #[sqlx::test]
   async fn test_find(pool: PgPool) -> sqlx::Result<()> {
-    let feed: Feed = fake_feed();
+    let feed: Feed = real_feed(&pool).await?;
     let item: Item = real_item(&feed, &pool).await?;
 
     let item2 = Item::find(item.id, &pool).await?;
@@ -315,7 +315,7 @@ mod test {
 
   #[sqlx::test]
   async fn find_by_feed_and_id(pool: PgPool) -> sqlx::Result<()> {
-    let feed: Feed = fake_feed();
+    let feed: Feed = real_feed(&pool).await?;
     let item: Item = real_item(&feed, &pool).await?;
 
     let item2 = Item::find_by_feed_and_id(&feed, item.id, &pool).await?;
@@ -327,7 +327,7 @@ mod test {
 
   #[sqlx::test]
   async fn test_find_by_guid(pool: PgPool) -> sqlx::Result<()> {
-    let feed: Feed = fake_feed();
+    let feed: Feed = real_feed(&pool).await?;
     let item: Item = real_item(&feed, &pool).await?;
 
     let item2 = Item::find_by_guid(&item.guid, &feed, &pool).await?;
@@ -339,7 +339,7 @@ mod test {
 
   #[sqlx::test]
   async fn test_exists_by_guid(pool: PgPool) -> sqlx::Result<()> {
-    let feed: Feed = fake_feed();
+    let feed: Feed = real_feed(&pool).await?;
     let item: Item = real_item(&feed, &pool).await?;
 
     let result = Item::exists_by_guid(&item.guid, &feed, &pool).await?;   
@@ -354,7 +354,7 @@ mod test {
 
   #[sqlx::test]
   pub async fn test_for_feed(pool: PgPool) -> sqlx::Result<()> {
-    let feed: Feed = fake_feed();
+    let feed: Feed = real_feed(&pool).await?;
     let _item: Item = real_item(&feed, &pool).await?;
 
     let result = Item::for_feed(&feed, 10, &pool).await?;
@@ -369,7 +369,7 @@ mod test {
 
   #[sqlx::test]
   async fn test_to_activity_pub(pool: PgPool) -> Result<(), String> {
-    let feed: Feed = fake_feed();
+    let feed: Feed = real_feed(&pool).await.unwrap();
     let item: Item = fake_item();
 
     let result = item.to_activity_pub(&feed, &pool).await;
@@ -388,7 +388,7 @@ mod test {
 
   #[sqlx::test]
   async fn test_to_activity_pub_with_enclosure(pool: PgPool) -> Result<(), String> {
-    let feed: Feed = fake_feed();
+    let feed: Feed = real_feed(&pool).await.unwrap();
     let item: Item = real_item_with_enclosure(&feed, &pool).await.unwrap();
 
     let result = item.to_activity_pub(&feed, &pool).await;
@@ -409,7 +409,7 @@ mod test {
   
   #[sqlx::test]
   async fn test_deliver(pool: PgPool) -> Result<(), String> {
-    let feed: Feed = fake_feed();
+    let feed: Feed = real_feed(&pool).await.unwrap();
     let item: Item = fake_item();
 
     let actor = format!("{}/users/colin", &mockito::server_url());

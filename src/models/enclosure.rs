@@ -38,11 +38,11 @@ mod test {
   use crate::models::feed::Feed;
   use crate::models::item::Item;
   use crate::models::Enclosure;
-  use crate::utils::test_helpers::{real_item, fake_feed, real_item_with_enclosure};
+  use crate::utils::test_helpers::{real_item, real_feed, real_item_with_enclosure};
 
   #[sqlx::test]
   async fn test_for_item(pool: PgPool) -> Result<(), String> {
-    let feed: Feed = fake_feed();
+    let feed: Feed = real_feed(&pool).await.unwrap();
     let item: Item = real_item_with_enclosure(&feed, &pool).await.unwrap();
 
     let result = Enclosure::for_item(&item, &pool).await.unwrap();
