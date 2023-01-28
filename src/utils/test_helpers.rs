@@ -28,7 +28,7 @@ pub async fn real_user(pool: &PgPool) -> sqlx::Result<User> {
 }
 
 pub async fn real_feed(pool: &PgPool) -> sqlx::Result<Feed> {
-  let user = fake_user();
+  let user = real_user(&pool).await.unwrap();
   
   let url:String = "https://foo.com/rss.xml".to_string();
   let name = Uuid::new_v4().to_string();

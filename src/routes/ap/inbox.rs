@@ -43,34 +43,33 @@ pub async fn user_inbox(username: &str, activity: Json<AcceptedActivity>, db: &S
   Ok(())
 }
 
-// #[cfg(test)]
-// mod test {
-//   use crate::server::build_server;
-//   use rocket::local::asynchronous::Client;
-//   use rocket::http::Status;
-//   use rocket::uri;
-//   use rocket::{Rocket, Build};
-//   use chrono::Utc;
+#[cfg(test)]
+mod test {
+  use crate::server::build_server;
+  use rocket::local::asynchronous::Client;
+  use rocket::http::Status;
+  use rocket::uri;
+  use rocket::{Rocket, Build};
 
-//   use sqlx::postgres::PgPool;
+  use sqlx::postgres::PgPool;
 
-//   use crate::utils::test_helpers::{real_feed};
+  use crate::utils::test_helpers::{real_feed};
 
-//   #[sqlx::test]
-//   async fn test_user_inbox(pool: PgPool) -> sqlx::Result<()> {
-//     let feed = real_feed(&pool).await.unwrap();
+  #[sqlx::test]
+  async fn test_user_inbox(pool: PgPool) -> sqlx::Result<()> {
+    let feed = real_feed(&pool).await.unwrap();
 
-//     let actor = "https://activitypub.pizza/users/colin".to_string();
-//     let json = format!(r#"{{"actor":"{}","object":"{}/feed","type":"Follow"}}"#, actor, actor).to_string();
+    let actor = "https://activitypub.pizza/users/colin".to_string();
+    let json = format!(r#"{{"actor":"{}","object":"{}/feed","type":"Follow"}}"#, actor, actor).to_string();
     
-//     let server:Rocket<Build> = build_server(pool).await;
-//     let client = Client::tracked(server).await.unwrap();
+    let server:Rocket<Build> = build_server(pool).await;
+    let client = Client::tracked(server).await.unwrap();
 
-//     let req = client.post(uri!(super::user_inbox(&feed.name))).body(json);
-//     let response = req.dispatch().await;
+    let req = client.post(uri!(super::user_inbox(&feed.name))).body(json);
+    let response = req.dispatch().await;
 
-//     assert_eq!(response.status(), Status::Ok);
+    assert_eq!(response.status(), Status::Ok);
 
-//     Ok(())
-//   }
-// }
+    Ok(())
+  }
+}
