@@ -9,5 +9,8 @@ README.md
 LICENSE
 .vscode
 
+profile
+profile/*
+
 db
 db/*

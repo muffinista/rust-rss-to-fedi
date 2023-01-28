@@ -3,23 +3,21 @@
 FROM rustlang/rust:nightly
 
 WORKDIR /app
-# COPY . .
 
-# ENV DATABASE_URL sqlite:build.sqlite
-# need DATABASE_URL and DOMAIN_NAME to actually run things
+ENV SQLX_OFFLINE true
 
-COPY Cargo.toml Cargo.lock .
-
-# RUN cargo install sqlx-cli --no-default-features --features native-tls,sqlite
-# COPY migrations migrations
-# RUN rm -f build.sqlite && sqlx database setup 
-
+# COPY Cargo.toml Cargo.lock .
 COPY . .
 
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/app/target \
-    # cargo install --path . && \
     cargo install sqlx-cli --no-default-features --features rustls,postgres && \
-    cargo build
+    cargo fetch
 
-CMD ["cargo", "run", "--bin", "server"]
+RUN echo "==============================="
+RUN cargo build
+
+# CMD ["cargo", "run", "--bin", "server"]
+RUN find /app
+
+CMD ["target/debug/server"]

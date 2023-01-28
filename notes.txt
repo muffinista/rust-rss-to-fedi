@@ -36,3 +36,4 @@ DOMAIN_NAME=test.com DATABASE_URL=postgres://postgres:FOFOFOFO@localhost/rusty c
 
 
 docker compose run app cargo sqlx database reset
+
