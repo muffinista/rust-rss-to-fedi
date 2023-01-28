@@ -32,3 +32,28 @@ impl Enclosure {
   }
 }
 
+#[cfg(test)]
+mod test {
+  use sqlx::postgres::PgPool;
+  use crate::models::feed::Feed;
+  use crate::models::item::Item;
+  use crate::models::Enclosure;
+  use crate::utils::test_helpers::{real_item, fake_feed, real_item_with_enclosure};
+
+  #[sqlx::test]
+  async fn test_for_item(pool: PgPool) -> Result<(), String> {
+    let feed: Feed = fake_feed();
+    let item: Item = real_item_with_enclosure(&feed, &pool).await.unwrap();
+
+    let result = Enclosure::for_item(&item, &pool).await.unwrap();
+    assert_eq!(result.len(), 1);
+
+
+    let item2: Item = real_item(&feed, &pool).await.unwrap();
+
+    let result2 = Enclosure::for_item(&item2, &pool).await.unwrap();
+    assert_eq!(result2.len(), 0);
+
+    Ok(())
+  }
+}
