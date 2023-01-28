@@ -14,21 +14,29 @@ if (button) {
       body: JSON.stringify(payload),
     });
 
+    const messageDest = document.querySelector(".add-feed-results");
+
     if ( response.status == 404 ) {
       console.log("No feed there");
+      messageDest.innerHTML = "Sorry, we couldn't find a valid feed at that URL";
     } else if ( response.status > 200 ) {
       console.log("Something went wrong");
+      messageDest.innerHTML = "Sorry, something went wrong";
     } else {
       const data = await response.json();
       console.log(data);
 
-      document.querySelector(".add-feed input[name='url']").value = data.url;
-      document.querySelector(".add-feed").attributes.action = "/feed";
-
-      button.removeEventListener("click", checkForValidFeed);
-      button.type = "submit";
-
-      document.querySelector(".add-feed-results").innerHTML = "Looks good!";
+      if ( data.error ) {
+        messageDest.innerHTML = data.error;  
+      } else {
+        document.querySelector(".add-feed input[name='url']").value = data.url;
+        document.querySelector(".add-feed").attributes.action = "/feed";
+  
+        button.removeEventListener("click", checkForValidFeed);
+        button.type = "submit";
+  
+        messageDest.innerHTML = "Looks good! Click ok to create account";  
+      }
     }
   };
 
