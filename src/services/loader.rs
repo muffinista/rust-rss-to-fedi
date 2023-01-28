@@ -5,7 +5,7 @@ use anyhow::Error as AnyError;
 
 use crate::models::feed::Feed;
 
-pub async fn update_stale_feeds(pool: &PgPool) -> Result<(), AnyError>{
+pub async fn update_stale_feeds(pool: &PgPool) -> Result<(), AnyError> {
   let feeds = Feed::stale(pool, 3600, 5).await;
   match feeds {
     Ok(feeds) => {

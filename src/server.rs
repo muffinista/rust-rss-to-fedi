@@ -5,12 +5,15 @@ use rocket::{Rocket, Build};
 use rocket::fs::{FileServer, relative};
 use rocket_dyn_templates::Template;
 
+use crate::utils::admin::create_admin_feed;
 
 pub async fn build_server(pool: PgPool) -> Rocket<Build> {
   sqlx::migrate!("./migrations")
     .run(&pool)
     .await
     .ok();
+
+  create_admin_feed(&pool).await;
   
   rocket::build()
     .manage(pool)

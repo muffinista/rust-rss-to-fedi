@@ -115,6 +115,12 @@ impl Feed {
     .await
   }
 
+  pub async fn for_admin(pool: &PgPool) -> Result<Option<Feed>, sqlx::Error> {
+    sqlx::query_as!(Feed, "SELECT * FROM feeds WHERE admin = true LIMIT 1")
+    .fetch_optional(pool)
+    .await
+  }
+
   pub async fn for_user(user: &User, pool: &PgPool) -> Result<Vec<Feed>, sqlx::Error> {
     sqlx::query_as!(Feed, "SELECT * FROM feeds WHERE user_id = $1", user.id)
     .fetch_all(pool)
