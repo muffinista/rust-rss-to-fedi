@@ -78,25 +78,6 @@ pub fn fake_item() -> Item {
     title: Some("Hello!".to_string()),
     content: Some("Hey!".to_string()),
     url: Some("http://google.com".to_string()),
-    enclosure_url: None,
-    enclosure_content_type: None,
-    enclosure_size: None,
-    created_at: Utc::now(),
-    updated_at: Utc::now()
-  }
-}
-
-pub fn fake_item_with_enclosure() -> Item {
-  Item {
-    id: 1,
-    feed_id: 1,
-    guid: "12345".to_string(),
-    title: Some("Hello!".to_string()),
-    content: Some("Hey!".to_string()),
-    url: Some("http://google.com".to_string()),
-    enclosure_url: Some("http://place.com/file.mp3".to_string()),
-    enclosure_content_type: Some("audio/mpeg".to_string()),
-    enclosure_size: Some(123456),
     created_at: Utc::now(),
     updated_at: Utc::now()
   }
@@ -124,5 +105,25 @@ pub async fn real_item(feed: &Feed, pool: &PgPool) -> sqlx::Result<Item> {
     .id;
 
   Item::find(item_id, &pool).await
+}
+
+pub async fn real_item_with_enclosure(feed: &Feed, pool: &PgPool) -> sqlx::Result<Item> {
+  let item = real_item(feed, pool).await?;
+
+  let now = Utc::now();
+  let url = "http://media.com/attachment.mp3";
+  let content_type = "audio/mpeg";
+  let size = 123456;
+
+  sqlx::query!("INSERT INTO enclosures 
+    (item_id, url, content_type, size, created_at, updated_at)
+    VALUES($1, $2, $3, $4, $5, $6)
+    RETURNING id",
+      item.id, url, content_type, size, now, now)
+    .fetch_one(pool)
+    .await?;
+
+  Ok(item)
+
 }
 

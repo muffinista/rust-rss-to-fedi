@@ -2,6 +2,7 @@ use sqlx::postgres::PgPool;
 use serde::{Serialize};
 use feed_rs::model::Entry;
 
+use crate::models::enclosure::Enclosure;
 use crate::models::feed::Feed;
 use crate::services::mailer::*;
 
@@ -43,10 +44,6 @@ pub struct Item {
   pub title: Option<String>,
   pub content: Option<String>,
   pub url: Option<String>,
-
-  pub enclosure_url: Option<String>,
-  pub enclosure_content_type: Option<String>,
-  pub enclosure_size: Option<i32>,
   
   pub created_at: chrono::DateTime::<Utc>,
   pub updated_at: chrono::DateTime::<Utc>
@@ -127,51 +124,52 @@ impl Item {
       None
     };
     
-    let enclosure_url;
-    let enclosure_content_type;
-    let enclosure_size;
-    
-    if entry.media.len() > 0 && entry.media[0].content.len() > 0 && entry.media[0].content[0].url.is_some() {
-      enclosure_url = Some(entry.media[0].content[0].url.as_ref().unwrap().as_str());
-
-      enclosure_content_type = if entry.media[0].content[0].content_type.is_some() {
-        Some(entry.media[0].content[0].content_type.as_ref().unwrap().essence_str())
-      } else {
-        None
-      };
-
-      enclosure_size = if entry.media[0].content[0].size.is_some() {
-        Some(entry.media[0].content[0].size.unwrap() as i32)
-      } else {
-        None
-      }
-      
-    } else {
-      enclosure_url = None;
-      enclosure_content_type = None;
-      enclosure_size = None;
-    };
-
     let now = Utc::now();
 
     let item_id = sqlx::query!("INSERT INTO items 
-                                (feed_id, guid, title, content, url, enclosure_url, enclosure_content_type, enclosure_size, created_at, updated_at)
-                                VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                                (feed_id, guid, title, content, url, created_at, updated_at)
+                                VALUES($1, $2, $3, $4, $5, $6, $7)
                                 RETURNING id",
                                feed.id,
                                entry.id,
                                title,
                                body,
                                item_url,
-                               enclosure_url,
-                               enclosure_content_type,
-                               enclosure_size,
                                now,
                                now
     )
       .fetch_one(pool)
       .await?
       .id;
+
+    for media in &entry.media {      
+      for content in &media.content {
+        if content.url.is_some() {
+          let url = Some(content.url.as_ref().unwrap().as_str());
+    
+          let content_type = if content.content_type.is_some() {
+            Some(content.content_type.as_ref().unwrap().essence_str())
+          } else {
+            None
+          };
+    
+          let size = if content.size.is_some() {
+            Some(content.size.unwrap() as i32)
+          } else {
+            None
+          };
+
+          sqlx::query!("INSERT INTO enclosures 
+            (item_id, url, content_type, size, created_at, updated_at)
+            VALUES($1, $2, $3, $4, $5, $6)
+            RETURNING id",
+            item_id, url, content_type, size, now, now)
+          .fetch_one(pool)
+          .await?;
+        }
+      } // for
+    } // for
+  
 
     Item::find(item_id, pool).await
   }
@@ -201,7 +199,7 @@ impl Item {
   }
 
   
-  pub fn to_activity_pub(&self, feed: &Feed) -> Result<ApObject<Create>, AnyError> {    
+  pub async fn to_activity_pub(&self, feed: &Feed, pool: &PgPool) -> Result<ApObject<Create>, AnyError> {    
     let mut note: ApObject<Note> = ApObject::new(Note::new());
 
     let feed_url = feed.ap_url();
@@ -217,18 +215,19 @@ impl Item {
       .set_id(iri!(item_url))
       .set_published(ts);
 
-    if self.enclosure_url.is_some() {
+    let enclosures = Enclosure::for_item(&self, &pool).await?;
+    for enclosure in enclosures {
       let mut attachment = Document::new();
-      let enclosure_url = self.enclosure_url.clone().unwrap();
+      let enclosure_url = enclosure.url.clone();
 
       attachment.set_url(iri!(&enclosure_url));
 
-      if self.enclosure_content_type.is_some() {
-        let content_type: &String = &self.enclosure_content_type.clone().unwrap();
+      if enclosure.content_type.is_some() {
+        let content_type: &String = &enclosure.content_type.clone().unwrap();
         attachment.set_media_type(content_type.parse::<Mime>().unwrap());
       }
 
-      note.set_attachment(attachment.into_any_base()?);
+      note.add_attachment(attachment.into_any_base()?);
     }
 
     let mut action: ApObject<Create> = ApObject::new(
@@ -257,7 +256,7 @@ impl Item {
 
 
   pub async fn deliver(&self, feed: &Feed, pool: &PgPool) -> Result<(), AnyError> {
-    let message = self.to_activity_pub(feed).unwrap();
+    let message = self.to_activity_pub(feed, pool).await.unwrap();
     let followers = feed.followers_list(pool).await?;
     for follower in followers { 
       let inbox = follower.find_inbox().await;
@@ -298,7 +297,7 @@ mod test {
   use sqlx::postgres::PgPool;
   use crate::models::feed::Feed;
   use crate::models::item::Item;
-  use crate::utils::test_helpers::{real_item, fake_feed, fake_item, fake_item_with_enclosure};
+  use crate::utils::test_helpers::{real_item, fake_feed, fake_item, real_item_with_enclosure};
 
   use mockito::mock;
 
@@ -369,11 +368,11 @@ mod test {
   }
 
   #[sqlx::test]
-  async fn test_to_activity_pub() -> Result<(), String> {
+  async fn test_to_activity_pub(pool: PgPool) -> Result<(), String> {
     let feed: Feed = fake_feed();
     let item: Item = fake_item();
 
-    let result = item.to_activity_pub(&feed);
+    let result = item.to_activity_pub(&feed, &pool).await;
     match result {
       Ok(result) => {
         let s = serde_json::to_string(&result).unwrap();
@@ -388,20 +387,18 @@ mod test {
   }
 
   #[sqlx::test]
-  async fn test_to_activity_pub_with_enclosure() -> Result<(), String> {
+  async fn test_to_activity_pub_with_enclosure(pool: PgPool) -> Result<(), String> {
     let feed: Feed = fake_feed();
-    let item: Item = fake_item_with_enclosure();
+    let item: Item = real_item_with_enclosure(&feed, &pool).await.unwrap();
 
-    let result = item.to_activity_pub(&feed);
+    let result = item.to_activity_pub(&feed, &pool).await;
     match result {
       Ok(result) => {
         let s = serde_json::to_string(&result).unwrap();
 
-        println!("{:}", s);
+        // println!("{:}", s);
         
-        assert!(s.contains("Hello!"));
-        assert!(s.contains("<p>Hey!</p>"));
-        assert!(s.contains("file.mp3"));
+        assert!(s.contains("media.com/attachment.mp3"));
         assert!(s.contains("audio/mpeg"));
 
         Ok(())

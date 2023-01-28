@@ -9,7 +9,7 @@ use activitystreams_ext::{Ext1};
 use activitystreams::{
   activity::*,
   actor::{ApActor, ApActorExt, Service},
-  base::{AnyBase, BaseExt},
+  base::BaseExt,
   iri,
   iri_string::types::IriString,
   prelude::*,
@@ -727,7 +727,7 @@ impl Feed {
   }
 
   ///
-  /// generate actual AP page of followes 
+  /// generate actual AP page of follows 
   ///
   pub async fn outbox_paged(&self, page: i32, pool: &PgPool)  -> Result<ApObject<OrderedCollectionPage>, AnyError>{
     let count = self.entries_count(pool).await?;
@@ -762,21 +762,33 @@ impl Feed {
       self.id as i32, PER_PAGE as i32, offset as i32)
       .fetch_all(pool)
       .await;
-  
+
     match result {
       Ok(result) => {
-        let v: Vec<AnyBase> = result
-          .into_iter()
-          .filter_map(|outbox| Some(outbox.to_activity_pub(&self).unwrap().into_any_base().ok()?))
-          .collect();
-        // collection.add_item(action.into_any_base()?);
-        collection.set_many_items(v);
+        for item in result {
+          let output = item.to_activity_pub(&self, &pool).await.unwrap();
+          collection.add_item(output.into_any_base()?);    
+        }
 
         Ok(collection)
-          
       },
       Err(why) => Err(why.into())
     }
+
+    // match result {
+    //   Ok(result) => {
+    //     let v: Vec<AnyBase> = result
+    //       .into_iter()
+    //       .filter_map(|outbox| Some(outbox.to_activity_pub(&self, &pool).await.unwrap().into_any_base().ok()?))
+    //       .collect();
+    //     // collection.add_item(action.into_any_base()?);
+    //     collection.set_many_items(v);
+
+    //     Ok(collection)
+          
+    //   },
+    //   Err(why) => Err(why.into())
+    // }
   }
 
 }
@@ -791,6 +803,7 @@ mod test {
   use crate::models::feed::Feed;
   use crate::models::feed::AcceptedActivity;
   use crate::models::item::Item;
+  use crate::models::enclosure::Enclosure;
   use crate::utils::utils::*;
   use crate::utils::test_helpers::{fake_user, fake_feed, real_feed, real_item};
 
@@ -1011,9 +1024,14 @@ mod test {
     assert_eq!(feed.entries_count(&pool).await.unwrap(), 1);
 
     let items = Item::for_feed(&feed, 10, &pool).await?;
-    assert_eq!(items[0].enclosure_url.as_ref().unwrap(), "https://secretassets.colinlabs.com/podcasts/0232.mp3");
-    assert_eq!(items[0].enclosure_content_type.as_ref().unwrap(), "audio/mp3");
-    assert_eq!(items[0].enclosure_size, None);
+
+    let enclosures = Enclosure::for_item(&items[0], &pool).await?;
+    assert_eq!(enclosures.len(), 1);
+
+    let enclosure = &enclosures[0];
+    assert_eq!(enclosure.url, "https://secretassets.colinlabs.com/podcasts/0232.mp3");
+    assert_eq!(enclosure.content_type.as_ref().unwrap(), "audio/mp3");
+    assert_eq!(enclosure.size, None);
 
     Ok(())
   }

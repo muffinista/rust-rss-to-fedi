@@ -1,5 +1,12 @@
 -- Add migration script here
 -- Your SQL goes here
-ALTER TABLE items ADD enclosure_url VARCHAR NULL;
-ALTER TABLE items ADD enclosure_content_type VARCHAR NULL;
-ALTER TABLE items ADD enclosure_size INTEGER NULL;
+CREATE TABLE enclosures (
+  id SERIAL PRIMARY KEY,
+  item_id INTEGER NOT NULL,
+  url VARCHAR NOT NULL,
+  content_type VARCHAR,
+  size INTEGER NULL,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL
+);
+
