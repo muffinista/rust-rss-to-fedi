@@ -819,11 +819,6 @@ mod test {
     let user = fake_user();
     let feed:Feed = real_feed(&pool).await?;
     
-    let url:String = "https://foo.com/rss.xml".to_string();
-    let name:String = "testfeed".to_string();
-
-    assert_eq!(feed.url, url);
-    assert_eq!(feed.name, name);
     assert_eq!(feed.user_id, user.id);
     
     Ok(())
@@ -846,15 +841,16 @@ mod test {
 
   #[sqlx::test]
   async fn test_find_by_url(pool: PgPool) -> sqlx::Result<()> {
-    let url: String = "https://foo.com/rss.xml".to_string();
-    let name: String = "testfeed".to_string();
-
     let feed:Feed = real_feed(&pool).await?;
+    let url = &feed.url;
+
     let feed2 = Feed::find_by_url(&url, &pool).await?;
-    
+
+    let name = &feed.name;
+
     assert_eq!(feed, feed2);
-    assert_eq!(feed2.name, name);
-    assert_eq!(feed2.url, url);
+    assert_eq!(&feed2.name, name);
+    assert_eq!(&feed2.url, url);
     
     Ok(())
   }

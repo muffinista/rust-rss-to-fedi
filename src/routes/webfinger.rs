@@ -101,7 +101,7 @@ mod test {
     assert_eq!(response.status(), Status::Ok);
     
     let body = response.into_string().await.unwrap();
-    assert!(body.contains(&format!(r#"href":"https://{}/feed/testfeed"#, instance_domain)));
+    assert!(body.contains(&format!(r#"href":"https://{}/feed/{}"#, instance_domain, &feed.name)));
 
     Ok(())
   }
