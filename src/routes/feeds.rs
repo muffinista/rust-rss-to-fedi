@@ -28,7 +28,8 @@ pub struct FeedForm {
 #[serde(crate = "rocket::serde")]
 pub struct FeedLookup {
   src: String,
-  url: String
+  url: String,
+  error: Option<String>
 }
 
 #[post("/feed", data = "<form>")]
@@ -51,14 +52,22 @@ pub async fn add_feed(user: User, db: &State<PgPool>, form: Form<FeedForm>) -> R
 }
 
 #[post("/test-feed", data = "<form>")]
-pub async fn test_feed(_user: User, form: Json<FeedForm>) -> Result<Json<FeedLookup>, Status> {
+pub async fn test_feed(_user: User, db: &State<PgPool>, form: Json<FeedForm>) -> Result<Json<FeedLookup>, Status> {
+  // check if feed name is already in use
+  let feed_exists = Feed::exists_by_name(&form.name, &db).await;
+
+  if feed_exists.is_ok() && feed_exists.unwrap() {
+    return Ok(Json(FeedLookup { src: form.url.to_string(), url: form.url.to_string(), error: Some("Username in use".to_string()) }))
+  }
+
+  // check if feed is valid
   let url = url_to_feed_url(&form.url).await;
 
   match url {
     Err(_why) => Err(Status::NotFound),
     Ok(result) => {
       if result.is_some() {
-        Ok(Json(FeedLookup { src: form.url.to_string(), url: result.unwrap() }))
+        Ok(Json(FeedLookup { src: form.url.to_string(), url: result.unwrap(), error: None }))
       } else {
         Err(Status::NotFound)
       }
@@ -249,7 +258,7 @@ mod test {
 
     let body = response.into_string().await.unwrap();
     println!("{:}", body);
-    assert!(body.contains(r#"{"src":"https://muffinlabs.com/","url":"http://muffinlabs.com/atom.xml"}"#));
+    assert!(body.contains(r#"{"src":"https://muffinlabs.com/","url":"http://muffinlabs.com/atom.xml","error":null}"#));
 
     Ok(())
   }
