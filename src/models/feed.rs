@@ -93,6 +93,7 @@ use activitystreams::activity::ActorAndObject;
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
 pub enum AcceptedTypes {
   Accept,
+  Create,
   Delete,
   Follow,
   Undo,
@@ -596,7 +597,6 @@ impl Feed {
 
     // now let's deliver an Accept message
 
-
     // reconstruct original follow activity
     let (_actor, _object, original_follow) = activity.clone().into_parts();
 
@@ -615,6 +615,11 @@ impl Feed {
     deliver_to_inbox(&Url::parse(&inbox)?, &self.ap_url(), &self.private_key, &msg).await
   }
 
+  pub async fn incoming_message(&self, _pool: &PgPool, _actor: &str, _activity: &AcceptedActivity) -> Result<(), AnyError> {
+    Ok(())
+  }
+
+  
   ///
   /// handle unfollow activity
   ///
@@ -639,6 +644,7 @@ impl Feed {
       Some(AcceptedTypes::Follow) => self.follow(pool, &actor_id, &activity).await,
       Some(AcceptedTypes::Undo) => self.unfollow(pool, &actor_id).await,
       Some(AcceptedTypes::Delete) => self.unfollow(pool, &actor_id).await,
+      Some(AcceptedTypes::Create) => self.incoming_message(pool, &actor_id, &activity).await,
       // we don't need to handle this but if we receive it, just move on
       Some(AcceptedTypes::Accept) => Ok(()),
       None => Ok(())

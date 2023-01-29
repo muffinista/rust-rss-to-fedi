@@ -22,6 +22,9 @@ use base64::{Engine as _, engine::general_purpose};
 
 use anyhow::{anyhow};
 
+use serde_json::Value;
+
+
 ///
 /// query webfinger endpoint for actor and try and find data url
 ///
@@ -32,6 +35,40 @@ pub async fn find_actor_url(actor: &str) -> Result<Option<Url>, WebfingerError> 
   match webfinger {
     Ok(webfinger) => Ok(parse_webfinger(webfinger)),
     Err(why) => Err(why)
+  }
+}
+
+pub async fn profile_for_actor(actor: &str) -> Result<Option<String>, reqwest::Error> {
+  let profile_url = find_actor_url(actor).await;
+  match profile_url {
+    Ok(profile_url) => {
+      let client = reqwest::Client::new();
+      let response = client
+        .get(profile_url.unwrap())
+        .header("Accept", "application/activity+json")
+        .send()
+        .await?;
+
+      let json = response.text().await?;
+      Ok(Some(json))
+  
+    },
+    Err(why) => Ok(None)
+  }
+}
+
+///
+/// given an actor, try and find their public key so we can validate
+/// incoming requests
+///
+pub async fn key_for_actor(actor: &str) -> Result<Option<String>, reqwest::Error> {
+  let result = profile_for_actor(actor).await?;
+
+  if result.is_some() {
+    let v: Value = serde_json::from_str(&result.unwrap()).unwrap();
+    Ok(Some(v["publicKey"]["publicKeyPem"].to_string()))
+  } else {
+    Ok(None)
   }
 }
 
@@ -133,7 +170,7 @@ mod test {
   use url::Url;
   use webfinger::Webfinger;
 
-  use crate::services::mailer::parse_webfinger;
+  use crate::services::mailer::*;
 
   #[tokio::test]
   async fn test_parse_webfinger() {
@@ -167,4 +204,11 @@ mod test {
     assert_eq!("https://example.org/@test/json", inbox.to_string());
   }
  
+  #[tokio::test]
+  async fn test_key_for_actor() {
+    let result = key_for_actor("muffinista@botsin.space").await.unwrap();
+    assert!(result.is_some());
+    assert!(result.unwrap().contains("-----BEGIN PUBLIC KEY-----"));
+  }
+
 }
