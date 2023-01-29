@@ -124,10 +124,12 @@ pub async fn show_feed(user: Option<User>, username: &str, db: &State<PgPool>) -
           let owned_by = logged_in && user.unwrap().id == feed.user_id;
           let follow_url = feed.permalink_url();
           let items = Item::for_feed(&feed, 10, &db).await;
+          let admin = feed.is_admin();
 
           match items {
             Ok(items) => {
               Ok(Template::render("feed", context! {
+                admin: admin,
                 logged_in: logged_in,
                 owned_by: owned_by,
                 feed: feed,
