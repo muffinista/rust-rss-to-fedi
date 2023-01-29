@@ -29,7 +29,8 @@ use feed_rs::parser;
 use chrono::{Duration, Utc, prelude::*};
 
 
-use std::{error::Error, fmt};
+use std::{env, error::Error, fmt};
+
 
 use crate::models::user::User;
 use crate::models::item::Item;
@@ -110,7 +111,7 @@ impl Feed {
 
   pub async fn stale(pool: &PgPool, age:i64, limit: i64) -> Result<Vec<Feed>, sqlx::Error> {
     let age = Utc::now() - Duration::seconds(age);
-    sqlx::query_as!(Feed, "SELECT * FROM feeds WHERE refreshed_at < $1 LIMIT $2", age, limit)
+    sqlx::query_as!(Feed, "SELECT * FROM feeds WHERE admin = false AND refreshed_at < $1 LIMIT $2", age, limit)
     .fetch_all(pool)
     .await
   }
@@ -227,6 +228,21 @@ impl Feed {
     old_feed   
   }
 
+  pub fn is_admin(&self) -> bool {
+    self.admin == true
+  }
+
+  pub async fn mark_admin(&self, pool: &PgPool) -> Result<(), sqlx::Error> {
+    let result = sqlx::query!("UPDATE feeds SET admin = true WHERE id = $1", self.id)
+    .execute(pool)
+    .await;
+
+    match result {
+      Ok(_result) => Ok(()),
+      Err(why) => Err(why)
+    }
+  }
+
   pub async fn mark_stale(&self, pool: &PgPool) -> Result<(), sqlx::Error> {
     let old = Utc.with_ymd_and_hms(1900, 1, 1, 0, 0, 0).unwrap();
     let result = sqlx::query!("UPDATE feeds SET refreshed_at = $1 WHERE id = $2", old, self.id)
@@ -262,9 +278,7 @@ impl Feed {
     }
   }
 
-
-  
-  pub async fn entries_count(&self, pool: &PgPool)  -> Result<i32, AnyError>{
+  pub async fn entries_count(&self, pool: &PgPool)  -> Result<i32, AnyError> {
     let result = sqlx::query!("SELECT COUNT(1) AS tally FROM items WHERE feed_id = $1", self.id)
       .fetch_one(pool)
       .await;
@@ -346,6 +360,12 @@ impl Feed {
   /// grab new data for this feed, and deliver any new entries to followers
   ///
   pub async fn refresh(&mut self, pool: &PgPool) -> Result<(), AnyError> {
+    // skip processing for admin accounts
+    if self.is_admin() {
+      self.mark_fresh(pool).await?;
+      return Ok(())
+    }
+
     let items = self.parse(pool).await;
     match items {
       Ok(items) => {
@@ -372,6 +392,12 @@ impl Feed {
   /// returns a list of any new items
   ///
   pub async fn parse(&mut self, pool: &PgPool) -> Result<Vec<Item>, FeedError> {        
+    // skip processing for admin accounts
+    if self.is_admin() {
+      self.mark_fresh(pool).await.unwrap();
+      return Ok(Vec::<Item>::new())
+    }
+
     let body = Feed::load(self).await;
     match body {
       Ok(body) => {
@@ -469,6 +495,7 @@ impl Feed {
   /// Generate valid ActivityPub data for this feed
   ///
   pub fn to_activity_pub(&self) -> Result<String, AnyError> {    
+    let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
     let feed_url = self.ap_url();
     let mut svc = Ext1::new(
       ApActor::new(
@@ -494,25 +521,44 @@ impl Feed {
       .set_outbox(iri!(path_to_url(&uri!(render_feed_outbox(&self.name, None::<i32>)))))
       .set_followers(iri!(path_to_url(&uri!(render_feed_followers(&self.name, None::<i32>)))));
 
-    if self.description.is_some() {
-      svc.set_summary(self.description.clone().unwrap());
-    }
+    if self.is_admin() {
+      svc.set_summary(format!("Admin account for {}", instance_domain));
 
-
-    if self.icon_url.is_some() {
       let mut icon = Image::new();
-      icon.set_url(iri!(self.icon_url.clone().unwrap()));
+      icon.set_url(iri!(format!("https://{}/assets/icon.png", instance_domain)));
       svc.set_icon(icon.into_any_base()?);
-    } else if self.image_url.is_some() {
-      let mut icon = Image::new();
-      icon.set_url(iri!(self.image_url.clone().unwrap()));
-      svc.set_icon(icon.into_any_base()?);
-    }
 
-    if self.image_url.is_some() {
       let mut image = Image::new();
-      image.set_url(iri!(self.image_url.clone().unwrap()));
+      image.set_url(iri!(format!("https://{}/assets/image.png", instance_domain)));
       svc.set_image(image.into_any_base()?);
+
+    } else {
+      if self.description.is_some() {
+        svc.set_summary(self.description.clone().unwrap());
+        let mut icon = Image::new();
+        icon.set_url(iri!(format!("https://{}/assets/icon.png", instance_domain)));
+        svc.set_icon(icon.into_any_base()?);
+
+        let mut image = Image::new();
+        image.set_url(iri!(format!("https://{}/assets/image.png", instance_domain)));
+        svc.set_image(image.into_any_base()?);
+      }
+  
+      if self.icon_url.is_some() {
+        let mut icon = Image::new();
+        icon.set_url(iri!(self.icon_url.clone().unwrap()));
+        svc.set_icon(icon.into_any_base()?);
+      } else if self.image_url.is_some() {
+        let mut icon = Image::new();
+        icon.set_url(iri!(self.image_url.clone().unwrap()));
+        svc.set_icon(icon.into_any_base()?);
+      }
+  
+      if self.image_url.is_some() {
+        let mut image = Image::new();
+        image.set_url(iri!(self.image_url.clone().unwrap()));
+        svc.set_image(image.into_any_base()?);
+      }  
     }
 
     // in theory we could return an object here instead of JSON so we can
@@ -1054,6 +1100,26 @@ mod test {
     assert_eq!(v["name"], "testfeed");
     assert_eq!(v["publicKey"]["id"], format!("https://{}/feed/testfeed#main-key", instance_domain));
     // assert_eq!(v["publicKey"]["publicKeyPem"], "public key");  
+  }
+
+  #[sqlx::test]
+  fn test_admin_feed_to_activity_pub(pool: PgPool) -> Result<(), String> {
+    use std::env;
+    let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
+
+    use serde_json::Value;
+    let tmpfeed:Feed = real_feed(&pool).await.unwrap();
+    tmpfeed.mark_admin(&pool).await.unwrap();
+
+    let feed = Feed::find(tmpfeed.id, &pool).await.unwrap();
+    let output = feed.to_activity_pub().unwrap();
+
+    let v: Value = serde_json::from_str(&output).unwrap();
+    assert_eq!(v["summary"], format!("Admin account for {}", instance_domain));
+    assert_eq!(v["image"]["url"], format!("https://{}/assets/image.png", instance_domain));
+    assert_eq!(v["icon"]["url"], format!("https://{}/assets/icon.png", instance_domain));
+
+    Ok(())
   }
 
   #[sqlx::test]

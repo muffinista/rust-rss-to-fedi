@@ -26,10 +26,7 @@ pub async fn create_admin_feed(pool: &PgPool) -> Result<(), sqlx::Error> {
 
             match feed {
               Ok(feed) => {
-                sqlx::query!("UPDATE feeds SET admin = true WHERE id = $1", feed.id)
-                .execute(pool)
-                .await;
-
+                feed.mark_admin(&pool).await?;
                 Ok(())
               },
               Err(why) => Err(why)

@@ -13,7 +13,12 @@ pub async fn build_server(pool: PgPool) -> Rocket<Build> {
     .await
     .ok();
 
-  create_admin_feed(&pool).await;
+  // create an admin feed to handle interactions with server
+  let result = create_admin_feed(&pool).await;
+  match result {
+    Ok(result) => println!("{:?}", result),
+    Err(why) => panic!("{}", why)
+  };
   
   rocket::build()
     .manage(pool)
