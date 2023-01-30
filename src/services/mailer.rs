@@ -38,39 +38,43 @@ pub async fn find_actor_url(actor: &str) -> Result<Option<Url>, WebfingerError> 
   }
 }
 
-pub async fn profile_for_actor(actor: &str) -> Result<Option<String>, reqwest::Error> {
-  let profile_url = find_actor_url(actor).await;
-  match profile_url {
-    Ok(profile_url) => {
-      let client = reqwest::Client::new();
-      let response = client
-        .get(profile_url.unwrap())
-        .header("Accept", "application/activity+json")
-        .send()
-        .await?;
+pub async fn fetch_object(url: &str) -> Result<String, reqwest::Error> {
+  let client = reqwest::Client::new();
+  let response = client
+    .get(url)
+    .header("Accept", "application/activity+json")
+    .send()
+    .await?;
 
-      let json = response.text().await?;
-      Ok(Some(json))
-  
-    },
-    Err(why) => Ok(None)
-  }
+  let body = response
+    .text()
+    .await?;
+
+  Ok(body)
 }
 
-///
-/// given an actor, try and find their public key so we can validate
-/// incoming requests
-///
-pub async fn key_for_actor(actor: &str) -> Result<Option<String>, reqwest::Error> {
-  let result = profile_for_actor(actor).await?;
+// pub async fn profile_for_actor(actor: &str) -> Result<Option<String>, reqwest::Error> {
+//   let profile_url = find_actor_url(actor).await;
+//   match profile_url {
+//     Ok(profile_url) => Ok(Some(fetch_object(&profile_url.unwrap().to_string()).await?)),
+//     Err(why) => Ok(None)
+//   }
+// }
 
-  if result.is_some() {
-    let v: Value = serde_json::from_str(&result.unwrap()).unwrap();
-    Ok(Some(v["publicKey"]["publicKeyPem"].to_string()))
-  } else {
-    Ok(None)
-  }
-}
+// ///
+// /// given an actor, try and find their public key so we can validate
+// /// incoming requests
+// ///
+// pub async fn key_for_actor(actor: &str) -> Result<Option<String>, reqwest::Error> {
+//   let result = profile_for_actor(actor).await?;
+
+//   if result.is_some() {
+//     let v: Value = serde_json::from_str(&result.unwrap()).unwrap();
+//     Ok(Some(v["publicKey"]["publicKeyPem"].to_string()))
+//   } else {
+//     Ok(None)
+//   }
+// }
 
 ///
 /// parse webfinger data for activity URL
@@ -126,6 +130,7 @@ pub async fn deliver_to_inbox(inbox: &Url, key_id: &str, private_key: &str, json
 }
 
 
+// @todo this is silly
 fn generate_request_headers(_inbox: &Url) -> HeaderMap {
   let mut headers = HeaderMap::new();
   headers.insert(
@@ -204,11 +209,11 @@ mod test {
     assert_eq!("https://example.org/@test/json", inbox.to_string());
   }
  
-  #[tokio::test]
-  async fn test_key_for_actor() {
-    let result = key_for_actor("muffinista@botsin.space").await.unwrap();
-    assert!(result.is_some());
-    assert!(result.unwrap().contains("-----BEGIN PUBLIC KEY-----"));
-  }
+  // #[tokio::test]
+  // async fn test_key_for_actor() {
+  //   let result = key_for_actor("muffinista@botsin.space").await.unwrap();
+  //   assert!(result.is_some());
+  //   assert!(result.unwrap().contains("-----BEGIN PUBLIC KEY-----"));
+  // }
 
 }

@@ -5,6 +5,8 @@ use rocket::State;
 
 use sqlx::postgres::PgPool;
 
+use crate::models::Actor;
+
 use crate::models::feed::Feed;
 use crate::models::feed::AcceptedActivity;
 
@@ -31,59 +33,60 @@ impl SignatureValidity {
   }
 }
 
-// // https://github.com/Plume-org/Plume/blob/8c098def6173797b3f36f3668ee8038e1048f6a5/plume-common/src/activity_pub/sign.rs#L137
+// https://github.com/Plume-org/Plume/blob/8c098def6173797b3f36f3668ee8038e1048f6a5/plume-common/src/activity_pub/sign.rs#L137
 
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for SignatureValidity {
   type Error = std::convert::Infallible;
   
   async fn from_request(request: &'r Request<'_>) -> request::Outcome<SignatureValidity, Self::Error> {
-    // let pool = request.rocket().state::<PgPool>().unwrap();
-    // let cookie = request.cookies().get_private("access_token");
+    let pool = request.rocket().state::<PgPool>().unwrap();
     let sig_header = request.headers().get_one("Signature");
     if sig_header.is_none() {
-      return Outcome::Forward(());
-      // return Outcome::Failure(Status::BadRequest); // (SignatureValidity::Absent, ()));
+      println!("no header!");
+      return Outcome::Success(SignatureValidity::Absent);
     }
     let sig_header = sig_header.expect("sign::verify_http_headers: unreachable");
 
-    let mut _key_id = None;
+    let mut key_id = None;
     let mut _algorithm = None;
     let mut headers = None;
     let mut signature = None;
+
     for part in sig_header.split(',') {
-        match part {
-            part if part.starts_with("keyId=") => _key_id = Some(&part[7..part.len() - 1]),
-            part if part.starts_with("algorithm=") => _algorithm = Some(&part[11..part.len() - 1]),
-            part if part.starts_with("headers=") => headers = Some(&part[9..part.len() - 1]),
-            part if part.starts_with("signature=") => signature = Some(&part[11..part.len() - 1]),
-            _ => {}
-        }
+      match part {
+          part if part.starts_with("keyId=") => key_id = Some(&part[7..part.len() - 1]),
+          part if part.starts_with("algorithm=") => _algorithm = Some(&part[11..part.len() - 1]),
+          part if part.starts_with("headers=") => headers = Some(&part[9..part.len() - 1]),
+          part if part.starts_with("signature=") => signature = Some(&part[11..part.len() - 1]),
+          _ => {}
+      }
     }
 
     if signature.is_none() || headers.is_none() {
-      //missing part of the header
-      // return Outcome::Failure(SignatureValidity::Invalid);
-      return Outcome::Forward(());
+      // missing part of the header
+      return Outcome::Success(SignatureValidity::Invalid);
     }
     let headers = headers
         .expect("sign::verify_http_headers: unreachable")
         .split_whitespace()
         .collect::<Vec<_>>();
     let signature = signature.expect("sign::verify_http_headers: unreachable");
-    let h = headers
+    let signature_verification_payload = headers
         .iter()
         .map(|header| (header, request.headers().get_one(header)))
         .map(|(header, value)| format!("{}: {}", header.to_lowercase(), value.unwrap_or("")))
         .collect::<Vec<_>>()
         .join("\n");
 
-    // if !sender
-    //     .verify(&h, &base64::decode(signature).unwrap_or_default())
-    //     .unwrap_or(false)
-    // {
-    //     return SignatureValidity::Invalid;
-    // }
+    let sender = Actor::find_or_fetch(&key_id.unwrap().to_string(), &pool).await.unwrap();
+
+    if !sender
+        .verify_signature(&signature_verification_payload, &base64::decode(signature).unwrap_or_default())
+        .unwrap_or(false)
+    {
+        return Outcome::Success(SignatureValidity::Invalid);
+      }
 
     // @todo digest check
     // if !headers.contains(&"digest") {
@@ -108,32 +111,20 @@ impl<'r> FromRequest<'r> for SignatureValidity {
 
     let date = request.headers().get_one("date");
     if date.is_none() {
-      // return SignatureValidity::Outdated;
-      return Outcome::Forward(());
+      return Outcome::Success(SignatureValidity::Outdated);
     }
 
     let date = NaiveDateTime::parse_from_str(date.unwrap(), "%a, %d %h %Y %T GMT");
     if date.is_err() {
-      // return SignatureValidity::Outdated;
-      return Outcome::Forward(());
+      return Outcome::Success(SignatureValidity::Outdated);
     }
     let diff = Utc::now().naive_utc() - date.unwrap();
     let future = Duration::hours(12);
     let past = Duration::hours(-12);
     if diff < future && diff > past {
-
-      // https://blog.joinmastodon.org/amp/2018/07/how-to-make-friends-and-verify-requests/
-      // We need to read the Signature header, split it into its parts (keyId, headers and signature), fetch the public key linked from keyId, create a comparison string from the plaintext headers we got in the same order as was given in the signature header, and then verify that string using the public key and the original signature.
-
-      // https://github.com/Plume-org/Plume/blob/8c098def6173797b3f36f3668ee8038e1048f6a5/plume-common/src/activity_pub/sign.rs#L72
-
-
-      // SignatureValidity::Valid
       return Outcome::Success(SignatureValidity::Valid);
-
     } else {
-        // SignatureValidity::Outdated
-      return Outcome::Forward(());
+      return Outcome::Success(SignatureValidity::Outdated);
     }
   }
 }
@@ -148,7 +139,11 @@ impl<'r> FromRequest<'r> for SignatureValidity {
 /// https://www.w3.org/TR/activitypub/#inbox
 ///
 #[post("/feed/<username>/inbox", data="<activity>")]
-pub async fn user_inbox(digest: SignatureValidity, username: &str, activity: Json<AcceptedActivity>, db: &State<PgPool>) -> Result<(), Status> {
+pub async fn user_inbox(digest: Option<SignatureValidity>, username: &str, activity: Json<AcceptedActivity>, db: &State<PgPool>) -> Result<(), Status> {
+  println!("YO {:?}", digest);
+  if digest.is_none() || !digest.unwrap().is_secure() {
+    return Err(Status::NotFound)
+  }
   let feed_lookup = Feed::find_by_name(&username.to_string(), db).await;
 
   match feed_lookup {
@@ -182,18 +177,18 @@ mod test {
   use sqlx::postgres::PgPool;
 
   use crate::utils::test_helpers::{real_feed};
-
+  
   #[sqlx::test]
   async fn test_user_inbox(pool: PgPool) -> sqlx::Result<()> {
     let feed = real_feed(&pool).await.unwrap();
-
     let actor = "https://activitypub.pizza/users/colin".to_string();
     let json = format!(r#"{{"actor":"{}","object":"{}/feed","type":"Follow"}}"#, actor, actor).to_string();
-    
+
     let server:Rocket<Build> = build_server(pool).await;
     let client = Client::tracked(server).await.unwrap();
 
     let req = client.post(uri!(super::user_inbox(&feed.name))).body(json);
+
     let response = req.dispatch().await;
 
     assert_eq!(response.status(), Status::Ok);
