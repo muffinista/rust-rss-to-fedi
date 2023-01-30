@@ -219,6 +219,19 @@
     },
     "query": "INSERT INTO feeds\n        (user_id, url, name, private_key, public_key, created_at, updated_at, refreshed_at)\n        VALUES($1, $2, $3, $4, $5, $6, $7, $8)\n        RETURNING id"
   },
+  "2f41862f85e856da569e79423972c4ac1d3fbe9e9a5f4c0277beb7e2344f1d5b": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Timestamptz",
+          "Text"
+        ]
+      }
+    },
+    "query": "UPDATE actors SET refreshed_at = $1 WHERE url = $2"
+  },
   "37a2b696a00c6ab96f8db9e9e3572d285843a3025e1ba7d6b4de9c6d599fc951": {
     "describe": {
       "columns": [],
@@ -260,6 +273,94 @@
     },
     "query": "INSERT INTO followers (feed_id, actor, created_at, updated_at) VALUES($1, $2, $3, $4)"
   },
+  "4d64e51db24b141b9ca52385419277a1c1e77e7610345088a207766e925a9e1d": {
+    "describe": {
+      "columns": [
+        {
+          "name": "url",
+          "ordinal": 0,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "error",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "public_key_id",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "public_key",
+          "ordinal": 3,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "created_at",
+          "ordinal": 4,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "ordinal": 5,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "refreshed_at",
+          "ordinal": 6,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      }
+    },
+    "query": "SELECT * FROM actors WHERE url = $1"
+  },
+  "4e3e0fdf04776ee17f5434b3814ed2fbe3408b677b4bd9b609834375dae698e8": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      }
+    },
+    "query": "DELETE FROM actors WHERE url = $1"
+  },
+  "50ab7d4310aa54254ab751d1bb406cc7651cfc2167013c9e822db0deb259fe70": {
+    "describe": {
+      "columns": [
+        {
+          "name": "tally",
+          "ordinal": 0,
+          "type_info": "Int8"
+        }
+      ],
+      "nullable": [
+        null
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      }
+    },
+    "query": "SELECT count(1) AS tally FROM actors WHERE url = $1"
+  },
   "51eb813de2b266dc47df6601ab8ac5d11603360037c4d8361a65dbf5a7b74c75": {
     "describe": {
       "columns": [],
@@ -273,55 +374,7 @@
     },
     "query": "UPDATE feeds SET refreshed_at = $1 WHERE id = $2"
   },
-  "64ab49a91806396f2a52d938c8a958161cf18cd96ca72cc3b663ffdef10b5309": {
-    "describe": {
-      "columns": [
-        {
-          "name": "id",
-          "ordinal": 0,
-          "type_info": "Int4"
-        }
-      ],
-      "nullable": [
-        false
-      ],
-      "parameters": {
-        "Left": [
-          "Int4",
-          "Varchar",
-          "Varchar",
-          "Int4",
-          "Timestamptz",
-          "Timestamptz"
-        ]
-      }
-    },
-    "query": "INSERT INTO enclosures \n            (item_id, url, content_type, size, created_at, updated_at)\n            VALUES($1, $2, $3, $4, $5, $6)\n            RETURNING id"
-  },
-  "754ba153110d91c682dcb5b4b2424994922969e0e842ad57415407e57c792267": {
-    "describe": {
-      "columns": [
-        {
-          "name": "id",
-          "ordinal": 0,
-          "type_info": "Int4"
-        }
-      ],
-      "nullable": [
-        false
-      ],
-      "parameters": {
-        "Left": [
-          "Varchar",
-          "Varchar",
-          "Timestamptz",
-          "Timestamptz"
-        ]
-      }
-    },
-    "query": "INSERT INTO users (email, login_token, created_at, updated_at)\n      VALUES($1, $2, $3, $4)\n      RETURNING id"
-  },
-  "77ebc2ef9481817d2977e2680f6d8e464fa4ff705d9d1461fd16c8274466712a": {
+  "5c4f3a34de0a3bf868af76e2607241caae95ae8c7bb1a32b5e9f077f096307e4": {
     "describe": {
       "columns": [
         {
@@ -430,7 +483,67 @@
         ]
       }
     },
-    "query": "SELECT * FROM feeds WHERE refreshed_at < $1 LIMIT $2"
+    "query": "SELECT * FROM feeds WHERE admin = false AND refreshed_at < $1 LIMIT $2"
+  },
+  "64ab49a91806396f2a52d938c8a958161cf18cd96ca72cc3b663ffdef10b5309": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        }
+      ],
+      "nullable": [
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Varchar",
+          "Varchar",
+          "Int4",
+          "Timestamptz",
+          "Timestamptz"
+        ]
+      }
+    },
+    "query": "INSERT INTO enclosures \n            (item_id, url, content_type, size, created_at, updated_at)\n            VALUES($1, $2, $3, $4, $5, $6)\n            RETURNING id"
+  },
+  "69f07967f37f786e507af8669f171467843e7838d8e27fc822fa4e244ab68e6c": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      }
+    },
+    "query": "UPDATE feeds SET admin = true WHERE id = $1"
+  },
+  "754ba153110d91c682dcb5b4b2424994922969e0e842ad57415407e57c792267": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        }
+      ],
+      "nullable": [
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Varchar",
+          "Timestamptz",
+          "Timestamptz"
+        ]
+      }
+    },
+    "query": "INSERT INTO users (email, login_token, created_at, updated_at)\n      VALUES($1, $2, $3, $4)\n      RETURNING id"
   },
   "79589d174eb487ea7ef94fa9dd217ff91f1c7f81250b55493c2d633bfc3c2803": {
     "describe": {
@@ -1247,6 +1360,131 @@
     },
     "query": "SELECT * FROM items WHERE feed_id = $1 ORDER by id DESC LIMIT $2"
   },
+  "d0a040aba721772c5be96f5dfa5f912f322e0e4e78c9ee1a34187433fed6d37b": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Timestamptz",
+          "Timestamptz",
+          "Timestamptz"
+        ]
+      }
+    },
+    "query": "INSERT INTO actors\n        (url, public_key_id, public_key, created_at, updated_at, refreshed_at)\n        VALUES($1, $2, $3, $4, $5, $6)"
+  },
+  "da788272bbd9045f75d93e24cd646a6ef7b4714d03ad1bc7a7c0c1562e70926c": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "user_id",
+          "ordinal": 1,
+          "type_info": "Int4"
+        },
+        {
+          "name": "name",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "url",
+          "ordinal": 3,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "error",
+          "ordinal": 4,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "public_key",
+          "ordinal": 5,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "private_key",
+          "ordinal": 6,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "image_url",
+          "ordinal": 7,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "icon_url",
+          "ordinal": 8,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "title",
+          "ordinal": 9,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "description",
+          "ordinal": 10,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "site_url",
+          "ordinal": 11,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "created_at",
+          "ordinal": 12,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "ordinal": 13,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "refreshed_at",
+          "ordinal": 14,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "admin",
+          "ordinal": 15,
+          "type_info": "Bool"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": []
+      }
+    },
+    "query": "SELECT * FROM feeds WHERE admin = true LIMIT 1"
+  },
   "dc8ebf976f9fd72f9fa234b048639ed2708a1a1e0a1f1a5a4b4a4dacf9a54b40": {
     "describe": {
       "columns": [
@@ -1302,6 +1540,19 @@
       }
     },
     "query": "SELECT * FROM enclosures WHERE item_id = $1 ORDER by id"
+  },
+  "ddb6f39abe95e50e9e2823926e69a9c48ad4ca14cd5274057b5aacc56612a244": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Text"
+        ]
+      }
+    },
+    "query": "UPDATE actors SET error = $1 WHERE url = $2"
   },
   "e19336b810984550c60919f17e9db6a7ff89c9dac2a6616350cc582635c23ae1": {
     "describe": {
