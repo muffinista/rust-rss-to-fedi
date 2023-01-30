@@ -138,6 +138,10 @@ impl Actor {
 
 
   pub fn verify_signature(&self, payload: &str, signature: &[u8]) -> Result<bool, AnyError> {
+    println!("{:}", payload);
+    println!("{:?}", signature);
+    println!("{:}", self.public_key);
+
     let key = PKey::from_rsa(Rsa::public_key_from_pem(self.public_key.as_ref()).unwrap()).unwrap();
     let mut verifier = sign::Verifier::new(MessageDigest::sha256(), &key)?;
     verifier.update(payload.as_bytes())?;

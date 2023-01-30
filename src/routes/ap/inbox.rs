@@ -65,17 +65,33 @@ impl<'r> FromRequest<'r> for SignatureValidity {
 
     if signature.is_none() || headers.is_none() {
       // missing part of the header
+      println!("missing signature/header!");
       return Outcome::Success(SignatureValidity::Invalid);
     }
+
+
+    let mut header_data:rocket::http::HeaderMap<'_> = request.headers().clone();
+    header_data.add_raw("(request-target)", format!("post {}", request.uri()));
+
+    println!("{:?}", request.headers());
+    println!("headers: {:?}", headers);
     let headers = headers
         .expect("sign::verify_http_headers: unreachable")
         .split_whitespace()
         .collect::<Vec<_>>();
     let signature = signature.expect("sign::verify_http_headers: unreachable");
+
     let signature_verification_payload = headers
         .iter()
-        .map(|header| (header, request.headers().get_one(header)))
+        .map(|header| (header, header_data.get_one(header)))
         .map(|(header, value)| format!("{}: {}", header.to_lowercase(), value.unwrap_or("")))
+        // .map(|(header, value)| 
+        //   format!("{}: {}", header.to_lowercase(), (if header == &"(request-target)" {
+        //     format!("post {}", request.uri()).as_str()
+        //   } else {
+        //     value.unwrap_or("")
+        //   }))
+        // )
         .collect::<Vec<_>>()
         .join("\n");
 
@@ -85,6 +101,7 @@ impl<'r> FromRequest<'r> for SignatureValidity {
         .verify_signature(&signature_verification_payload, &base64::decode(signature).unwrap_or_default())
         .unwrap_or(false)
     {
+        println!("unable to verify signature!");
         return Outcome::Success(SignatureValidity::Invalid);
       }
 
@@ -142,6 +159,7 @@ impl<'r> FromRequest<'r> for SignatureValidity {
 pub async fn user_inbox(digest: Option<SignatureValidity>, username: &str, activity: Json<AcceptedActivity>, db: &State<PgPool>) -> Result<(), Status> {
   println!("YO {:?}", digest);
   if digest.is_none() || !digest.unwrap().is_secure() {
+    println!("sad face {:?} {:?}", digest.is_none(), digest.unwrap().is_secure());
     return Err(Status::NotFound)
   }
   let feed_lookup = Feed::find_by_name(&username.to_string(), db).await;
