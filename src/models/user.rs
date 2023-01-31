@@ -25,7 +25,8 @@ use chrono::Utc;
 #[derive(Debug)]
 pub struct User {
   pub id: i32,
-  pub email: String,
+  pub email: Option<String>,
+  pub actor_url: Option<String>,
   pub login_token: String,
   pub access_token: Option<String>,
   pub created_at: chrono::DateTime::<Utc>,
@@ -59,6 +60,16 @@ impl User {
   }
   
   ///
+  /// Find user by email
+  ///
+  pub async fn find_by_actor_url(actor_url: &String, pool: &PgPool) -> Result<Option<User>, sqlx::Error> {
+    sqlx::query_as!(User, "SELECT * FROM users WHERE actor_url = $1", actor_url)
+    .fetch_optional(pool)
+    .await
+  }
+  
+
+  ///
   /// Find user by login
   ///
   pub async fn find_by_login(token: &String, pool: &PgPool) -> Result<Option<User>, sqlx::Error> {
@@ -91,7 +102,7 @@ impl User {
       Err(why) => return Err(why)
     }
   }
-    
+
   ///
   /// create a user with the given email address
   ///
@@ -122,8 +133,40 @@ impl User {
       Ok(user) => return Ok(user),
       _ => return User::create_by_email(email, pool).await
     }
-  }
+  }      
+
+  ///
+  /// create a user with the given URL
+  ///
+  pub async fn create_by_actor_url(actor_url: &String, pool: &PgPool) -> Result<User, sqlx::Error> {
+    let token = User::generate_login_token();
+    let now = Utc::now();
+
+    let user_id = sqlx::query!(
+      "INSERT INTO users (actor_url, login_token, created_at, updated_at)
+      VALUES($1, $2, $3, $4)
+      RETURNING id", actor_url, token, now, now)
+      .fetch_one(pool)
+      .await?
+      .id;
       
+    User::find(user_id, pool).await
+  }
+
+  ///
+  /// look for a user with the given URL. if none exists, create one
+  ///
+  pub async fn find_or_create_by_actor_url(actor_url: &String, pool: &PgPool) -> Result<User, sqlx::Error> {
+    let user_check = sqlx::query_as!(User, "SELECT * FROM users WHERE actor_url = $1", actor_url)
+    .fetch_one(pool)
+    .await;
+    
+    match user_check {
+      Ok(user) => return Ok(user),
+      _ => return User::create_by_actor_url(actor_url, pool).await
+    }
+  }
+
   pub fn generate_login_token() -> String {
     rand::thread_rng()
     .sample_iter(&Alphanumeric)
@@ -178,10 +221,11 @@ impl User {
     let smtp_password = env::var("SMTP_PASSWORD").expect("SMTP_PASSWORD is not set");
     let smtp_host = env::var("SMTP_HOST").expect("SMTP_HOST is not set");
     let mail_from = env::var("SMTP_FROM").expect("SMTP_FROM is not set");
+    let target = self.email.clone().unwrap();
 
     let email = Message::builder()
       .from(mail_from.parse().unwrap()) // "NoBody <nobody@domain.tld>"
-      .to(self.email.parse().unwrap())
+      .to(target.parse().unwrap())
       .subject("Your login email")
       .body(body)
       .unwrap();

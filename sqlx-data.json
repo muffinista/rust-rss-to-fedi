@@ -1,5 +1,61 @@
 {
   "db": "PostgreSQL",
+  "1682ff9073a1af19e978fd34fff240cea9d1c5007c121526249820875b589191": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "email",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "actor_url",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "login_token",
+          "ordinal": 3,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "access_token",
+          "ordinal": 4,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "created_at",
+          "ordinal": 5,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "ordinal": 6,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        true,
+        true,
+        false,
+        true,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      }
+    },
+    "query": "SELECT * FROM users WHERE actor_url = $1"
+  },
   "1e2e2f7d777d421c1ec11ed8122b84cae27fa0fbb8dc6da33cb6691b0e9285c4": {
     "describe": {
       "columns": [
@@ -732,29 +788,35 @@
           "type_info": "Varchar"
         },
         {
-          "name": "login_token",
+          "name": "actor_url",
           "ordinal": 2,
           "type_info": "Varchar"
         },
         {
-          "name": "access_token",
+          "name": "login_token",
           "ordinal": 3,
           "type_info": "Varchar"
         },
         {
-          "name": "created_at",
+          "name": "access_token",
           "ordinal": 4,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "created_at",
+          "ordinal": 5,
           "type_info": "Timestamptz"
         },
         {
           "name": "updated_at",
-          "ordinal": 5,
+          "ordinal": 6,
           "type_info": "Timestamptz"
         }
       ],
       "nullable": [
         false,
-        false,
+        true,
+        true,
         false,
         true,
         false,
@@ -849,29 +911,35 @@
           "type_info": "Varchar"
         },
         {
-          "name": "login_token",
+          "name": "actor_url",
           "ordinal": 2,
           "type_info": "Varchar"
         },
         {
-          "name": "access_token",
+          "name": "login_token",
           "ordinal": 3,
           "type_info": "Varchar"
         },
         {
-          "name": "created_at",
+          "name": "access_token",
           "ordinal": 4,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "created_at",
+          "ordinal": 5,
           "type_info": "Timestamptz"
         },
         {
           "name": "updated_at",
-          "ordinal": 5,
+          "ordinal": 6,
           "type_info": "Timestamptz"
         }
       ],
       "nullable": [
         false,
-        false,
+        true,
+        true,
         false,
         true,
         false,
@@ -1007,6 +1075,29 @@
       }
     },
     "query": "SELECT * FROM feeds WHERE id = $1"
+  },
+  "a2a093cdacd20d2ff18a731dc2ea70e895a11fe4da8803ff17b20b365ef7f598": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        }
+      ],
+      "nullable": [
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Varchar",
+          "Timestamptz",
+          "Timestamptz"
+        ]
+      }
+    },
+    "query": "INSERT INTO users (actor_url, login_token, created_at, updated_at)\n      VALUES($1, $2, $3, $4)\n      RETURNING id"
   },
   "a89acc5c74779f060c4ee3697baeccfea664e2877ff2ac522bcfe34c8ec69839": {
     "describe": {
@@ -1261,29 +1352,35 @@
           "type_info": "Varchar"
         },
         {
-          "name": "login_token",
+          "name": "actor_url",
           "ordinal": 2,
           "type_info": "Varchar"
         },
         {
-          "name": "access_token",
+          "name": "login_token",
           "ordinal": 3,
           "type_info": "Varchar"
         },
         {
-          "name": "created_at",
+          "name": "access_token",
           "ordinal": 4,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "created_at",
+          "ordinal": 5,
           "type_info": "Timestamptz"
         },
         {
           "name": "updated_at",
-          "ordinal": 5,
+          "ordinal": 6,
           "type_info": "Timestamptz"
         }
       ],
       "nullable": [
         false,
-        false,
+        true,
+        true,
         false,
         true,
         false,
@@ -1725,29 +1822,35 @@
           "type_info": "Varchar"
         },
         {
-          "name": "login_token",
+          "name": "actor_url",
           "ordinal": 2,
           "type_info": "Varchar"
         },
         {
-          "name": "access_token",
+          "name": "login_token",
           "ordinal": 3,
           "type_info": "Varchar"
         },
         {
-          "name": "created_at",
+          "name": "access_token",
           "ordinal": 4,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "created_at",
+          "ordinal": 5,
           "type_info": "Timestamptz"
         },
         {
           "name": "updated_at",
-          "ordinal": 5,
+          "ordinal": 6,
           "type_info": "Timestamptz"
         }
       ],
       "nullable": [
         false,
-        false,
+        true,
+        true,
         false,
         true,
         false,

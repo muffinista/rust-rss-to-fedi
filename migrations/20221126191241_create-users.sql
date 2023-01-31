@@ -2,7 +2,8 @@
 -- Your SQL goes here
 CREATE TABLE users (
   id SERIAL PRIMARY KEY,
-  email VARCHAR NOT NULL,
+  email VARCHAR NULL,
+  actor_url VARCHAR NULL,
   login_token VARCHAR NOT NULL,
   access_token VARCHAR,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL,

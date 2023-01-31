@@ -22,9 +22,6 @@ use base64::{Engine as _, engine::general_purpose};
 
 use anyhow::{anyhow};
 
-use serde_json::Value;
-
-
 ///
 /// query webfinger endpoint for actor and try and find data url
 ///

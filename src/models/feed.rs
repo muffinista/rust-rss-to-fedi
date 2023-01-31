@@ -19,15 +19,12 @@ use activitystreams::{
   object::ApObject,
   object::*
 };
-use activitystreams::base::AnyBase;
-use activitystreams::object::AsObject;
-use activitystreams::base::Extends;
+
 use activitystreams::object::Image;
 use activitystreams::link::Mention;
 
 use sqlx::postgres::PgPool;
 use serde::{Serialize};
-use serde_json::Value;
 
 use reqwest;
 use feed_rs::parser;
@@ -50,6 +47,7 @@ use crate::services::mailer::*;
 use crate::routes::feeds::*;
 use crate::routes::ap::inbox::*;
 use crate::routes::ap::outbox::*;
+use crate::routes::login::*;
 
 
 #[derive(Debug, Serialize)]
@@ -628,7 +626,7 @@ impl Feed {
     // tag - Used to mark up mentions and hashtags.
     // https://docs.joinmastodon.org/spec/activitypub/
 
-    let (actor, object, create_note) = activity.clone().into_parts();
+    let (_, object, _create_note) = activity.clone().into_parts();
 
     // THIS GETS THE CONTENT OF THE STATUS
     let s = serde_json::to_string(&object).unwrap();
@@ -647,6 +645,10 @@ impl Feed {
     hasher.update(&source_id);
     let result = format!("{:X}", hasher.finalize());
 
+
+    let user = User::find_or_create_by_actor_url(&source_id, pool).await.unwrap();
+    let auth_url = path_to_url(&uri!(attempt_login(&user.login_token)));
+
     let mut mention = Mention::new();
 
     mention
@@ -656,7 +658,7 @@ impl Feed {
     reply
       .set_attributed_to(iri!(my_url))
       .set_in_reply_to(iri!(source_id))
-      .set_content("hey")
+      .set_content(format!(r#"Hi! Here's a <a href="{}">login link</a> to setup feeds"#, auth_url))
       .set_url(iri!(my_url))
       .set_id(iri!(format!("{}/{}", my_url, result)))
       .set_to(iri!(_actor))
