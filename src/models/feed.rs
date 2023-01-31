@@ -16,12 +16,18 @@ use activitystreams::{
   security,
   context,
   collection::{OrderedCollection, OrderedCollectionPage},
-  object::ApObject
+  object::ApObject,
+  object::*
 };
-
+use activitystreams::base::AnyBase;
+use activitystreams::object::AsObject;
+use activitystreams::base::Extends;
 use activitystreams::object::Image;
+use activitystreams::link::Mention;
+
 use sqlx::postgres::PgPool;
 use serde::{Serialize};
+use serde_json::Value;
 
 use reqwest;
 use feed_rs::parser;
@@ -31,7 +37,9 @@ use chrono::{Duration, Utc, prelude::*};
 
 use std::{env, error::Error, fmt};
 
+use md5::{Md5, Digest};
 
+use crate::models::Actor;
 use crate::models::user::User;
 use crate::models::item::Item;
 use crate::models::follower::Follower;
@@ -615,7 +623,70 @@ impl Feed {
     deliver_to_inbox(&Url::parse(&inbox)?, &self.ap_url(), &self.private_key, &msg).await
   }
 
-  pub async fn incoming_message(&self, _pool: &PgPool, _actor: &str, _activity: &AcceptedActivity) -> Result<(), AnyError> {
+  pub async fn incoming_message(&self, pool: &PgPool, _actor: &str, activity: &AcceptedActivity) -> Result<(), AnyError> {
+    // Direct statuses have actors in to or cc, all of which are Mentioned in tag
+    // tag - Used to mark up mentions and hashtags.
+    // https://docs.joinmastodon.org/spec/activitypub/
+
+    let (actor, object, create_note) = activity.clone().into_parts();
+
+    // THIS GETS THE CONTENT OF THE STATUS
+    let s = serde_json::to_string(&object).unwrap();
+    let n:ApObject<Note> = serde_json::from_str(&s).unwrap();
+    println!("NOTE: {:?}", n.content().unwrap().as_single_xsd_string());
+
+    let mut reply: ApObject<Note> = ApObject::new(Note::new());
+
+    let my_url = self.ap_url();
+    let source_id = object.as_single_id().unwrap().to_string();
+
+    // generate a hash of the incoming actor id. we'll tack
+    // this on the end of the ID for the reply to make it
+    // vaguely unique to the conversation
+    let mut hasher = Md5::new();
+    hasher.update(&source_id);
+    let result = format!("{:X}", hasher.finalize());
+
+    let mut mention = Mention::new();
+
+    mention
+      .set_href(iri!(_actor.to_string()))
+      .set_name("en");
+
+    reply
+      .set_attributed_to(iri!(my_url))
+      .set_in_reply_to(iri!(source_id))
+      .set_content("hey")
+      .set_url(iri!(my_url))
+      .set_id(iri!(format!("{}/{}", my_url, result)))
+      .set_to(iri!(_actor))
+      .set_tag(mention.into_any_base()?);
+
+    let dest_actor = Actor::find_or_fetch(&_actor.to_string(), pool).await.unwrap();
+    let dest_inbox = dest_actor.find_inbox().await.unwrap();
+
+    let mut action: ApObject<Create> = ApObject::new(
+      Create::new(
+        iri!(my_url),
+        reply.into_any_base()?
+      )
+    );
+
+    action
+      .set_context(context())
+      .add_context(security());
+   
+    let msg = serde_json::to_string(&action).unwrap();
+    println!("{}", msg);
+
+    let result = deliver_to_inbox(&Url::parse(&dest_inbox)?, &my_url, &self.private_key, &msg).await;
+
+    match result {
+      Ok(result) => println!("sent! {:?}", result),
+      Err(why) => println!("failure! {:?}", why)
+    }
+
+
     Ok(())
   }
 
@@ -636,6 +707,9 @@ impl Feed {
   /// handle any incoming events. we're just handling follow/unfollows for now
   ///
   pub async fn handle_activity(&self, pool: &PgPool, activity: &AcceptedActivity)  -> Result<(), AnyError> {
+    // let s = serde_json::to_string(&activity).unwrap();
+    // println!("{:}", s);
+
     let (actor, _object, act) = activity.clone().into_parts();
 
     let actor_id = actor.as_single_id().unwrap().to_string();
@@ -854,6 +928,7 @@ impl Feed {
 
 #[cfg(test)]
 mod test {
+  use std::fs;
   use sqlx::postgres::PgPool;
   use rocket::uri;
   use feed_rs::parser;
@@ -1058,7 +1133,6 @@ mod test {
 
   #[sqlx::test]
   async fn test_feed_with_enclosure_to_entries(pool: PgPool) -> sqlx::Result<()> {
-    use std::fs;
     let feed:Feed = real_feed(&pool).await?;
 
     assert_eq!(feed.entries_count(&pool).await.unwrap(), 0);
@@ -1205,6 +1279,23 @@ mod test {
       
     Ok(())
   }
+
+
+  #[sqlx::test]
+  async fn test_mention(pool: PgPool) -> Result<(), String> {
+    let feed:Feed = real_feed(&pool).await.unwrap();
+
+    let path = "fixtures/create-note.json";
+    let json = fs::read_to_string(path).unwrap();
+    let message:AcceptedActivity = serde_json::from_str(&json).unwrap();
+
+    let result = feed.handle_activity(&pool, &message).await.unwrap();
+
+
+    Ok(())
+
+  }
+
 
   #[sqlx::test]
   async fn test_followers(pool: PgPool) -> Result<(), String> {

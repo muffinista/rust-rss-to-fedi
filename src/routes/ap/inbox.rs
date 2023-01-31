@@ -157,9 +157,9 @@ impl<'r> FromRequest<'r> for SignatureValidity {
 ///
 #[post("/feed/<username>/inbox", data="<activity>")]
 pub async fn user_inbox(digest: Option<SignatureValidity>, username: &str, activity: Json<AcceptedActivity>, db: &State<PgPool>) -> Result<(), Status> {
-  println!("YO {:?}", digest);
+  // println!("YO {:?}", digest);
   if digest.is_none() || !digest.unwrap().is_secure() {
-    println!("sad face {:?} {:?}", digest.is_none(), digest.unwrap().is_secure());
+    // println!("sad face {:?} {:?}", digest.is_none(), digest.unwrap().is_secure());
     return Err(Status::NotFound)
   }
   let feed_lookup = Feed::find_by_name(&username.to_string(), db).await;
@@ -168,7 +168,7 @@ pub async fn user_inbox(digest: Option<SignatureValidity>, username: &str, activ
     Ok(feed_lookup) => {
       match feed_lookup {
         Some(feed) => {
-          println!("***** {:?}", activity);
+          // println!("***** {:?}", activity);
           let handle = feed.handle_activity(db, &activity).await;
           match handle {
             Ok(_handle) => Status::Accepted,

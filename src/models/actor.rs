@@ -15,6 +15,9 @@ use openssl::{
   sign,
 };
 
+use reqwest::header::{HeaderValue, HeaderMap};
+use crate::utils::http::http_client;
+
 #[derive(Debug, Serialize)]
 pub struct Actor {
   pub url: String,
@@ -134,6 +137,35 @@ impl Actor {
       Ok(_result) => Ok(()),
       Err(why) => Err(why)
     }
+  }
+
+  ///
+  /// Ping the actor's profile data to get their inbox
+  /// @todo -- cache this
+  ///
+  pub async fn find_inbox(&self) -> Result<String, AnyError> {
+    let profile_url = Url::parse(&self.url)?;
+      
+    let mut headers = HeaderMap::new();
+
+    headers.insert(
+      reqwest::header::ACCEPT,
+      HeaderValue::from_str("application/ld+json").unwrap(),
+    );
+
+    // query that
+    let client = http_client();
+    let res = client
+      .get(profile_url)
+      .headers(headers)
+      .send()
+      .await?;
+
+
+    let body = res.text().await?;
+
+    let v: Value = serde_json::from_str(&body).unwrap();
+    Ok(v["inbox"].as_str().unwrap().to_string())
   }
 
 
