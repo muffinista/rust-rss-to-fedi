@@ -621,17 +621,43 @@ impl Feed {
     deliver_to_inbox(&Url::parse(&inbox)?, &self.ap_url(), &self.private_key, &msg).await
   }
 
+  /// handle an incoming message
   pub async fn incoming_message(&self, pool: &PgPool, _actor: &str, activity: &AcceptedActivity) -> Result<(), AnyError> {
-    // Direct statuses have actors in to or cc, all of which are Mentioned in tag
-    // tag - Used to mark up mentions and hashtags.
-    // https://docs.joinmastodon.org/spec/activitypub/
 
-    let (_, object, _create_note) = activity.clone().into_parts();
+    // ignore messages that aren't to admin feed
+    if ! self.is_admin() {
+      return Ok(())
+    }
 
-    // THIS GETS THE CONTENT OF THE STATUS
-    let s = serde_json::to_string(&object).unwrap();
-    let n:ApObject<Note> = serde_json::from_str(&s).unwrap();
-    println!("NOTE: {:?}", n.content().unwrap().as_single_xsd_string());
+    let dest_actor = Actor::find_or_fetch(&_actor.to_string(), pool).await.unwrap();
+    let dest_inbox = dest_actor.find_inbox().await.unwrap();
+
+    let message = self.generate_login_message(activity, &dest_actor, pool).await?;
+    let msg = serde_json::to_string(&message).unwrap();
+    // println!("{}", msg);
+
+    let my_url = self.ap_url();
+
+    let result = deliver_to_inbox(&Url::parse(&dest_inbox)?, &my_url, &self.private_key, &msg).await;
+
+    match result {
+      Ok(result) => println!("sent! {:?}", result),
+      Err(why) => println!("failure! {:?}", why)
+    }
+
+    Ok(())
+  }
+
+  ///
+  /// generate a login message to send to the user
+  ///
+  pub async fn generate_login_message(&self, activity: &AcceptedActivity, dest_actor: &Actor, pool: &PgPool) -> Result<ApObject<Create>, AnyError> {
+    let (_, object, _) = activity.clone().into_parts();
+
+    // THIS GETS THE CONTENT OF THE STATUS (which we don't really need right now)
+    // let s = serde_json::to_string(&object).unwrap();
+    // let n: ApObject<Note> = serde_json::from_str(&s).unwrap();
+    // println!("NOTE: {:?}", n.content().unwrap().as_single_xsd_string());
 
     let mut reply: ApObject<Note> = ApObject::new(Note::new());
 
@@ -652,7 +678,7 @@ impl Feed {
     let mut mention = Mention::new();
 
     mention
-      .set_href(iri!(_actor.to_string()))
+      .set_href(iri!(dest_actor.url.to_string()))
       .set_name("en");
 
     reply
@@ -661,11 +687,8 @@ impl Feed {
       .set_content(format!(r#"Hi! Here's a <a href="{}">login link</a> to setup feeds"#, auth_url))
       .set_url(iri!(my_url))
       .set_id(iri!(format!("{}/{}", my_url, result)))
-      .set_to(iri!(_actor))
+      .set_to(iri!(dest_actor.url))
       .set_tag(mention.into_any_base()?);
-
-    let dest_actor = Actor::find_or_fetch(&_actor.to_string(), pool).await.unwrap();
-    let dest_inbox = dest_actor.find_inbox().await.unwrap();
 
     let mut action: ApObject<Create> = ApObject::new(
       Create::new(
@@ -677,19 +700,8 @@ impl Feed {
     action
       .set_context(context())
       .add_context(security());
-   
-    let msg = serde_json::to_string(&action).unwrap();
-    println!("{}", msg);
 
-    let result = deliver_to_inbox(&Url::parse(&dest_inbox)?, &my_url, &self.private_key, &msg).await;
-
-    match result {
-      Ok(result) => println!("sent! {:?}", result),
-      Err(why) => println!("failure! {:?}", why)
-    }
-
-
-    Ok(())
+    Ok(action) 
   }
 
   

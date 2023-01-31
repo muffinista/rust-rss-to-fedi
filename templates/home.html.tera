@@ -10,7 +10,7 @@
     {% include "feeds" %}
     {% include "add-feed" %}
   {% else %}
-    <p>You can get started by entering your email address here.</p>
+    <p>You can get started by sending a message to @admin. You'll get a URL back that you can use to login and create an account that will post the RSS feed.</p>
     {% include "login" %}
   {% endif %}
   
