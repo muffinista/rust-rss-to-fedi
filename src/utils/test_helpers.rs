@@ -18,7 +18,15 @@ pub async fn login_user(client: &rocket::local::asynchronous::Client, user: &Use
 }
 
 pub fn fake_user() -> User {
-  User { id: 1, email: "foo@bar.com".to_string(), login_token: "lt".to_string(), access_token: Some("at".to_string()), created_at: Utc::now(), updated_at: Utc::now() }
+  User { 
+    id: 1, 
+    email: Some("foo@bar.com".to_string()), 
+    actor_url: Some("http://foobar.com".to_string()), 
+    login_token: "lt".to_string(), 
+    access_token: Some("at".to_string()), 
+    created_at: Utc::now(), 
+    updated_at: Utc::now() 
+  }
 }
 
 pub async fn real_user(pool: &PgPool) -> sqlx::Result<User> {

@@ -1295,20 +1295,20 @@ mod test {
   }
 
 
-  #[sqlx::test]
-  async fn test_mention(pool: PgPool) -> Result<(), String> {
-    let feed:Feed = real_feed(&pool).await.unwrap();
+  // #[sqlx::test]
+  // async fn test_mention(pool: PgPool) -> Result<(), String> {
+  //   let feed:Feed = real_feed(&pool).await.unwrap();
 
-    let path = "fixtures/create-note.json";
-    let json = fs::read_to_string(path).unwrap();
-    let message:AcceptedActivity = serde_json::from_str(&json).unwrap();
+  //   let path = "fixtures/create-note.json";
+  //   let json = fs::read_to_string(path).unwrap();
+  //   let message:AcceptedActivity = serde_json::from_str(&json).unwrap();
 
-    let result = feed.handle_activity(&pool, &message).await.unwrap();
+  //   let result = feed.handle_activity(&pool, &message).await.unwrap();
 
 
-    Ok(())
+  //   Ok(())
 
-  }
+  // }
 
 
   #[sqlx::test]

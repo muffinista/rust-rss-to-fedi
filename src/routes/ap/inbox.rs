@@ -17,6 +17,8 @@ use rocket::outcome::{Outcome};
 
 use chrono::{Duration, NaiveDateTime, Utc};
 
+use std::env;
+
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum SignatureValidity {
@@ -157,8 +159,9 @@ impl<'r> FromRequest<'r> for SignatureValidity {
 ///
 #[post("/feed/<username>/inbox", data="<activity>")]
 pub async fn user_inbox(digest: Option<SignatureValidity>, username: &str, activity: Json<AcceptedActivity>, db: &State<PgPool>) -> Result<(), Status> {
-  // println!("YO {:?}", digest);
-  if digest.is_none() || !digest.unwrap().is_secure() {
+  if env::var("DISABLE_SIGNATURE_CHECKS").is_ok() {
+    println!("Skipping signature check because DISABLE_SIGNATURE_CHECKS is set");
+  } else if digest.is_none() || !digest.unwrap().is_secure() {
     // println!("sad face {:?} {:?}", digest.is_none(), digest.unwrap().is_secure());
     return Err(Status::NotFound)
   }

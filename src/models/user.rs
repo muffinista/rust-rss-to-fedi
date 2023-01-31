@@ -288,7 +288,7 @@ mod test {
     let email:String = "foo@bar.com".to_string();
     let user = User::find_or_create_by_email(&email, &pool).await?;
     
-    assert_eq!(user.email, email);
+    assert_eq!(user.email.unwrap(), email);
     
     Ok(())
   }
@@ -324,7 +324,9 @@ mod test {
   async fn test_find_by_email(pool: PgPool) -> sqlx::Result<()> {
     let email:String = "foo@bar.com".to_string();
     let user = User::find_or_create_by_email(&email, &pool).await?;
-    let user_find = User::find_by_email(&user.email, &pool).await?.unwrap();
+    let created_email = user.email.as_ref().unwrap();
+
+    let user_find = User::find_by_email(&created_email, &pool).await?.unwrap();
     
     assert_eq!(user, user_find);
     
