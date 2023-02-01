@@ -35,19 +35,29 @@ pub async fn find_actor_url(actor: &str) -> Result<Option<Url>, WebfingerError> 
   }
 }
 
-pub async fn fetch_object(url: &str) -> Result<String, reqwest::Error> {
+pub async fn fetch_object(url: &str) -> Result<Option<String>, reqwest::Error> {
   let client = reqwest::Client::new();
   let response = client
     .get(url)
     .header("Accept", "application/activity+json")
     .send()
-    .await?;
+    .await;
 
-  let body = response
-    .text()
-    .await?;
+  match response {
+    Ok(response) => {
+      if !response.status().is_success() {
+        return Ok(None)
+      }
 
-  Ok(body)
+
+      let body = response
+      .text()
+      .await?;
+  
+      Ok(Some(body))  
+    },
+    Err(err) => Err(err)
+  }
 }
 
 // pub async fn profile_for_actor(actor: &str) -> Result<Option<String>, reqwest::Error> {

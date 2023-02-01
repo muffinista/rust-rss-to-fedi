@@ -622,27 +622,36 @@ impl Feed {
   }
 
   /// handle an incoming message
-  pub async fn incoming_message(&self, pool: &PgPool, _actor: &str, activity: &AcceptedActivity) -> Result<(), AnyError> {
+  pub async fn incoming_message(&self, pool: &PgPool, actor_url: &str, activity: &AcceptedActivity) -> Result<(), AnyError> {
+
+    println!("ACTOR: {:}", actor_url);
 
     // ignore messages that aren't to admin feed
     if ! self.is_admin() {
       return Ok(())
     }
 
-    let dest_actor = Actor::find_or_fetch(&_actor.to_string(), pool).await.unwrap();
-    let dest_inbox = dest_actor.find_inbox().await.unwrap();
+    let dest_actor = Actor::find_or_fetch(&actor_url.to_string(), pool).await;
+    match dest_actor {
+      Ok(dest_actor) => {
+        let dest_inbox = dest_actor.find_inbox().await.unwrap();
 
-    let message = self.generate_login_message(activity, &dest_actor, pool).await?;
-    let msg = serde_json::to_string(&message).unwrap();
-    // println!("{}", msg);
-
-    let my_url = self.ap_url();
-
-    let result = deliver_to_inbox(&Url::parse(&dest_inbox)?, &my_url, &self.private_key, &msg).await;
-
-    match result {
-      Ok(result) => println!("sent! {:?}", result),
-      Err(why) => println!("failure! {:?}", why)
+        let message = self.generate_login_message(activity, &dest_actor, pool).await?;
+        let msg = serde_json::to_string(&message).unwrap();
+        // println!("{}", msg);
+    
+        let my_url = self.ap_url();
+    
+        let result = deliver_to_inbox(&Url::parse(&dest_inbox)?, &my_url, &self.private_key, &msg).await;
+    
+        match result {
+          Ok(result) => println!("sent! {:?}", result),
+          Err(why) => println!("failure! {:?}", why)
+        }    
+      },
+      Err(why) => {
+        println!("couldnt find actor: {:?}", why);
+      }
     }
 
     Ok(())
@@ -672,7 +681,7 @@ impl Feed {
     let result = format!("{:X}", hasher.finalize());
 
 
-    let user = User::find_or_create_by_actor_url(&source_id, pool).await.unwrap();
+    let user = User::find_or_create_by_actor_url(&dest_actor.url, pool).await.unwrap();
     let auth_url = path_to_url(&uri!(attempt_login(&user.login_token)));
 
     let mut mention = Mention::new();
@@ -721,8 +730,8 @@ impl Feed {
   /// handle any incoming events. we're just handling follow/unfollows for now
   ///
   pub async fn handle_activity(&self, pool: &PgPool, activity: &AcceptedActivity)  -> Result<(), AnyError> {
-    // let s = serde_json::to_string(&activity).unwrap();
-    // println!("{:}", s);
+    let s = serde_json::to_string(&activity).unwrap();
+    println!("{:}", s);
 
     let (actor, _object, act) = activity.clone().into_parts();
 

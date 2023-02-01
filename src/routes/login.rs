@@ -25,11 +25,14 @@ pub async fn attempt_login(db: &State<PgPool>, cookies: &CookieJar<'_>, login_to
   match user {
     Ok(user) => {
       if user.is_some() {
-        let token = user.unwrap().apply_access_token(db).await;
+        let user = user.unwrap();
+        let token = user.apply_access_token(db).await;
         match token {
           Ok(token) => {
             cookies.add_private(Cookie::new("access_token", token.to_string()));
-            Ok(Redirect::to("/?yay=1"))
+
+            let dest = uri!(crate::routes::index::index_logged_in);
+            Ok(Redirect::to(dest))
           },
           Err(why) => {
             print!("{}", why);

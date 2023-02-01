@@ -48,7 +48,7 @@ impl<'r> FromRequest<'r> for SignatureValidity {
       println!("no header!");
       return Outcome::Success(SignatureValidity::Absent);
     }
-    let sig_header = sig_header.expect("sign::verify_http_headers: unreachable");
+    let sig_header = sig_header.unwrap();
 
     let mut key_id = None;
     let mut _algorithm = None;
@@ -57,11 +57,11 @@ impl<'r> FromRequest<'r> for SignatureValidity {
 
     for part in sig_header.split(',') {
       match part {
-          part if part.starts_with("keyId=") => key_id = Some(&part[7..part.len() - 1]),
-          part if part.starts_with("algorithm=") => _algorithm = Some(&part[11..part.len() - 1]),
-          part if part.starts_with("headers=") => headers = Some(&part[9..part.len() - 1]),
-          part if part.starts_with("signature=") => signature = Some(&part[11..part.len() - 1]),
-          _ => {}
+        part if part.starts_with("keyId=") => key_id = Some(&part[7..part.len() - 1]),
+        part if part.starts_with("algorithm=") => _algorithm = Some(&part[11..part.len() - 1]),
+        part if part.starts_with("headers=") => headers = Some(&part[9..part.len() - 1]),
+        part if part.starts_with("signature=") => signature = Some(&part[11..part.len() - 1]),
+        _ => {}
       }
     }
 
@@ -97,55 +97,58 @@ impl<'r> FromRequest<'r> for SignatureValidity {
         .collect::<Vec<_>>()
         .join("\n");
 
-    let sender = Actor::find_or_fetch(&key_id.unwrap().to_string(), &pool).await.unwrap();
+    let sender = Actor::find_or_fetch(&key_id.unwrap().to_string(), &pool).await;
+    match sender {
+      Ok(sender) => {
+        if !sender
+          .verify_signature(&signature_verification_payload, &base64::decode(signature).unwrap_or_default())
+          .unwrap_or(false)
+        {
+          println!("unable to verify signature!");
+          return Outcome::Success(SignatureValidity::Invalid);
+        }
 
-    if !sender
-        .verify_signature(&signature_verification_payload, &base64::decode(signature).unwrap_or_default())
-        .unwrap_or(false)
-    {
-        println!("unable to verify signature!");
-        return Outcome::Success(SignatureValidity::Invalid);
-      }
+        // @todo digest check
+        // if !headers.contains(&"digest") {
+        //   // signature is valid, but body content is not verified
+        //   // return SignatureValidity::ValidNoDigest;
+        //   return Outcome::Forward(());
+        // }
 
-    // @todo digest check
-    // if !headers.contains(&"digest") {
-    //   // signature is valid, but body content is not verified
-    //   // return SignatureValidity::ValidNoDigest;
-    //   return Outcome::Forward(());
-    // }
+        // let digest = request.headers().get_one("digest").unwrap_or("");
+        // let digest = request::Digest::from_header(digest);
 
-    // let digest = request.headers().get_one("digest").unwrap_or("");
-    // let digest = request::Digest::from_header(digest);
+        // @todo get/check digest of body content
+        // if !digest.map(|d| d.verify_header(data)).unwrap_or(false) {
+        //   // signature was valid, but body content does not match its digest
+        //   // return SignatureValidity::Invalid;
+        //   return Outcome::Forward(());
+        // }
 
-    // // @todo get digest of body content
-    // if !digest.map(|d| d.verify_header(data)).unwrap_or(false) {
-    //   // signature was valid, but body content does not match its digest
-    //   // return SignatureValidity::Invalid;
-    //   return Outcome::Forward(());
-    // }
+        let date = request.headers().get_one("date");
+        if date.is_none() {
+          return Outcome::Success(SignatureValidity::Outdated);
+        }
 
-    // if !headers.contains(&"date") {
-    //     return SignatureValidity::Valid; //maybe we shouldn't trust a request without date?
-    // }
-
-    let date = request.headers().get_one("date");
-    if date.is_none() {
-      return Outcome::Success(SignatureValidity::Outdated);
-    }
-
-    let date = NaiveDateTime::parse_from_str(date.unwrap(), "%a, %d %h %Y %T GMT");
-    if date.is_err() {
-      return Outcome::Success(SignatureValidity::Outdated);
-    }
-    let diff = Utc::now().naive_utc() - date.unwrap();
-    let future = Duration::hours(12);
-    let past = Duration::hours(-12);
-    if diff < future && diff > past {
-      return Outcome::Success(SignatureValidity::Valid);
-    } else {
-      return Outcome::Success(SignatureValidity::Outdated);
+        let date = NaiveDateTime::parse_from_str(date.unwrap(), "%a, %d %h %Y %T GMT");
+        if date.is_err() {
+          return Outcome::Success(SignatureValidity::Outdated);
+        }
+        let diff = Utc::now().naive_utc() - date.unwrap();
+        let future = Duration::hours(12);
+        let past = Duration::hours(-12);
+        if diff < future && diff > past {
+          return Outcome::Success(SignatureValidity::Valid);
+        } else {
+          return Outcome::Success(SignatureValidity::Outdated);
+        }
+      },
+      Err(_why) => {
+        Outcome::Success(SignatureValidity::Invalid)
+      }        
     }
   }
+
 }
 
 /// The inbox stream contains all activities received by the actor. The server
@@ -162,7 +165,7 @@ pub async fn user_inbox(digest: Option<SignatureValidity>, username: &str, activ
   if env::var("DISABLE_SIGNATURE_CHECKS").is_ok() {
     println!("Skipping signature check because DISABLE_SIGNATURE_CHECKS is set");
   } else if digest.is_none() || !digest.unwrap().is_secure() {
-    // println!("sad face {:?} {:?}", digest.is_none(), digest.unwrap().is_secure());
+    println!("digest failure sad{:?}", digest);
     return Err(Status::NotFound)
   }
   let feed_lookup = Feed::find_by_name(&username.to_string(), db).await;
@@ -171,7 +174,6 @@ pub async fn user_inbox(digest: Option<SignatureValidity>, username: &str, activ
     Ok(feed_lookup) => {
       match feed_lookup {
         Some(feed) => {
-          // println!("***** {:?}", activity);
           let handle = feed.handle_activity(db, &activity).await;
           match handle {
             Ok(_handle) => Status::Accepted,

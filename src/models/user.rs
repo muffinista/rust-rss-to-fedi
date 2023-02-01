@@ -31,7 +31,6 @@ pub struct User {
   pub access_token: Option<String>,
   pub created_at: chrono::DateTime::<Utc>,
   pub updated_at: chrono::DateTime::<Utc>
-  
 }
 
 impl PartialEq for User {
@@ -74,8 +73,8 @@ impl User {
   ///
   pub async fn find_by_login(token: &String, pool: &PgPool) -> Result<Option<User>, sqlx::Error> {
     sqlx::query_as!(User, "SELECT * FROM users WHERE login_token = $1", token)
-    .fetch_optional(pool)
-    .await
+      .fetch_optional(pool)
+      .await
   }
   
   ///
@@ -83,9 +82,24 @@ impl User {
   ///
   pub async fn find_by_access(token: &String, pool: &PgPool) -> Result<Option<User>, sqlx::Error> {
     sqlx::query_as!(User, "SELECT * FROM users WHERE access_token = $1", token)
-    .fetch_optional(pool)
-    .await
+      .fetch_optional(pool)
+      .await
   }
+
+  // pub async fn reset_login_token(&self, pool: &PgPool) -> Result<String, sqlx::Error> {
+  //   let token = User::generate_login_token();
+  //   let query_check = sqlx::query!(
+  //     "UPDATE users SET login_token = $1 WHERE id = $2", token, self.id)
+  //     .execute(pool)
+  //     .await;
+      
+  //   match query_check {
+  //     Ok(_q) => return Ok(token),
+  //     Err(why) => return Err(why)
+  //   }
+  // }
+
+  
   
   ///
   /// generate and apply access token to the current object

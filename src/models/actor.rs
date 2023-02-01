@@ -1,3 +1,4 @@
+use anyhow::{anyhow};
 use anyhow::Error as AnyError;
 
 use url::Url;
@@ -38,21 +39,36 @@ impl PartialEq for Actor {
 }
 
 impl Actor {
-  pub async fn find_or_fetch(url: &String, pool: &PgPool) -> Result<Actor, sqlx::Error> {
+  pub async fn find_or_fetch(url: &String, pool: &PgPool) -> Result<Actor, AnyError> {
     let mut clean_url = Url::parse(url).unwrap();
     clean_url.set_fragment(None);
 
     let lookup_url = clean_url.as_str().to_string();
+    println!("find actor {:}", lookup_url);
 
     let exists = Actor::exists_by_url(&lookup_url, pool).await?;
     if ! exists {
       // @todo handle failure
-      Actor::fetch(&lookup_url, pool).await.unwrap();
+      let result = Actor::fetch(&lookup_url, pool).await;
+      match result {
+        Ok(_result) => {
+          println!("fetched and created {:}", lookup_url);
+        }
+        Err(why) => {
+          return Err(why)
+        }
+      }      
     }
 
-    sqlx::query_as!(Actor, "SELECT * FROM actors WHERE url = $1", &lookup_url)
-      .fetch_one(pool)
-      .await
+    let result = sqlx::query_as!(Actor, "SELECT * FROM actors WHERE url = $1", &lookup_url)
+    .fetch_one(pool)
+    .await;
+
+    match result {
+      Ok(result) => Ok(result),
+      Err(why) => Err(why.into())
+    }
+
   }
 
   pub async fn exists_by_url(url: &String, pool: &PgPool) -> Result<bool, sqlx::Error> {
@@ -67,14 +83,32 @@ impl Actor {
   }
 
   pub async fn fetch(url: &String, pool: &PgPool) -> Result<(), AnyError> {
-    let resp = crate::services::mailer::fetch_object(url).await?;
-    let data:Value = serde_json::from_str(&resp).unwrap();
+    println!("FETCH ACTOR: {:}", url);
+    let resp = crate::services::mailer::fetch_object(url).await;
 
-    Actor::create(&data["id"].as_str().unwrap().to_string(),
-      &data["publicKey"]["id"].as_str().unwrap().to_string(),
-      &data["publicKey"]["publicKeyPem"].as_str().unwrap().to_string(),
-      pool
-    ).await?;
+    match resp {
+      Ok(resp) => {
+        if resp.is_none() {
+          return Err(anyhow!("User not found"))
+        }
+        let resp = resp.unwrap();
+        println!("{:}", resp);
+        let data:Value = serde_json::from_str(&resp).unwrap();
+        if data["id"].is_string() && data["publicKey"].is_object() {
+          Actor::create(&data["id"].as_str().unwrap().to_string(),
+            &data["publicKey"]["id"].as_str().unwrap().to_string(),
+            &data["publicKey"]["publicKeyPem"].as_str().unwrap().to_string(),
+            pool
+          ).await?;
+        } else {
+          return Err(anyhow!("User not found"))
+        }
+      },
+      Err(why) => {
+        println!("fetch failed: {:?}", why);
+        return Err(why.into());
+      }
+    }
 
     Ok(())
   }
