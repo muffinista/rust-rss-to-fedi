@@ -220,6 +220,26 @@
           "name": "admin",
           "ordinal": 15,
           "type_info": "Bool"
+        },
+        {
+          "name": "listed",
+          "ordinal": 16,
+          "type_info": "Bool"
+        },
+        {
+          "name": "hashtag",
+          "ordinal": 17,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "content_warning",
+          "ordinal": 18,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "status_publicity",
+          "ordinal": 19,
+          "type_info": "Varchar"
         }
       ],
       "nullable": [
@@ -238,7 +258,11 @@
         false,
         false,
         false,
-        false
+        false,
+        false,
+        true,
+        true,
+        true
       ],
       "parameters": {
         "Left": [
@@ -512,6 +536,26 @@
           "name": "admin",
           "ordinal": 15,
           "type_info": "Bool"
+        },
+        {
+          "name": "listed",
+          "ordinal": 16,
+          "type_info": "Bool"
+        },
+        {
+          "name": "hashtag",
+          "ordinal": 17,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "content_warning",
+          "ordinal": 18,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "status_publicity",
+          "ordinal": 19,
+          "type_info": "Varchar"
         }
       ],
       "nullable": [
@@ -530,7 +574,11 @@
         false,
         false,
         false,
-        false
+        false,
+        false,
+        true,
+        true,
+        true
       ],
       "parameters": {
         "Left": [
@@ -746,6 +794,26 @@
           "name": "admin",
           "ordinal": 15,
           "type_info": "Bool"
+        },
+        {
+          "name": "listed",
+          "ordinal": 16,
+          "type_info": "Bool"
+        },
+        {
+          "name": "hashtag",
+          "ordinal": 17,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "content_warning",
+          "ordinal": 18,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "status_publicity",
+          "ordinal": 19,
+          "type_info": "Varchar"
         }
       ],
       "nullable": [
@@ -764,7 +832,11 @@
         false,
         false,
         false,
-        false
+        false,
+        false,
+        true,
+        true,
+        true
       ],
       "parameters": {
         "Left": [
@@ -1048,6 +1120,26 @@
           "name": "admin",
           "ordinal": 15,
           "type_info": "Bool"
+        },
+        {
+          "name": "listed",
+          "ordinal": 16,
+          "type_info": "Bool"
+        },
+        {
+          "name": "hashtag",
+          "ordinal": 17,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "content_warning",
+          "ordinal": 18,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "status_publicity",
+          "ordinal": 19,
+          "type_info": "Varchar"
         }
       ],
       "nullable": [
@@ -1066,7 +1158,11 @@
         false,
         false,
         false,
-        false
+        false,
+        false,
+        true,
+        true,
+        true
       ],
       "parameters": {
         "Left": [
@@ -1264,6 +1360,26 @@
           "name": "admin",
           "ordinal": 15,
           "type_info": "Bool"
+        },
+        {
+          "name": "listed",
+          "ordinal": 16,
+          "type_info": "Bool"
+        },
+        {
+          "name": "hashtag",
+          "ordinal": 17,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "content_warning",
+          "ordinal": 18,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "status_publicity",
+          "ordinal": 19,
+          "type_info": "Varchar"
         }
       ],
       "nullable": [
@@ -1282,7 +1398,11 @@
         false,
         false,
         false,
-        false
+        false,
+        false,
+        true,
+        true,
+        true
       ],
       "parameters": {
         "Left": [
@@ -1337,6 +1457,23 @@
       }
     },
     "query": "SELECT * FROM followers WHERE feed_id = $1 LIMIT $2 OFFSET $3"
+  },
+  "c4115e60449288151a6d99217a35089f0bb205e943e9c1ac510dfcc90c54936e": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Timestamptz",
+          "Timestamptz",
+          "Timestamptz"
+        ]
+      }
+    },
+    "query": "INSERT INTO actors\n        (url, public_key_id, public_key, created_at, updated_at, refreshed_at)\n        VALUES($1, $2, $3, $4, $5, $6)\n        ON CONFLICT (url) DO UPDATE\n          SET public_key_id = EXCLUDED.public_key_id,\n            public_key = EXCLUDED.public_key,\n            updated_at = EXCLUDED.updated_at,\n            refreshed_at = EXCLUDED.updated_at"
   },
   "c5d20d9c167556ef154b97c7b4510985a5571342d651a7d8c2bfb4e5aa7b09f6": {
     "describe": {
@@ -1457,23 +1594,6 @@
     },
     "query": "SELECT * FROM items WHERE feed_id = $1 ORDER by id DESC LIMIT $2"
   },
-  "d0a040aba721772c5be96f5dfa5f912f322e0e4e78c9ee1a34187433fed6d37b": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
-          "Varchar",
-          "Varchar",
-          "Varchar",
-          "Timestamptz",
-          "Timestamptz",
-          "Timestamptz"
-        ]
-      }
-    },
-    "query": "INSERT INTO actors\n        (url, public_key_id, public_key, created_at, updated_at, refreshed_at)\n        VALUES($1, $2, $3, $4, $5, $6)"
-  },
   "da788272bbd9045f75d93e24cd646a6ef7b4714d03ad1bc7a7c0c1562e70926c": {
     "describe": {
       "columns": [
@@ -1556,6 +1676,26 @@
           "name": "admin",
           "ordinal": 15,
           "type_info": "Bool"
+        },
+        {
+          "name": "listed",
+          "ordinal": 16,
+          "type_info": "Bool"
+        },
+        {
+          "name": "hashtag",
+          "ordinal": 17,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "content_warning",
+          "ordinal": 18,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "status_publicity",
+          "ordinal": 19,
+          "type_info": "Varchar"
         }
       ],
       "nullable": [
@@ -1574,7 +1714,11 @@
         false,
         false,
         false,
-        false
+        false,
+        false,
+        true,
+        true,
+        true
       ],
       "parameters": {
         "Left": []

@@ -9,8 +9,7 @@ use rocket::uri;
 use crate::routes::login::*;
 use crate::utils::utils::*;
 
-use rocket_dyn_templates::tera::Tera;
-use rocket_dyn_templates::tera::Context;
+use rocket_dyn_templates::tera::{Tera, Context};
 
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::{Message, SmtpTransport, Transport};
@@ -219,7 +218,7 @@ impl User {
     let mut context = Context::new();
     context.insert("link", &auth_url);
     
-    let body = tera.render("send-login.text.tera", &context).unwrap();
+    let body = tera.render("send-login-email.text.tera", &context).unwrap();
 
     println!("{:}", body);
 

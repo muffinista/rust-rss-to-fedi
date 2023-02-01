@@ -30,7 +30,7 @@ use reqwest;
 use feed_rs::parser;
 
 use chrono::{Duration, Utc, prelude::*};
-
+use rocket_dyn_templates::tera::{Tera, Context};
 
 use std::{env, error::Error, fmt};
 
@@ -66,6 +66,11 @@ pub struct Feed {
   pub description: Option<String>,
   pub site_url: Option<String>,
 
+  pub listed: bool,
+  pub hashtag: Option<String>,
+  pub content_warning: Option<String>,
+  pub status_publicity: Option<String>,
+  
   pub created_at: chrono::DateTime::<Utc>,
   pub updated_at: chrono::DateTime::<Utc>,
   pub refreshed_at: chrono::DateTime::<Utc>,
@@ -638,7 +643,7 @@ impl Feed {
 
         let message = self.generate_login_message(activity, &dest_actor, pool).await?;
         let msg = serde_json::to_string(&message).unwrap();
-        // println!("{}", msg);
+        println!("{}", msg);
     
         let my_url = self.ap_url();
     
@@ -690,10 +695,24 @@ impl Feed {
       .set_href(iri!(dest_actor.url.to_string()))
       .set_name("en");
 
+    let tera = match Tera::new("templates/email/*.*") {
+      Ok(t) => t,
+      Err(e) => {
+        println!("Parsing error(s): {}", e);
+        ::std::process::exit(1);
+      }
+    };
+  
+    let mut template_context = Context::new();
+    template_context.insert("link", &auth_url);
+    
+    let body = tera.render("send-login-status.text.tera", &template_context).unwrap();
+    println!("{:}", body);
+
     reply
       .set_attributed_to(iri!(my_url))
       .set_in_reply_to(iri!(source_id))
-      .set_content(format!(r#"Hi! Here's a <a href="{}">login link</a> to setup feeds"#, auth_url))
+      .set_content(body)
       .set_url(iri!(my_url))
       .set_id(iri!(format!("{}/{}", my_url, result)))
       .set_to(iri!(dest_actor.url))

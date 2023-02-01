@@ -63,6 +63,11 @@ pub fn fake_feed() -> Feed {
     description: None,
     site_url: None,
     title: None,
+    listed: false,
+    hashtag: None,
+    content_warning: None,
+    status_publicity: None,
+    
     created_at: Utc::now(),
     updated_at: Utc::now(),
     refreshed_at: Utc::now(),

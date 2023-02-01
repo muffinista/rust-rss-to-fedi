@@ -73,10 +73,10 @@ impl<'r> FromRequest<'r> for SignatureValidity {
 
 
     let mut header_data:rocket::http::HeaderMap<'_> = request.headers().clone();
-    header_data.add_raw("(request-target)", format!("post {}", request.uri()));
+    if !header_data.contains("(request-target)") {
+      header_data.add_raw("(request-target)", format!("post {}", request.uri()));
+    }
 
-    println!("{:?}", request.headers());
-    println!("headers: {:?}", headers);
     let headers = headers
         .expect("sign::verify_http_headers: unreachable")
         .split_whitespace()
@@ -87,13 +87,6 @@ impl<'r> FromRequest<'r> for SignatureValidity {
         .iter()
         .map(|header| (header, header_data.get_one(header)))
         .map(|(header, value)| format!("{}: {}", header.to_lowercase(), value.unwrap_or("")))
-        // .map(|(header, value)| 
-        //   format!("{}: {}", header.to_lowercase(), (if header == &"(request-target)" {
-        //     format!("post {}", request.uri()).as_str()
-        //   } else {
-        //     value.unwrap_or("")
-        //   }))
-        // )
         .collect::<Vec<_>>()
         .join("\n");
 
@@ -165,7 +158,7 @@ pub async fn user_inbox(digest: Option<SignatureValidity>, username: &str, activ
   if env::var("DISABLE_SIGNATURE_CHECKS").is_ok() {
     println!("Skipping signature check because DISABLE_SIGNATURE_CHECKS is set");
   } else if digest.is_none() || !digest.unwrap().is_secure() {
-    println!("digest failure sad{:?}", digest);
+    println!("digest failure sad {:?}", digest);
     return Err(Status::NotFound)
   }
   let feed_lookup = Feed::find_by_name(&username.to_string(), db).await;

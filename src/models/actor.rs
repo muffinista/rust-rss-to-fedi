@@ -75,8 +75,9 @@ impl Actor {
 
   pub async fn exists_by_url(url: &String, pool: &PgPool) -> Result<bool, sqlx::Error> {
     // look for an actor but exclude old data
-    let age = Utc::now() - Duration::seconds(3600);
-    let result = sqlx::query!("SELECT count(1) AS tally FROM actors WHERE url = $1 AND refreshed_at > $2", url, age)
+    // let age = Utc::now() - Duration::seconds(3600);
+    //  AND refreshed_at > $2
+    let result = sqlx::query!("SELECT count(1) AS tally FROM actors WHERE url = $1", url)
       .fetch_one(pool)
       .await;
 
@@ -92,9 +93,12 @@ impl Actor {
 
     match resp {
       Ok(resp) => {
+        println!("{:?}", resp);
+
         if resp.is_none() {
           return Err(anyhow!("User not found"))
         }
+
         let resp = resp.unwrap();
         let data:Value = serde_json::from_str(&resp).unwrap();
         if data["id"].is_string() && data["publicKey"].is_object() {
@@ -122,7 +126,6 @@ impl Actor {
       pool: &PgPool) -> Result<(), sqlx::Error> {
 
     let now = Utc::now();
-
 
     // create new row, or update existing row
     sqlx::query!("INSERT INTO actors
