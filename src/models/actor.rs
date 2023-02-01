@@ -7,7 +7,7 @@ use sqlx::postgres::PgPool;
 use serde::{Serialize};
 use serde_json::Value;
 
-use chrono::{Utc, prelude::*};
+use chrono::{Duration, Utc, prelude::*};
 
 use openssl::{
   hash::MessageDigest,
@@ -17,6 +17,8 @@ use openssl::{
 };
 
 use reqwest::header::{HeaderValue, HeaderMap};
+
+
 use crate::utils::http::http_client;
 
 #[derive(Debug, Serialize)]
@@ -72,7 +74,9 @@ impl Actor {
   }
 
   pub async fn exists_by_url(url: &String, pool: &PgPool) -> Result<bool, sqlx::Error> {
-    let result = sqlx::query!("SELECT count(1) AS tally FROM actors WHERE url = $1", url)
+    // look for an actor but exclude old data
+    let age = Utc::now() - Duration::seconds(3600);
+    let result = sqlx::query!("SELECT count(1) AS tally FROM actors WHERE url = $1 AND refreshed_at > $2", url, age)
       .fetch_one(pool)
       .await;
 
@@ -92,7 +96,6 @@ impl Actor {
           return Err(anyhow!("User not found"))
         }
         let resp = resp.unwrap();
-        println!("{:}", resp);
         let data:Value = serde_json::from_str(&resp).unwrap();
         if data["id"].is_string() && data["publicKey"].is_object() {
           Actor::create(&data["id"].as_str().unwrap().to_string(),
@@ -120,9 +123,16 @@ impl Actor {
 
     let now = Utc::now();
 
+
+    // create new row, or update existing row
     sqlx::query!("INSERT INTO actors
         (url, public_key_id, public_key, created_at, updated_at, refreshed_at)
-        VALUES($1, $2, $3, $4, $5, $6)",
+        VALUES($1, $2, $3, $4, $5, $6)
+        ON CONFLICT (url) DO UPDATE
+          SET public_key_id = EXCLUDED.public_key_id,
+            public_key = EXCLUDED.public_key,
+            updated_at = EXCLUDED.updated_at,
+            refreshed_at = EXCLUDED.updated_at",
         url, public_key_id, public_key, now, now, now)
       .execute(pool)
       .await?;
