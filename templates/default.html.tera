@@ -13,10 +13,6 @@
       <nav><a href="/">Home</a></nav>
     </header>
     <main>
-      {% if flash %}
-      <div class="flash-{{ flash.kind }}">{{ flash.message }}</div>
-      {% endif %}
-
       {% block content %}{% endblock content %}
     </main>
     <footer>

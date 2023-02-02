@@ -42,26 +42,33 @@
 
   {% if logged_in %}
     {% if owned_by %}
-    You can update the settings for this feed!
+    <section class="form">
+      <h1>Feed settings</h1>
 
-    <form method="POST" action="/feed/{{feed.name}}" class="update-feed">
-      <input type="hidden" name="_method" value="put" />
+      {% if flash %}
+      <div class="flash-{{ flash.kind }}">{{ flash.message }}</div>
+      {% endif %}
 
-      <div class="form-row">
-        <label for="listed">listed?</label> 
-        <input type="radio" name="listed" value="true" {% if feed.listed %}checked{% endif %}/> yes
-        <input type="radio" name="listed" value="false" {% if not feed.listed %}checked{% endif %} /> no
-      </div>
-      <div class="form-row">
-        <label for="hashtag">hashtag:</label> <input type="text" name="hashtag" value="{{ feed.hashtag }}" />
-      </div>
-      <div class="form-row">
-        <label for="content_warning">content_warning:</label> <input type="text" name="content_warning"  value="{{ feed.content_warning }}" />
-      </div>
-      <div class="form-row">
-        <button class="check" type="submit">update</button>
-      </div>
-    </form>
+
+      <form method="POST" action="/feed/{{feed.name}}" class="update-feed">
+        <input type="hidden" name="_method" value="put" />
+
+        <div class="form-row">
+          <label for="listed">listed?</label> 
+          <input type="radio" name="listed" value="true" {% if feed.listed %}checked{% endif %}/> yes
+          <input type="radio" name="listed" value="false" {% if not feed.listed %}checked{% endif %} /> no
+        </div>
+        <div class="form-row">
+          <label for="hashtag">hashtag:</label> <input type="text" name="hashtag" value="{{ feed.hashtag }}" />
+        </div>
+        <div class="form-row">
+          <label for="content_warning">content_warning:</label> <input type="text" name="content_warning"  value="{{ feed.content_warning }}" />
+        </div>
+        <div class="form-row">
+          <button class="check" type="submit">update</button>
+        </div>
+      </form>
+    </section>
     {% endif %}
   {% else %}
     {% include "login" %}
