@@ -121,6 +121,12 @@ impl Feed {
     .await
   }
 
+  pub async fn find_by_user_and_name(user: &User, name: &String, pool: &PgPool) -> Result<Option<Feed>, sqlx::Error> {
+    sqlx::query_as!(Feed, "SELECT * FROM feeds WHERE name = $1 AND user_id = $2", name, user.id)
+      .fetch_optional(pool)
+      .await
+  }
+
   pub async fn stale(pool: &PgPool, age:i64, limit: i64) -> Result<Vec<Feed>, sqlx::Error> {
     let age = Utc::now() - Duration::seconds(age);
     sqlx::query_as!(Feed, "SELECT * FROM feeds WHERE admin = false AND refreshed_at < $1 LIMIT $2", age, limit)
@@ -210,8 +216,10 @@ impl Feed {
           description = $8,
           site_url = $9,
           error = $10,
-          updated_at = $11
-      WHERE id = $12",
+          updated_at = $11,
+          hashtag = $12,
+          content_warning = $13
+      WHERE id = $14",
       self.url,
       self.name,
       self.private_key,
@@ -223,6 +231,8 @@ impl Feed {
       self.site_url,
       self.error,
       now,
+      self.hashtag,
+      self.content_warning,
       self.id
     ).execute(pool)
       .await?;

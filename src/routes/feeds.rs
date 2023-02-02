@@ -1,7 +1,8 @@
-use rocket::{FromForm, get, post};
+use rocket::{FromForm, get, post, put};
 use rocket::form::Form;
 use rocket::http::Status;
-use rocket::response::Redirect;
+use rocket::request::FlashMessage;
+use rocket::response::{Flash, Redirect};
 use rocket::State;
 use rocket_dyn_templates::{Template, context};
 use rocket::uri;
@@ -22,6 +23,14 @@ use crate::services::url_to_feed::url_to_feed_url;
 pub struct FeedForm {
   name: String,
   url: String
+}
+
+#[derive(FromForm, serde::Deserialize)]
+#[serde(crate = "rocket::serde")]
+pub struct FeedUpdateForm {
+  listed: bool,
+  hashtag: Option<String>,
+  content_warning: Option<String>
 }
 
 #[derive(Serialize)]
@@ -48,6 +57,35 @@ pub async fn add_feed(user: User, db: &State<PgPool>, form: Form<FeedForm>) -> R
       print!("{}", why);
       Err(Status::NotFound)
     }
+  }
+}
+
+#[put("/feed/<username>", data = "<form>")]
+pub async fn update_feed(user: User, username: &str, db: &State<PgPool>, form: Form<FeedUpdateForm>) -> Result<Flash<Redirect>, Status> {
+  let feed_lookup = Feed::find_by_user_and_name(&user, &username.to_string(), &db).await;
+
+  match feed_lookup {
+    Ok(feed_lookup) => {
+      match feed_lookup {
+        Some(mut feed) => {
+          feed.listed = form.listed;
+          feed.hashtag = form.hashtag.clone();
+          feed.content_warning = form.content_warning.clone();
+
+          let result = feed.save(&db).await;
+          let dest = uri!(show_feed(&feed.name));
+
+          match result {
+            Ok(_result) => {
+              Ok(Flash::success(Redirect::to(dest), "Feed updated!"))
+            },
+            Err(_why) => Ok(Flash::error(Redirect::to(dest), "Sorry, something went wrong!"))
+          }
+        },
+        None => Err(Status::NotFound)
+      }
+    },
+    Err(_why) => Err(Status::NotFound)
   }
 }
 
@@ -113,7 +151,7 @@ pub async fn render_feed(username: &str, db: &State<PgPool>) -> Result<String, S
 }
 
 #[get("/feed/<username>", format = "text/html", rank = 2)]
-pub async fn show_feed(user: Option<User>, username: &str, db: &State<PgPool>) -> Result<Template, Status> {
+pub async fn show_feed(user: Option<User>, username: &str, flash: Option<FlashMessage<'_>>, db: &State<PgPool>) -> Result<Template, Status> {
   let feed_lookup = Feed::find_by_name(&username.to_string(), db).await;
 
   match feed_lookup {
@@ -128,6 +166,7 @@ pub async fn show_feed(user: Option<User>, username: &str, db: &State<PgPool>) -
           match items {
             Ok(items) => {
               Ok(Template::render("feed", context! {
+                flash: flash,
                 is_admin: feed.is_admin(),
                 logged_in: logged_in,
                 owned_by: owned_by,

@@ -31,6 +31,7 @@ pub async fn build_server(pool: PgPool) -> Rocket<Build> {
       crate::routes::login::attempt_login,
       crate::routes::feeds::add_feed,
       crate::routes::feeds::test_feed,
+      crate::routes::feeds::update_feed,
       crate::routes::feeds::delete_feed,
       crate::routes::feeds::render_feed,
       crate::routes::feeds::render_feed_followers,
