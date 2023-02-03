@@ -44,6 +44,7 @@
     {% if owned_by %}
     <section class="form">
       <h1>Feed settings</h1>
+      <p>You can tweak the settings for how this account behaves when posting statuses to the Fediverse.</p>
 
       {% if flash %}
       <div class="flash-{{ flash.kind }}">{{ flash.message }}</div>
@@ -53,19 +54,41 @@
       <form method="POST" action="/feed/{{feed.name}}" class="update-feed">
         <input type="hidden" name="_method" value="put" />
 
+        <fieldset>
+          <legend>Search Engine Indexing</legend>
+          <div>
+            <label for="listed-true"><input type="radio" id="listed-true" name="listed" value="true" {% if feed.listed %}checked{% endif %}/> Allow search engines to index this account</label><br />
+            <label for="listed-false"><input type="radio" id="listed-false" name="listed" value="false" {% if not feed.listed %}checked{% endif %} /> Do not search engines to index this account</label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Output Settings</legend>
+          <div class="form-row">
+            <label for="hashtag">Status Publicity:</label>
+            <div class="input">
+              <label for="status-unlisted"><input type="radio" id="status-unlisted" name="status_publicity" value="unlisted" {% if feed.status_publicity == "unlisted" %}checked{% endif %}/> <b>Unlisted</b> -- anyone can see, but not visible in public timeline. Posts can be boosted</label><br />
+              <label for="status-followers"><input type="radio" id="status-followers" name="status_publicity" value="followers" {% if feed.status_publicity == "followers" %}checked{% endif %}/> <b>Followers-only</b> -- only followers can see the posts, and they aren't boostable.</label><br />
+              <label for="status-direct"><input type="radio" id="status-direct" name="status_publicity" value="direct" {% if feed.status_publicity == "direct" %}checked{% endif %}/> <b>Direct</b> -- only the creator of this feed gets the statuses, as direct messages.</label><br />
+             </div>
+          </div>
+          <div class="form-row">
+            <label for="hashtag">Hashtag:</label>
+            <div class="input">
+              <input type="text" name="hashtag" value="{{ feed.hashtag }}" />
+              <div class="help">You can add a hashtag to any post made by this account.</div>
+            </div>
+          </div>
+          <div class="form-row">
+            <label for="content_warning">Content Warning:</label>
+            <div class="input">
+              <input type="text" name="content_warning"  value="{{ feed.content_warning }}" />
+              <div class="help">If specified, any post from this account will use the specified content warning.</div>
+            </div>
+          </div>
+        </fieldset>
         <div class="form-row">
-          <label for="listed">listed?</label> 
-          <input type="radio" name="listed" value="true" {% if feed.listed %}checked{% endif %}/> yes
-          <input type="radio" name="listed" value="false" {% if not feed.listed %}checked{% endif %} /> no
-        </div>
-        <div class="form-row">
-          <label for="hashtag">hashtag:</label> <input type="text" name="hashtag" value="{{ feed.hashtag }}" />
-        </div>
-        <div class="form-row">
-          <label for="content_warning">content_warning:</label> <input type="text" name="content_warning"  value="{{ feed.content_warning }}" />
-        </div>
-        <div class="form-row">
-          <button class="check" type="submit">update</button>
+          <button class="check" type="submit">Save</button>
         </div>
       </form>
     </section>

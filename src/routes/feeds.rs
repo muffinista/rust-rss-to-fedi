@@ -29,6 +29,7 @@ pub struct FeedForm {
 #[serde(crate = "rocket::serde")]
 pub struct FeedUpdateForm {
   listed: bool,
+  status_publicity: Option<String>,
   hashtag: Option<String>,
   content_warning: Option<String>
 }
@@ -71,6 +72,7 @@ pub async fn update_feed(user: User, username: &str, db: &State<PgPool>, form: F
           feed.listed = form.listed;
           feed.hashtag = form.hashtag.clone();
           feed.content_warning = form.content_warning.clone();
+          feed.status_publicity = form.status_publicity.clone();
 
           let result = feed.save(&db).await;
           let dest = uri!(show_feed(&feed.name));

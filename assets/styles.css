@@ -16,6 +16,12 @@ body > header {
   margin-bottom: 10px;
 }
 
+header > img {
+  object-fit: cover;
+  max-width: 200px;
+  max-height: 200px;
+}
+
 body > footer {
   width: 100%;
   display: flex;
@@ -33,18 +39,27 @@ main {
   line-height: 1.5em;
 }
 
-form > .form-row {
+.form-row {
   display: flex;
   justify-content: flex-end;
   padding: .5em;
 }
 
+/* .form-row > .input {
+  display: flex;
+  justify-content: flex-end;
+  padding: .5em;
+} */
+
 .form-row > label {
   padding: .5em 1em .5em 0;
   flex: 1;
 }
-.form-row > input {
-  flex: 2;
+
+.form-row > .input {
+  display: flex;
+  flex-direction: column;
+  flex: 4;
 }
 
 main > header.feed {

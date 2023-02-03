@@ -218,8 +218,9 @@ impl Feed {
           error = $10,
           updated_at = $11,
           hashtag = $12,
-          content_warning = $13
-      WHERE id = $14",
+          content_warning = $13,
+          status_publicity = $14
+      WHERE id = $15",
       self.url,
       self.name,
       self.private_key,
@@ -233,6 +234,7 @@ impl Feed {
       now,
       self.hashtag,
       self.content_warning,
+      self.status_publicity,
       self.id
     ).execute(pool)
       .await?;
