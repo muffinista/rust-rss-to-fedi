@@ -16,9 +16,7 @@
       {% block content %}{% endblock content %}
     </main>
     <footer>
-      {% block footer %}
-      &copy; Copyright 2008 by <a href="http://domain.invalid/">you</a>.
-      {% endblock footer %}
+      <p>A project of <a href="https://botsin.space/@muffinista">https://botsin.space/@muffinista</a>, contact him if you need help or have questions.</p>
     </footer>
     <script src="/assets/script.js"></script>
   </body>

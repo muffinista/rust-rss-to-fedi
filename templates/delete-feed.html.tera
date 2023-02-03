@@ -1,0 +1,9 @@
+<section class="delete">
+  <h1>Delete feed</h1>
+  <p>You can delete this feed here.</p>
+
+  <form method="POST" action="/feed/{{feed.id}}/delete">
+    <input type="hidden" name="_method" value="delete" />
+    <button class="check" type="submit">Delete this feed!</button>
+  </form>
+</section>

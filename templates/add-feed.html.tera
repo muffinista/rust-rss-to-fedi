@@ -1,19 +1,32 @@
 <section class="add-feed">
   <h1>Add a new feed:</h1>
+
+  {% if flash %}
+  <div class="flash-{{ flash.kind }}">{{ flash.message }}</div>
+  {% endif %}
+
   <form method="post" action="/feed" class="add-feed">
     <div class="form-row">
-      <label for="url">url:</label> <input type="text" name="url" required />
+      <label for="url">Feed URL:</label>
+      <div class="input">
+        <input type="text" name="url" required />
+        <div class="help">The feed you want to use</div>
+      </div>
     </div>
     <div class="form-row">
-      <label for="name">name:</label> <input type="text" name="name" required />
+      <label for="name">Name:</label>
+      <div class="input">
+        <input type="text" name="name" pattern="[A-Za-z0-9]" required />
+        <div class="help">The username of the account</div>
+      </div>
     </div>
+    <div class="add-feed-results">
+  
+    </div> 
     <div class="form-row">
-      <button class="check" type="button">go</button>
+      <button class="check" type="button">Add feed</button>
     </div>
   </form>
   
-  <div class="add-feed-results">
-  
-  </div>
 </section>
 

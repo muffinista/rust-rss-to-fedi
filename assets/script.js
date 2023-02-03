@@ -3,18 +3,24 @@ if (button) {
   const checkForValidFeed = async (event) => {
     event.preventDefault();
 
+    const messageDest = document.querySelector(".add-feed-results");
     const name = document.querySelector(".add-feed input[name='name']").value;
     const url = document.querySelector(".add-feed input[name='url']").value;
     const payload = {
       name, url
     }
 
+    if (name.match(/^[a-z0-9]/i) ) {
+      messageDest.innerHTML = "Sorry, please limit the username to letters and digits";
+      return;
+    }
+
+    messageDest.innerHTML = "Checking that feed is valid..."; 
+
     const response = await fetch('/test-feed', {
       method: 'POST',
       body: JSON.stringify(payload),
     });
-
-    const messageDest = document.querySelector(".add-feed-results");
 
     if ( response.status == 404 ) {
       console.log("No feed there");
@@ -35,7 +41,7 @@ if (button) {
         button.removeEventListener("click", checkForValidFeed);
         button.type = "submit";
   
-        messageDest.innerHTML = "Looks good! Click ok to create account";  
+        messageDest.innerHTML = "Looks good! Click 'Add feed' one more time to create the account";  
       }
     }
   };

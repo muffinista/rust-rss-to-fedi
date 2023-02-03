@@ -1,4 +1,4 @@
-use rocket::{FromForm, get, post, put};
+use rocket::{FromForm, get, post, put, delete};
 use rocket::form::Form;
 use rocket::http::Status;
 use rocket::request::FlashMessage;
@@ -43,7 +43,7 @@ pub struct FeedLookup {
 }
 
 #[post("/feed", data = "<form>")]
-pub async fn add_feed(user: User, db: &State<PgPool>, form: Form<FeedForm>) -> Result<Redirect, Status> {
+pub async fn add_feed(user: User, db: &State<PgPool>, form: Form<FeedForm>) -> Result<Flash<Redirect>, Status> {
   let feed = Feed::create(&user, &form.url, &form.name, &db).await;
   
   match feed {
@@ -52,11 +52,11 @@ pub async fn add_feed(user: User, db: &State<PgPool>, form: Form<FeedForm>) -> R
       let _refresh_result = feed.refresh(&db).await;
 
       let dest = uri!(show_feed(feed.name));
-      Ok(Redirect::to(dest))
+      Ok(Flash::success(Redirect::to(dest), "Feed created!"))
     },
     Err(why) => {
       print!("{}", why);
-      Err(Status::NotFound)
+      Ok(Flash::error(Redirect::to("/"), "Sorry, something went wrong!"))
     }
   }
 }
@@ -78,9 +78,7 @@ pub async fn update_feed(user: User, username: &str, db: &State<PgPool>, form: F
           let dest = uri!(show_feed(&feed.name));
 
           match result {
-            Ok(_result) => {
-              Ok(Flash::success(Redirect::to(dest), "Feed updated!"))
-            },
+            Ok(_result) => Ok(Flash::success(Redirect::to(dest), "Feed updated!")),
             Err(_why) => Ok(Flash::error(Redirect::to(dest), "Sorry, something went wrong!"))
           }
         },
@@ -97,7 +95,11 @@ pub async fn test_feed(_user: User, db: &State<PgPool>, form: Json<FeedForm>) ->
   let feed_exists = Feed::exists_by_name(&form.name, &db).await;
 
   if feed_exists.is_ok() && feed_exists.unwrap() {
-    return Ok(Json(FeedLookup { src: form.url.to_string(), url: form.url.to_string(), error: Some("Username in use".to_string()) }))
+    return Ok(Json(FeedLookup {
+      src: form.url.to_string(),
+      url: form.url.to_string(),
+      error: Some("Sorry, that username is already taken".to_string())
+    }))
   }
 
   // check if feed is valid
@@ -107,7 +109,11 @@ pub async fn test_feed(_user: User, db: &State<PgPool>, form: Json<FeedForm>) ->
     Err(_why) => Err(Status::NotFound),
     Ok(result) => {
       if result.is_some() {
-        Ok(Json(FeedLookup { src: form.url.to_string(), url: result.unwrap(), error: None }))
+        Ok(Json(FeedLookup {
+          src: form.url.to_string(),
+          url: result.unwrap(),
+          error: None
+        }))
       } else {
         Err(Status::NotFound)
       }
@@ -115,8 +121,7 @@ pub async fn test_feed(_user: User, db: &State<PgPool>, form: Json<FeedForm>) ->
   }
 }
 
-// @todo use proper verb
-#[get("/feed/<id>/delete")]
+#[delete("/feed/<id>/delete")]
 pub async fn delete_feed(user: User, id: i32, db: &State<PgPool>) -> Result<Redirect, Status> {
   let feed = Feed::delete(&user, id, &db).await;
   
