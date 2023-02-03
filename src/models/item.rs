@@ -14,6 +14,9 @@ use activitystreams::iri;
 use activitystreams::base::BaseExt;
 use activitystreams::base::ExtendsExt;
 use activitystreams::object::ObjectExt;
+use activitystreams::link::Mention;
+use activitystreams::link::LinkExt;
+
 
 use anyhow::Error as AnyError;
 
@@ -179,7 +182,7 @@ impl Item {
   /// generate an HTML-ish version of this item suitable
   /// for adding to an AP message
   ///
-  pub fn to_html(&self) -> String {
+  pub fn to_html(&self, suffix: &Option<String>) -> String {
     let tera = match Tera::new("templates/ap/*.*") {
       Ok(t) => t,
       Err(e) => {
@@ -191,8 +194,12 @@ impl Item {
     let mut context = Context::new();
     context.insert("title", &self.title);
     context.insert("body", &self.content);
+
     if self.url.is_some() {
       context.insert("link", &self.url.as_ref().unwrap());
+    }
+    if suffix.is_some() {
+      context.insert("suffix", &suffix.as_ref().unwrap());
     }
     
     tera.render("feed-item.html.tera", &context).unwrap()
@@ -208,13 +215,43 @@ impl Item {
 
     note
       .set_attributed_to(iri!(feed_url))
-      .set_content(self.to_html())
+      .set_content(self.to_html(&feed.hashtag))
       // @todo direct url to item
       .set_url(iri!(feed_url))
-      .set_cc(iri!("https://www.w3.org/ns/activitystreams#Public"))
       .set_id(iri!(item_url))
       .set_published(ts);
 
+    let item_publicity = match &feed.status_publicity {
+      Some(value) => value.as_str(),
+      None => "unlisted"
+    };
+
+    match item_publicity {
+      "public" => { note.set_cc(iri!("https://www.w3.org/ns/activitystreams#Public")) },
+
+      // we'll handle some DM logic outside of message generation here
+      "direct" => { &mut note },
+      "followers" => { note.set_to(iri!(feed.followers_url())) },
+
+      // unlisted/fallback
+      _ => { 
+        note
+          .set_to(iri!(feed.followers_url()))
+          .add_cc(iri!("https://www.w3.org/ns/activitystreams#Public"))
+      },
+    };
+
+    //
+    // add content warning as a summary
+    // 
+    if feed.content_warning.is_some() {
+      let summary = feed.content_warning.as_ref().unwrap();
+      note.set_summary(summary.to_string());
+    }
+
+    //
+    // add any enclosures
+    //
     let enclosures = Enclosure::for_item(&self, &pool).await?;
     for enclosure in enclosures {
       let mut attachment = Document::new();
@@ -257,35 +294,62 @@ impl Item {
 
   pub async fn deliver(&self, feed: &Feed, pool: &PgPool) -> Result<(), AnyError> {
     let message = self.to_activity_pub(feed, pool).await.unwrap();
-    let followers = feed.followers_list(pool).await?;
-    for follower in followers { 
-      let inbox = follower.find_inbox().await;
-      match inbox {
-        Ok(inbox) => {
-          println!("INBOX: {}", inbox);
-          // generate and send
-          let mut targeted = message.clone();
-
-          targeted.set_many_tos(vec![iri!(inbox)]);
-          
-          let msg = serde_json::to_string(&targeted).unwrap();
-          println!("{}", msg);
-
-          let result = deliver_to_inbox(&Url::parse(&inbox)?, &feed.ap_url(), &feed.private_key, &msg).await;
-
-          match result {
-            Ok(result) => println!("sent! {:?}", result),
-            Err(why) => println!("failure! {:?}", why)
-          }
-
-        },
-        Err(why) => {
-          println!("failure! {:?}", why);
-          // @todo retry! mark as undeliverable? delete user?
-          // panic!("oops!");
-        }
-      }
+    let item_publicity = match &feed.status_publicity {
+      Some(value) => value.as_str(),
+      None => "unlisted"
     };
+
+    // handle special case of sending DMs to feed owner
+    // TODO unify both parts of this if statement
+    if item_publicity == "direct" {
+      let user = feed.user(pool).await?;
+
+      if user.actor_url.is_none() {
+        println!("Refusing to send because owner doesn't have an address");
+        return Ok(());
+      }
+
+      let dest_url = user.actor_url.unwrap();
+
+      let mut targeted = message.clone();
+      targeted.set_to(iri!(dest_url));
+
+      let mut mention = Mention::new();
+
+      mention
+        .set_href(iri!(dest_url.to_string()))
+        .set_name("en");
+  
+    } else {
+      let followers = feed.followers_list(pool).await?;
+      for follower in followers { 
+        let inbox = follower.find_inbox().await;
+        match inbox {
+          Ok(inbox) => {
+            println!("INBOX: {}", inbox);
+            // generate and send
+            let mut targeted = message.clone();
+            targeted.set_many_tos(vec![iri!(inbox)]);
+              
+            let msg = serde_json::to_string(&targeted).unwrap();
+            println!("{}", msg);
+  
+            let result = deliver_to_inbox(&Url::parse(&inbox)?, &feed.ap_url(), &feed.private_key, &msg).await;
+  
+            match result {
+              Ok(result) => println!("sent! {:?}", result),
+              Err(why) => println!("failure! {:?}", why)
+            }
+  
+          },
+          Err(why) => {
+            println!("failure! {:?}", why);
+            // @todo retry! mark as undeliverable? delete user?
+            // panic!("oops!");
+          }
+        }
+      };  
+    }
 
     Ok(())
   }

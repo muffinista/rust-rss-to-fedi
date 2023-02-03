@@ -335,6 +335,13 @@ impl Feed {
     }
   }
 
+  pub async fn user(&self, pool: &PgPool) -> Result<User, sqlx::Error> {
+    sqlx::query_as!(User, "SELECT * FROM users WHERE id = $1", self.user_id)
+      .fetch_one(pool)
+      .await
+  }
+
+
   ///
   /// load the contents of the feed
   ///
@@ -514,6 +521,10 @@ impl Feed {
     path_to_url(&uri!(show_feed(&self.name)))
   }
 
+  pub fn followers_url(&self) -> String {
+    path_to_url(&uri!(render_feed_followers(&self.name, None::<i32>)))
+  }
+
   
   ///
   /// Generate valid ActivityPub data for this feed
@@ -543,7 +554,7 @@ impl Feed {
       .set_preferred_username(self.name.clone())
       .set_inbox(iri!(path_to_url(&uri!(user_inbox(&self.name)))))
       .set_outbox(iri!(path_to_url(&uri!(render_feed_outbox(&self.name, None::<i32>)))))
-      .set_followers(iri!(path_to_url(&uri!(render_feed_followers(&self.name, None::<i32>)))));
+      .set_followers(iri!(self.followers_url()));
 
     if self.is_admin() {
       svc.set_summary(format!("Admin account for {}", instance_domain));
@@ -796,7 +807,7 @@ impl Feed {
   ///
   /// get a list of all followers
   ///
-  pub async fn followers_list(&self, pool: &PgPool)  -> Result<Vec<Follower>, sqlx::Error>{
+  pub async fn followers_list(&self, pool: &PgPool)  -> Result<Vec<Follower>, sqlx::Error> {
     sqlx::query_as!(Follower, "SELECT * FROM followers WHERE feed_id = $1", self.id)
       .fetch_all(pool)
       .await

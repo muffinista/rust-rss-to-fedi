@@ -23,6 +23,7 @@
       <div class="form-row">
         <label for="hashtag">Status Publicity:</label>
         <div class="input">
+          <label for="status-public"><input type="radio" id="status-public" name="status_publicity" value="public" {% if feed.status_publicity == "public" %}checked{% endif %}/> <b>Public</b> -- Posts are visible in public timeline and can be boosted</label><br />
           <label for="status-unlisted"><input type="radio" id="status-unlisted" name="status_publicity" value="unlisted" {% if feed.status_publicity == "unlisted" %}checked{% endif %}/> <b>Unlisted</b> -- anyone can see, but not visible in public timeline. Posts can be boosted</label><br />
           <label for="status-followers"><input type="radio" id="status-followers" name="status_publicity" value="followers" {% if feed.status_publicity == "followers" %}checked{% endif %}/> <b>Followers-only</b> -- only followers can see the posts, and they aren't boostable.</label><br />
           <label for="status-direct"><input type="radio" id="status-direct" name="status_publicity" value="direct" {% if feed.status_publicity == "direct" %}checked{% endif %}/> <b>Direct</b> -- only the creator of this feed gets the statuses, as direct messages.</label><br />
