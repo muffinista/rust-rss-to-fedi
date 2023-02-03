@@ -25,8 +25,11 @@ pub async fn create_admin_feed(pool: &PgPool) -> Result<(), sqlx::Error> {
             let feed = Feed::create(&user, &url.to_string(), &name.to_string(), &pool).await;
 
             match feed {
-              Ok(feed) => {
-                feed.mark_admin(&pool).await?;
+              Ok(mut feed) => {
+                feed.admin = true;
+                feed.title = Some("Admin account".to_string());
+                feed.description = Some("This is the admin account for this instance. Send me a message to get a login URL".to_string());
+                // feed.mark_admin(&pool).await?;
                 Ok(())
               },
               Err(why) => Err(why)

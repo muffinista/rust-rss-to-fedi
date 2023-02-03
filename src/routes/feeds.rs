@@ -180,7 +180,7 @@ pub async fn show_feed(user: Option<User>, username: &str, flash: Option<FlashMe
                 feed: feed,
                 items: items,
                 follow_url: follow_url,
-                domain_name: env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set")
+                instance_domain: env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set")
               }))    
             },
             Err(_why) => Err(Status::NotFound)        

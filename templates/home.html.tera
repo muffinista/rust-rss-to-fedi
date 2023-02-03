@@ -2,16 +2,12 @@
 {% block title %}Index{% endblock title %}
 
 {% block content %}
-  <p>
-    Here's a tool you can use to get RSS feeds into the fediverse.
-  </p>
 
   {% if logged_in %}
     {% include "feeds" %}
     {% include "add-feed" %}
   {% else %}
-    <p>You can get started by sending a message to @admin. You'll get a URL back that you can use to login and create an account that will post the RSS feed.</p>
-    {% include "login" %}
+    {% include "help" %}
   {% endif %}
   
 {% endblock content %}

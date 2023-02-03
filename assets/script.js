@@ -48,3 +48,13 @@ if (button) {
 
   button.addEventListener("click", checkForValidFeed);
 }
+
+let adminAddress = document.querySelector("#admin-address");
+function copy() {
+  adminAddress.select();
+  document.execCommand("copy");
+}
+
+if (adminAddress) {
+  document.querySelector("#copy").addEventListener("click", copy);
+}

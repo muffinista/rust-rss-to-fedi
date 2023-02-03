@@ -1,0 +1,8 @@
+<p>
+  This is a tool you can use to get RSS feeds into the fediverse.
+</p>
+<p>You can get started by sending a message to @admin@{{ instance_domain }}. You'll get a response with a URL that you can use to login and create an account that will post the RSS feed.</p>
+
+<div>
+  <input id="admin-address" type="text" value="@admin@{{ instance_domain }}" /> <button id="copy">Copy</button>
+</div>

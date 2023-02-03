@@ -8,11 +8,12 @@
     {% else %}
     <img src="{{feed.image_url}}" width="200" />
     {% endif %}
+
     <div>
       <h1>{{feed.title}}</h1>
       <p>{{feed.description}}</p>
 
-      <b>Fediverse name:</b> @{{feed.name}}@{{domain_name}}<br />
+      <b>Fediverse name:</b> @{{feed.name}}@{{instance_domain}}<br />
       <b>Fediverse URL:</b> {{follow_url}}<br />
       {% if not is_admin %}
       <b>Feed URL:</b> <a href="{{feed.url}}">{{feed.url}}</a><br />
@@ -25,7 +26,7 @@
 
   {% if is_admin %}
   <section class="feed">
-    Put some notes about how to interact here.
+    {% include "help" %}
   </section>
   {% else %}
   <section class="feed">
@@ -45,8 +46,6 @@
       {% include "edit-feed" %}
       {% include "delete-feed" %}
     {% endif %}
-  {% else %}
-    {% include "login" %}
   {% endif %}
   
 {% endblock content %}

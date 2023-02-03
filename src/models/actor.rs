@@ -7,7 +7,7 @@ use sqlx::postgres::PgPool;
 use serde::{Serialize};
 use serde_json::Value;
 
-use chrono::{Duration, Utc, prelude::*};
+use chrono::{Utc, prelude::*};
 
 use openssl::{
   hash::MessageDigest,

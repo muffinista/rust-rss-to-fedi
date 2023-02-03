@@ -1,3 +1,4 @@
+use std::env;
 use rocket_dyn_templates::{Template, context};
 
 use rocket::get;
@@ -10,13 +11,22 @@ use crate::models::feed::Feed;
 
 #[get("/")]
 pub async fn index_logged_in(user: User, db: &State<PgPool>) -> Template {
+  let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
   let feeds = Feed::for_user(&user, &db).await.unwrap();
-  Template::render("home", context! { logged_in: true, feeds: feeds })
+  Template::render("home", context! { 
+    logged_in: true,
+    feeds: feeds,
+    instance_domain: instance_domain
+  })
 }
 
 #[get("/", rank = 2)]
 pub fn index() -> Template {
-  Template::render("home", context! { logged_in: false })
+  let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
+  Template::render("home", context! {
+    logged_in: false,
+    instance_domain: instance_domain
+  })
 }
 
 #[cfg(test)]
@@ -42,7 +52,7 @@ mod test {
     assert_eq!(response.status(), Status::Ok);
     let output = response.into_string().await;
     match output {
-      Some(output) => assert!(output.contains("Email:")),
+      Some(output) => assert!(output.contains("You can get started by sending")),
       None => panic!()
     }
   }
