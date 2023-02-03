@@ -10,7 +10,7 @@ if (button) {
       name, url
     }
 
-    if (name.match(/^[a-z0-9]/i) ) {
+    if (!name.match(/^[a-z0-9]/i) ) {
       messageDest.innerHTML = "Sorry, please limit the username to letters and digits";
       return;
     }
