@@ -56,23 +56,26 @@ pub async fn do_login(db: &State<PgPool>, form: Form<LoginForm>) -> Result<Redir
   let user = User::find_or_create_by_email(&form.email, &**db).await;
   
   match user {
-    Ok(user) => {
-      if user.should_send_login_email() {
-        let result = user.send_login_email();
-        match result {
-          Ok(_result) => {
-            let dest = uri!(login_result());
-            Ok(Redirect::to(dest))
-          },
-          Err(_why) => {
-            let dest = uri!(login_result());
-            Ok(Redirect::to(dest))
-          }
-        }
-      } else {
-        let dest = uri!(login_result());
-        Ok(Redirect::to(dest))
-      }
+    Ok(_user) => {
+      let dest = uri!(login_result());
+      Ok(Redirect::to(dest))
+
+      // if user.should_send_login_email() {
+      //   let result = user.send_login_email();
+      //   match result {
+      //     Ok(_result) => {
+      //       let dest = uri!(login_result());
+      //       Ok(Redirect::to(dest))
+      //     },
+      //     Err(_why) => {
+      //       let dest = uri!(login_result());
+      //       Ok(Redirect::to(dest))
+      //     }
+      //   }
+      // } else {
+      //   let dest = uri!(login_result());
+      //   Ok(Redirect::to(dest))
+      // }
     },
     Err(why) => {
       print!("{}", why);

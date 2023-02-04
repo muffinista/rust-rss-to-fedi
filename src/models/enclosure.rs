@@ -1,12 +1,11 @@
 
 use sqlx::postgres::PgPool;
-use serde::{Serialize};
 
 use chrono::Utc;
 
 use crate::models::item::Item;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug)]
 pub struct Enclosure {
   pub id: i32,
   pub item_id: i32,

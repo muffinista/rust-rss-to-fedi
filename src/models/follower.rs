@@ -1,16 +1,11 @@
-use serde::{Serialize};
-use serde_json::Value;
-
-use reqwest::header::{HeaderValue, HeaderMap};
+use sqlx::postgres::PgPool;
 
 use anyhow::Error as AnyError;
-use url::Url;
 
-use crate::utils::http::http_client;
-
+use crate::models::Actor;
 use chrono::Utc;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug)]
 pub struct Follower {
   pub id: i32,
   pub feed_id: i32,
@@ -28,38 +23,17 @@ impl PartialEq for Follower {
 impl Follower {
   ///
   /// Ping the actor's profile data to get their inbox
-  /// @todo -- cache this
   ///
-  pub async fn find_inbox(&self) -> Result<String, AnyError> {
-
-    let profile_url = Url::parse(&self.actor)?;
-      
-    let mut headers = HeaderMap::new();
-
-    headers.insert(
-      reqwest::header::ACCEPT,
-      HeaderValue::from_str("application/ld+json").unwrap(),
-    );
-
-    // query that
-    let client = http_client();
-    let res = client
-      .get(profile_url)
-      .headers(headers)
-      .send()
-      .await?;
-
-
-    let body = res.text().await?;
-
-    let v: Value = serde_json::from_str(&body).unwrap();
-    Ok(v["inbox"].as_str().unwrap().to_string())
+  pub async fn find_inbox(&self, pool: &PgPool) -> Result<String, AnyError> {
+    let actor = Actor::find_or_fetch(&self.actor.to_string(), pool).await?;
+    Ok(actor.url)
   }
 }
 
 
 #[cfg(test)]
 mod test {
+  use sqlx::postgres::PgPool;
   use crate::models::feed::Feed;
   use crate::models::follower::Follower;
   use crate::utils::test_helpers::{fake_feed, fake_follower};
@@ -67,7 +41,7 @@ mod test {
   use mockito::mock;
 
   #[sqlx::test]
-  async fn test_find_inbox() -> Result<(), String> {
+  async fn test_find_inbox(pool: PgPool) -> Result<(), String> {
     let feed: Feed = fake_feed();
     let follower: Follower = fake_follower(&feed);
 
@@ -77,7 +51,7 @@ mod test {
       .with_body("{\"inbox\": \"https://foo.com/users/muffinista/inbox\"}")
       .create();
 
-    let result = follower.find_inbox().await.unwrap();
+    let result = follower.find_inbox(&pool).await.unwrap();
     assert!(result == "https://foo.com/users/muffinista/inbox");
     Ok(())
   }

@@ -4,7 +4,6 @@ use anyhow::Error as AnyError;
 use url::Url;
 
 use sqlx::postgres::PgPool;
-use serde::{Serialize};
 use serde_json::Value;
 
 use chrono::{Utc, prelude::*};
@@ -21,7 +20,7 @@ use reqwest::header::{HeaderValue, HeaderMap};
 
 use crate::utils::http::http_client;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug)]
 pub struct Actor {
   pub url: String,
   pub public_key_id: String,

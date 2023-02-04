@@ -323,7 +323,7 @@ impl Item {
     } else {
       let followers = feed.followers_list(pool).await?;
       for follower in followers { 
-        let inbox = follower.find_inbox().await;
+        let inbox = follower.find_inbox(pool).await;
         match inbox {
           Ok(inbox) => {
             println!("INBOX: {}", inbox);
