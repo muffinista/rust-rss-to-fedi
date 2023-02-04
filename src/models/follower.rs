@@ -33,6 +33,7 @@ impl Follower {
 
 #[cfg(test)]
 mod test {
+  use std::fs;
   use sqlx::postgres::PgPool;
   use crate::models::feed::Feed;
   use crate::models::follower::Follower;
@@ -45,14 +46,17 @@ mod test {
     let feed: Feed = fake_feed();
     let follower: Follower = fake_follower(&feed);
 
+    let path = "fixtures/muffinista.json";
+    let data = fs::read_to_string(path).unwrap();
+    
     let _m = mock("GET", "/users/muffinista")
       .with_status(200)
       .with_header("Accept", "application/ld+json")
-      .with_body("{\"inbox\": \"https://foo.com/users/muffinista/inbox\"}")
+      .with_body(data)
       .create();
 
     let result = follower.find_inbox(&pool).await.unwrap();
-    assert!(result == "https://foo.com/users/muffinista/inbox");
+    assert!(result == "http://127.0.0.1:1234/users/muffinista");
     Ok(())
   }
 }

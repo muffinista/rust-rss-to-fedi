@@ -62,14 +62,13 @@ impl Actor {
     }
 
     let result = sqlx::query_as!(Actor, "SELECT * FROM actors WHERE url = $1", &lookup_url)
-    .fetch_one(pool)
-    .await;
+      .fetch_one(pool)
+      .await;
 
     match result {
       Ok(result) => Ok(result),
       Err(why) => Err(why.into())
     }
-
   }
 
   pub async fn exists_by_url(url: &String, pool: &PgPool) -> Result<bool, sqlx::Error> {
@@ -92,8 +91,6 @@ impl Actor {
 
     match resp {
       Ok(resp) => {
-        println!("{:?}", resp);
-
         if resp.is_none() {
           return Err(anyhow!("User not found"))
         }
@@ -102,9 +99,9 @@ impl Actor {
         let data:Value = serde_json::from_str(&resp).unwrap();
         if data["id"].is_string() && data["publicKey"].is_object() {
           Actor::create(&data["id"].as_str().unwrap().to_string(),
-            &data["publicKey"]["id"].as_str().unwrap().to_string(),
-            &data["publicKey"]["publicKeyPem"].as_str().unwrap().to_string(),
-            pool
+                        &data["publicKey"]["id"].as_str().unwrap().to_string(),
+                        &data["publicKey"]["publicKeyPem"].as_str().unwrap().to_string(),
+                        pool
           ).await?;
         } else {
           return Err(anyhow!("User not found"))
