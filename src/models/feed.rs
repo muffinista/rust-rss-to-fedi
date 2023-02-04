@@ -16,12 +16,10 @@ use activitystreams::{
   security,
   context,
   collection::{OrderedCollection, OrderedCollectionPage},
+  link::Mention,
   object::ApObject,
   object::*
 };
-
-use activitystreams::object::Image;
-use activitystreams::link::Mention;
 
 use sqlx::postgres::PgPool;
 use serde::{Serialize};
@@ -98,8 +96,6 @@ const PER_PAGE:i32 = 10i32;
 
 // https://docs.rs/activitystreams/0.7.0-alpha.20/activitystreams/index.html#parse
 // also examples/handle_incoming.rs
-
-use activitystreams::activity::ActorAndObject;
 
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
 pub enum AcceptedTypes {

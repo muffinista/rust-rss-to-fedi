@@ -1,4 +1,3 @@
-
 use rocket::post;
 use rocket::http::Status;
 use rocket::State;
@@ -18,6 +17,8 @@ use rocket::outcome::{Outcome};
 use chrono::{Duration, NaiveDateTime, Utc};
 
 use std::env;
+
+use base64::{Engine as _, engine::general_purpose};
 
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -93,8 +94,9 @@ impl<'r> FromRequest<'r> for SignatureValidity {
     let sender = Actor::find_or_fetch(&key_id.unwrap().to_string(), &pool).await;
     match sender {
       Ok(sender) => {
+        // .verify_signature(&signature_verification_payload, &base64::decode(signature).unwrap_or_default())
         if !sender
-          .verify_signature(&signature_verification_payload, &base64::decode(signature).unwrap_or_default())
+          .verify_signature(&signature_verification_payload, &general_purpose::STANDARD.decode(signature).unwrap_or_default())
           .unwrap_or(false)
         {
           println!("unable to verify signature!");
