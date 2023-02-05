@@ -454,6 +454,20 @@
     },
     "query": "UPDATE feeds SET refreshed_at = $1 WHERE id = $2"
   },
+  "58140e7d207497fed95bd94114cfee4c31ba46ca049159f9bab55ccbbc92e280": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Timestamptz",
+          "Timestamptz"
+        ]
+      }
+    },
+    "query": "INSERT INTO blocked_domains (name, created_at, updated_at) VALUES ($1, $2, $3)"
+  },
   "5c4f3a34de0a3bf868af76e2607241caae95ae8c7bb1a32b5e9f077f096307e4": {
     "describe": {
       "columns": [
@@ -1440,6 +1454,26 @@
     },
     "query": "SELECT COUNT(1) AS tally FROM followers WHERE feed_id = $1"
   },
+  "ad676ad5aba1ade61e73f31708aff63005ad772e52347f4118e59ad9599712d1": {
+    "describe": {
+      "columns": [
+        {
+          "name": "tally",
+          "ordinal": 0,
+          "type_info": "Int8"
+        }
+      ],
+      "nullable": [
+        null
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      }
+    },
+    "query": "SELECT count(1) AS tally FROM blocked_domains WHERE name = $1"
+  },
   "ba54f2cfdc62fa7daa7a69952dccb566f1e568c7721b7f43b85356fd64380c1d": {
     "describe": {
       "columns": [
@@ -1887,6 +1921,18 @@
       }
     },
     "query": "SELECT * FROM feeds WHERE admin = true LIMIT 1"
+  },
+  "daae5eb260f8aaa9788ced69b950938e65d9f7f4399d199b2fb1b72979b01bea": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      }
+    },
+    "query": "DELETE FROM blocked_domains WHERE name = $1"
   },
   "dc8ebf976f9fd72f9fa234b048639ed2708a1a1e0a1f1a5a4b4a4dacf9a54b40": {
     "describe": {
