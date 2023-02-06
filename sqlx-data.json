@@ -272,33 +272,6 @@
     },
     "query": "SELECT * FROM feeds WHERE name = $1"
   },
-  "22329219e084d217058fd149c107adf88f8ed33696c2d4a0e41931987a5b4895": {
-    "describe": {
-      "columns": [
-        {
-          "name": "id",
-          "ordinal": 0,
-          "type_info": "Int4"
-        }
-      ],
-      "nullable": [
-        false
-      ],
-      "parameters": {
-        "Left": [
-          "Int4",
-          "Varchar",
-          "Varchar",
-          "Varchar",
-          "Varchar",
-          "Timestamptz",
-          "Timestamptz",
-          "Timestamptz"
-        ]
-      }
-    },
-    "query": "INSERT INTO feeds\n        (user_id, url, name, private_key, public_key, created_at, updated_at, refreshed_at)\n        VALUES($1, $2, $3, $4, $5, $6, $7, $8)\n        RETURNING id"
-  },
   "2f41862f85e856da569e79423972c4ac1d3fbe9e9a5f4c0277beb7e2344f1d5b": {
     "describe": {
       "columns": [],
@@ -630,6 +603,34 @@
       }
     },
     "query": "SELECT * FROM feeds WHERE admin = false AND refreshed_at < $1 LIMIT $2"
+  },
+  "60ed3badee320677e743fcc064e1148d00611c75f5cd73f2bb9a310bb6c619da": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        }
+      ],
+      "nullable": [
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Timestamptz",
+          "Timestamptz",
+          "Timestamptz"
+        ]
+      }
+    },
+    "query": "INSERT INTO feeds\n        (user_id, url, name, private_key, public_key, status_publicity, created_at, updated_at, refreshed_at)\n        VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9)\n        RETURNING id"
   },
   "64ab49a91806396f2a52d938c8a958161cf18cd96ca72cc3b663ffdef10b5309": {
     "describe": {
