@@ -154,6 +154,12 @@ impl Feed {
       .await
   }
 
+  pub async fn load_by_name(name: &String, pool: &PgPool) -> Result<Feed, sqlx::Error> {
+    sqlx::query_as!(Feed, "SELECT * FROM feeds WHERE name = $1", name)
+      .fetch_one(pool)
+      .await
+  }
+
   pub async fn exists_by_name(name: &String, pool: &PgPool) -> Result<bool, sqlx::Error> {
     let result = sqlx::query!("SELECT count(1) AS tally FROM feeds WHERE name = $1", name)
       .fetch_one(pool)
