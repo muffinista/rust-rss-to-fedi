@@ -6,7 +6,7 @@ use anyhow::Error as AnyError;
 use crate::models::feed::Feed;
 
 pub async fn update_stale_feeds(pool: &PgPool) -> Result<(), AnyError> {
-  let feeds = Feed::stale(pool, 3600, 5).await;
+  let feeds = Feed::stale(pool, 600, 5).await;
   match feeds {
     Ok(feeds) => {
       for mut feed in feeds {
