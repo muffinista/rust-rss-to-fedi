@@ -33,7 +33,7 @@ pub async fn attempt_login(db: &State<PgPool>, cookies: &CookieJar<'_>, login_to
             cookies.add_private(Cookie::new("access_token", token.to_string()));
 
             let dest = uri!(crate::routes::index::index_logged_in);
-            Ok(Redirect::to(dest))
+            Ok(Redirect::to(format!("{}?yay=1", dest)))
           },
           Err(why) => {
             print!("{}", why);
