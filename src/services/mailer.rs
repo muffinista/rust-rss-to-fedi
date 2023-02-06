@@ -60,29 +60,6 @@ pub async fn fetch_object(url: &str) -> Result<Option<String>, reqwest::Error> {
   }
 }
 
-// pub async fn profile_for_actor(actor: &str) -> Result<Option<String>, reqwest::Error> {
-//   let profile_url = find_actor_url(actor).await;
-//   match profile_url {
-//     Ok(profile_url) => Ok(Some(fetch_object(&profile_url.unwrap().to_string()).await?)),
-//     Err(why) => Ok(None)
-//   }
-// }
-
-// ///
-// /// given an actor, try and find their public key so we can validate
-// /// incoming requests
-// ///
-// pub async fn key_for_actor(actor: &str) -> Result<Option<String>, reqwest::Error> {
-//   let result = profile_for_actor(actor).await?;
-
-//   if result.is_some() {
-//     let v: Value = serde_json::from_str(&result.unwrap()).unwrap();
-//     Ok(Some(v["publicKey"]["publicKeyPem"].to_string()))
-//   } else {
-//     Ok(None)
-//   }
-// }
-
 ///
 /// parse webfinger data for activity URL
 ///
@@ -215,12 +192,4 @@ mod test {
     let inbox:Url = parse_webfinger(wf).unwrap();
     assert_eq!("https://example.org/@test/json", inbox.to_string());
   }
- 
-  // #[tokio::test]
-  // async fn test_key_for_actor() {
-  //   let result = key_for_actor("muffinista@botsin.space").await.unwrap();
-  //   assert!(result.is_some());
-  //   assert!(result.unwrap().contains("-----BEGIN PUBLIC KEY-----"));
-  // }
-
 }

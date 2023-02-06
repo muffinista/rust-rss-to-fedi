@@ -7,7 +7,7 @@
 
 {% block content %}
   <header class="feed">
-    {% if is_admin %}
+    {% if !feed.image_url %}
     <img src="/assets/icon.png" width="200" />
     {% else %}
     <img src="{{feed.image_url}}" width="200" />

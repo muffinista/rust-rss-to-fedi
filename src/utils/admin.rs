@@ -29,6 +29,8 @@ pub async fn create_admin_feed(pool: &PgPool) -> Result<(), sqlx::Error> {
                 feed.admin = true;
                 feed.title = Some("Admin account".to_string());
                 feed.description = Some("This is the admin account for this instance. Send me a message to get a login URL".to_string());
+                let image_url = format!("{}/assets/icon.png", instance_domain).to_string();
+                feed.image_url = Some(image_url);
                 // feed.mark_admin(&pool).await?;
                 Ok(())
               },
