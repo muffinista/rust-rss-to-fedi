@@ -326,6 +326,13 @@ impl Item {
         let inbox = follower.find_inbox(pool).await;
         match inbox {
           Ok(inbox) => {
+            if inbox.is_none() {
+              println!("inbox not found");
+              return Ok(());
+            }
+
+            let inbox = inbox.unwrap();
+
             println!("INBOX: {}", inbox);
             // generate and send
             let mut targeted = message.clone();

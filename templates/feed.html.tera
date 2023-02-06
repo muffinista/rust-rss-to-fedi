@@ -1,10 +1,9 @@
 {% extends "default" %}
 {% block title %}Feed for {{feed.name}}{% endblock title %}
 
-
-{% if noindex %}
-{% block meta %}<meta name="robots" content="noindex">{% endblock meta %}
-{% endif %}
+{% block meta %}
+  {% if noindex %}<meta name="robots" content="noindex">{% endif %}
+{% endblock meta %}
 
 {% block content %}
   <header class="feed">
@@ -28,22 +27,21 @@
     </div>
   </header>
 
-
   {% if is_admin %}
-  <section class="feed">
-    {% include "help" %}
-  </section>
+    <section class="feed">
+      {% include "help" %}
+    </section>
   {% else %}
-  <section class="feed">
-    <h1>Entries</h1>
-    <ul>
-      {% for item in items %}
-      <li>
-        <a href="{{ item.url | safe }}">{{ item.title }}</a>
-      </li>
-      {% endfor %}
-    </ul>
-  </section>
+    <section class="feed">
+      <h1>Entries</h1>
+      <ul>
+        {% for item in items %}
+        <li>
+          <a href="{{ item.url | safe }}">{{ item.title }}</a>
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
   {% endif %}
 
   {% if logged_in %}
@@ -52,5 +50,4 @@
       {% include "delete-feed" %}
     {% endif %}
   {% endif %}
-  
 {% endblock content %}

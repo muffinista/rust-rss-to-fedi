@@ -94,6 +94,13 @@ impl<'r> FromRequest<'r> for SignatureValidity {
     let sender = Actor::find_or_fetch(&key_id.unwrap().to_string(), &pool).await;
     match sender {
       Ok(sender) => {
+        if sender.is_none() {
+          println!("unable to find sender!");
+          return Outcome::Success(SignatureValidity::Invalid);
+        }
+
+        let sender = sender.expect("Unable to load sender data!");
+
         // .verify_signature(&signature_verification_payload, &base64::decode(signature).unwrap_or_default())
         if !sender
           .verify_signature(&signature_verification_payload, &general_purpose::STANDARD.decode(signature).unwrap_or_default())

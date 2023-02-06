@@ -24,9 +24,18 @@ impl Follower {
   ///
   /// Ping the actor's profile data to get their inbox
   ///
-  pub async fn find_inbox(&self, pool: &PgPool) -> Result<String, AnyError> {
-    let actor = Actor::find_or_fetch(&self.actor.to_string(), pool).await?;
-    Ok(actor.url)
+  pub async fn find_inbox(&self, pool: &PgPool) -> Result<Option<String>, AnyError> {
+    let actor = Actor::find_or_fetch(&self.actor.to_string(), pool).await;
+    match actor {
+      Ok(actor) => {
+        if actor.is_none() {
+          Ok(None)
+        } else {
+          Ok(Some(actor.unwrap().url))
+        }
+      },
+      Err(why) => Err(why)
+    }
   }
 }
 
@@ -56,7 +65,7 @@ mod test {
       .create();
 
     let result = follower.find_inbox(&pool).await.unwrap();
-    assert!(result == "http://127.0.0.1:1234/users/muffinista");
+    assert!(result.expect("Failed to find inbox") == "http://127.0.0.1:1234/users/muffinista");
     Ok(())
   }
 }

@@ -662,6 +662,12 @@ impl Feed {
     let dest_actor = Actor::find_or_fetch(&actor_url.to_string(), pool).await;
     match dest_actor {
       Ok(dest_actor) => {
+        if dest_actor.is_none() {
+          println!("Actor not found");
+          return Ok(());
+        }
+        let dest_actor = dest_actor.unwrap();
+
         let dest_inbox = dest_actor.find_inbox().await.unwrap();
 
         let message = self.generate_login_message(activity, &dest_actor, pool).await?;

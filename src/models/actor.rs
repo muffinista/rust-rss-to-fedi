@@ -17,6 +17,7 @@ use openssl::{
 
 use reqwest::header::{HeaderValue, HeaderMap};
 
+use crate::models::BlockedDomain;
 
 use crate::utils::http::http_client;
 
@@ -40,9 +41,16 @@ impl PartialEq for Actor {
 }
 
 impl Actor {
-  pub async fn find_or_fetch(url: &String, pool: &PgPool) -> Result<Actor, AnyError> {
+  pub async fn find_or_fetch(url: &String, pool: &PgPool) -> Result<Option<Actor>, AnyError> {
     let mut clean_url = Url::parse(url).unwrap();
     clean_url.set_fragment(None);
+
+    println!("{:?}", clean_url);
+    let domain = clean_url.host().unwrap();
+    let on_blocklist = BlockedDomain::exists(&domain.to_string(), pool).await?;
+    if on_blocklist {
+      return Ok(None);
+    }
 
     let lookup_url = clean_url.as_str().to_string();
     println!("find actor {:}", lookup_url);
@@ -62,7 +70,7 @@ impl Actor {
     }
 
     let result = sqlx::query_as!(Actor, "SELECT * FROM actors WHERE url = $1", &lookup_url)
-      .fetch_one(pool)
+      .fetch_optional(pool)
       .await;
 
     match result {
@@ -233,7 +241,7 @@ mod test {
   #[sqlx::test]
   async fn test_find_or_fetch(pool: PgPool) -> Result<(), String> {
     let url = "https://botsin.space/users/muffinista".to_string();
-    let actor = Actor::find_or_fetch(&url, &pool).await.unwrap();
+    let actor = Actor::find_or_fetch(&url, &pool).await.unwrap().expect("Failed to load actor");
     println!("{:?}", actor);
 
     assert_eq!(actor.url, url);

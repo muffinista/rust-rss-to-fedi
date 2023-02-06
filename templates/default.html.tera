@@ -7,8 +7,7 @@
     <link rel="stylesheet" href="/assets/styles.css" />
     <title>{% block title %}{% endblock title %}</title>
     {% endblock head %}
-    {% block meta %}
-    {% endblock meta %}
+    {% block meta %}{% endblock meta %}
   </head>
   <body>
     <header>
