@@ -86,6 +86,9 @@ pub async fn deliver_to_inbox(inbox: &Url, key_id: &str, private_key: &str, json
   let client = http_client();
   let heads = generate_request_headers(&inbox);
 
+  println!("deliver to {:}", inbox);
+  println!("message {:}", json);
+
   let request_builder = client
     .post(inbox.to_string())
     .headers(heads)

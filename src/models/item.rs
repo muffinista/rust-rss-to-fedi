@@ -345,12 +345,12 @@ impl Item {
   
             match result {
               Ok(result) => println!("sent! {:?}", result),
-              Err(why) => println!("failure! {:?}", why)
+              Err(why) => println!("delivery failure! {:?}", why)
             }
   
           },
           Err(why) => {
-            println!("failure! {:?}", why);
+            println!("lookup failure! {:?}", why);
             // @todo retry! mark as undeliverable? delete user?
             // panic!("oops!");
           }
