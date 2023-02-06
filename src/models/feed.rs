@@ -192,11 +192,13 @@ impl Feed {
 
     let now = Utc::now();
 
+    let status_publicity = Some("unlisted");
+
     let feed_id = sqlx::query!("INSERT INTO feeds
-        (user_id, url, name, private_key, public_key, created_at, updated_at, refreshed_at)
-        VALUES($1, $2, $3, $4, $5, $6, $7, $8)
+        (user_id, url, name, private_key, public_key, status_publicity, created_at, updated_at, refreshed_at)
+        VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING id",
-        user.id, url, name, private_key_str, public_key_str, now, now, old)
+        user.id, url, name, private_key_str, public_key_str, status_publicity, now, now, old)
       .fetch_one(pool)
       .await?
       .id;
