@@ -106,6 +106,8 @@ impl User {
   ///
   pub async fn apply_access_token(&self, pool: &PgPool) -> Result<String, sqlx::Error> {
     let token = User::generate_access_token();
+    println!("generate token: {:}", token);
+
     let query_check = sqlx::query!(
       "UPDATE users SET access_token = $1 WHERE id = $2", token, self.id)
       .execute(pool)

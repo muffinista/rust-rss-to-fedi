@@ -29,6 +29,7 @@ pub async fn attempt_login(db: &State<PgPool>, cookies: &CookieJar<'_>, login_to
         let token = user.apply_access_token(db).await;
         match token {
           Ok(token) => {
+            println!("Apply token: {:}", token);
             cookies.add_private(Cookie::new("access_token", token.to_string()));
 
             let dest = uri!(crate::routes::index::index_logged_in);
