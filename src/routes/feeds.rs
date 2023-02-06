@@ -175,6 +175,7 @@ pub async fn show_feed(user: Option<User>, username: &str, flash: Option<FlashMe
               Ok(Template::render("feed", context! {
                 flash: flash,
                 is_admin: feed.is_admin(),
+                noindex: !feed.listed,
                 logged_in: logged_in,
                 owned_by: owned_by,
                 feed: feed,

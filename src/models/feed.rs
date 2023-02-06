@@ -216,8 +216,9 @@ impl Feed {
           hashtag = $12,
           content_warning = $13,
           status_publicity = $14,
-          admin = $15
-      WHERE id = $16",
+          admin = $15,
+          listed = $16
+      WHERE id = $17",
       self.url,
       self.name,
       self.private_key,
@@ -233,6 +234,7 @@ impl Feed {
       self.content_warning,
       self.status_publicity,
       self.admin,
+      self.listed,
       self.id
     ).execute(pool)
       .await?;

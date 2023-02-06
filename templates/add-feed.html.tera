@@ -16,7 +16,7 @@
     <div class="form-row">
       <label for="name">Name:</label>
       <div class="input">
-        <input type="text" name="name" pattern="[A-Za-z0-9]" required />
+        <input type="text" name="name" required />
         <div class="help">The username of the account</div>
       </div>
     </div>

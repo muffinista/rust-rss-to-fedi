@@ -1,6 +1,11 @@
 {% extends "default" %}
 {% block title %}Feed for {{feed.name}}{% endblock title %}
 
+
+{% if noindex %}
+{% block meta %}<meta name="robots" content="noindex">{% endblock meta %}
+{% endif %}
+
 {% block content %}
   <header class="feed">
     {% if is_admin %}
@@ -16,8 +21,8 @@
       <b>Fediverse name:</b> @{{feed.name}}@{{instance_domain}}<br />
       <b>Fediverse URL:</b> {{follow_url}}<br />
       {% if not is_admin %}
-      <b>Feed URL:</b> <a href="{{feed.url}}">{{feed.url}}</a><br />
-      <b>website:</b> <a href="{{feed.site_url}}">{{feed.site_url}}</a><br />
+      <b>Feed URL:</b> <a href="{{feed.url | safe}}">{{feed.url | safe}}</a><br />
+      <b>website:</b> <a href="{{feed.site_url | safe}}">{{feed.site_url | safe}}</a><br />
       <b>refreshed at:</b> {{feed.refreshed_at}}<br />
       {% endif %}
     </div>
@@ -34,7 +39,7 @@
     <ul>
       {% for item in items %}
       <li>
-        <a href="{{ item.url }}">{{ item.title }}</a>
+        <a href="{{ item.url | safe }}">{{ item.title }}</a>
       </li>
       {% endfor %}
     </ul>
