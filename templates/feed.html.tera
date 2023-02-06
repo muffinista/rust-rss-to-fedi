@@ -7,10 +7,10 @@
 
 {% block content %}
   <header class="feed">
-    {% if !feed.image_url %}
-    <img src="/assets/icon.png" width="200" />
-    {% else %}
+    {% if feed.image_url %}
     <img src="{{feed.image_url}}" width="200" />
+    {% else %}
+    <img src="/assets/icon.png" width="200" />
     {% endif %}
 
     <div>

@@ -29,11 +29,6 @@ services:
     networks:
       - external_network
       - internal_network
-  # mail:
-  #   image: mailhog/mailhog:latest
-  #   ports:
-  #     - 8025:8025
-  #     - 1025:1025
 networks:
   external_network:
   internal_network:
