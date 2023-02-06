@@ -80,6 +80,7 @@ impl User {
   /// Find user by access token
   ///
   pub async fn find_by_access(token: &String, pool: &PgPool) -> Result<Option<User>, sqlx::Error> {
+    println!("Find user: {:}", token);
     sqlx::query_as!(User, "SELECT * FROM users WHERE access_token = $1", token)
       .fetch_optional(pool)
       .await
