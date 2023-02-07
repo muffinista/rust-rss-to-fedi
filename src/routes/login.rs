@@ -34,11 +34,16 @@ pub async fn attempt_login(db: &State<PgPool>, cookies: &CookieJar<'_>, login_to
             cookie.set_same_site(SameSite::Lax);
             cookies.add_private(cookie);
 
+            match user.reset_login_token(&db).await {
+              Ok(result) => { println!("Reset login token {:}", result) },
+              Err(why) => { println!("reset login error: {}", why) }
+            }
+
             let dest = uri!(crate::routes::index::index_logged_in);
-            Ok(Redirect::to(format!("{}?yay=1", dest)))
+            Ok(Redirect::to(dest))
           },
           Err(why) => {
-            print!("{}", why);
+            println!("{}", why);
             Err(Status::NotFound)
           }
         }
@@ -53,6 +58,11 @@ pub async fn attempt_login(db: &State<PgPool>, cookies: &CookieJar<'_>, login_to
     }
   }
 }
+#[get("/user/logout")]
+pub async fn do_logout(cookies: &CookieJar<'_>) -> Result<Redirect, Status> {
+  cookies.remove_private(Cookie::named("access_token"));
+  Ok(Redirect::to("/"))
+}
 
 #[post("/login", data = "<form>")]
 pub async fn do_login(db: &State<PgPool>, form: Form<LoginForm>) -> Result<Redirect, Status> {
@@ -62,23 +72,6 @@ pub async fn do_login(db: &State<PgPool>, form: Form<LoginForm>) -> Result<Redir
     Ok(_user) => {
       let dest = uri!(login_result());
       Ok(Redirect::to(dest))
-
-      // if user.should_send_login_email() {
-      //   let result = user.send_login_email();
-      //   match result {
-      //     Ok(_result) => {
-      //       let dest = uri!(login_result());
-      //       Ok(Redirect::to(dest))
-      //     },
-      //     Err(_why) => {
-      //       let dest = uri!(login_result());
-      //       Ok(Redirect::to(dest))
-      //     }
-      //   }
-      // } else {
-      //   let dest = uri!(login_result());
-      //   Ok(Redirect::to(dest))
-      // }
     },
     Err(why) => {
       print!("{}", why);

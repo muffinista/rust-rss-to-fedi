@@ -11,7 +11,12 @@
   </head>
   <body>
     <header>
-      <nav><a href="/">Home</a></nav>
+      <nav>
+        <a href="/">Home</a>
+        {% if logged_in %}
+        || <a href="/user/logout">Logout</a>
+        {% endif %}
+      </nav>
     </header>
     <main>
       {% block content %}{% endblock content %}

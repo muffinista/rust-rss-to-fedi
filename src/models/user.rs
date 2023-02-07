@@ -71,18 +71,18 @@ impl User {
       .await
   }
 
-  // pub async fn reset_login_token(&self, pool: &PgPool) -> Result<String, sqlx::Error> {
-  //   let token = User::generate_login_token();
-  //   let query_check = sqlx::query!(
-  //     "UPDATE users SET login_token = $1 WHERE id = $2", token, self.id)
-  //     .execute(pool)
-  //     .await;
+  pub async fn reset_login_token(&self, pool: &PgPool) -> Result<String, sqlx::Error> {
+    let token = User::generate_login_token();
+    let query_check = sqlx::query!(
+      "UPDATE users SET login_token = $1 WHERE id = $2", token, self.id)
+      .execute(pool)
+      .await;
       
-  //   match query_check {
-  //     Ok(_q) => return Ok(token),
-  //     Err(why) => return Err(why)
-  //   }
-  // }
+    match query_check {
+      Ok(_q) => return Ok(token),
+      Err(why) => return Err(why)
+    }
+  }
 
   
   
