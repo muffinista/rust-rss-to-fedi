@@ -3,7 +3,7 @@ use rocket::form::Form;
 use rocket::http::Status;
 use rocket::response::Redirect;
 use rocket::State;
-use rocket::http::{Cookie, CookieJar};
+use rocket::http::{Cookie, CookieJar, SameSite};
 use rocket::uri;
 use rocket_dyn_templates::{Template, context};
 
@@ -30,7 +30,9 @@ pub async fn attempt_login(db: &State<PgPool>, cookies: &CookieJar<'_>, login_to
         match token {
           Ok(token) => {
             println!("Apply token: {:}", token);
-            cookies.add_private(Cookie::new("access_token", token.to_string()));
+            let mut cookie = Cookie::new("access_token", token.to_string());
+            cookie.set_same_site(SameSite::Lax);
+            cookies.add_private(cookie);
 
             let dest = uri!(crate::routes::index::index_logged_in);
             Ok(Redirect::to(format!("{}?yay=1", dest)))
