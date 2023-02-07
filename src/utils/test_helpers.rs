@@ -31,7 +31,7 @@ pub fn fake_user() -> User {
 }
 
 pub async fn real_user(pool: &PgPool) -> sqlx::Result<User> {
-  let user:User = User::find_or_create_by_email(&"foo@bar.com".to_string(), &pool).await?;
+  let user:User = User::find_or_create_by_actor_url(&"https:://muffin.pizza/users/test".to_string(), &pool).await?;
   
   Ok(user)
 }

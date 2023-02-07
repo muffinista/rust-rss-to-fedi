@@ -368,6 +368,7 @@ mod test {
   use sqlx::postgres::PgPool;
   use crate::models::feed::Feed;
   use crate::models::item::Item;
+  use crate::models::Actor;
   use crate::utils::test_helpers::{real_item, real_feed, fake_item, real_item_with_enclosure};
 
   use mockito::mock;
@@ -477,14 +478,38 @@ mod test {
       Err(why) => Err(why.to_string())
     }
   }
+
+  #[sqlx::test]
+  async fn test_delete(pool: PgPool) -> Result<(), String> {
+    let feed: Feed = real_feed(&pool).await.unwrap();
+    let item: Item = real_item_with_enclosure(&feed, &pool).await.unwrap();
+
+    assert!(Item::exists_by_guid(&item.guid, &feed, &pool).await.unwrap());
+    assert_eq!(item, Item::delete(&feed, item.id, &pool).await.unwrap());
+    assert!(!Item::exists_by_guid(&item.guid, &feed, &pool).await.unwrap());
+
+    Ok(())
+  }
   
   #[sqlx::test]
   async fn test_deliver(pool: PgPool) -> Result<(), String> {
-    let feed: Feed = real_feed(&pool).await.unwrap();
+    let mut feed: Feed = real_feed(&pool).await.unwrap();
     let item: Item = fake_item();
 
+    // let dest_actor: Actor = real_actor(&pool).await.unwrap();
+
     let actor = format!("{}/users/colin", &mockito::server_url());
+    let inbox = format!("{}/inbox", &actor);
+
     let profile = format!("{{\"inbox\": \"{}/users/colin/inbox\"}}", &mockito::server_url());
+
+    Actor::create(
+      &actor.to_string(),
+      &inbox,
+      &"public_key_id".to_string(),
+      &"public_key".to_string(),
+      &pool).await.unwrap();
+  
 
     let _m = mock("GET", "/users/colin")
       .with_status(200)
@@ -500,12 +525,16 @@ mod test {
 
     let _follower = feed.add_follower(&pool, &actor).await;
 
-    let result = item.deliver(&feed, &pool).await;
-    match result {
-      Ok(_result) => {
-        Ok(())
-      },
-      Err(why) => Err(why.to_string())
-    }
+
+    feed.status_publicity = Some("unlisted".to_string());
+    assert!(item.deliver(&feed, &pool).await.is_ok());
+
+    feed.status_publicity = Some("public".to_string());
+    assert!(item.deliver(&feed, &pool).await.is_ok());
+
+    feed.status_publicity = Some("direct".to_string());
+    assert!(item.deliver(&feed, &pool).await.is_ok());
+
+    Ok(())
   }
 }
