@@ -677,11 +677,21 @@ impl Feed {
   pub async fn incoming_message(&self, pool: &PgPool, actor_url: &str, activity: &AcceptedActivity) -> Result<(), AnyError> {
 
     // println!("ACTOR: {:}", actor_url);
+    let message = activity.content();
 
     // ignore messages that aren't to admin feed
-    if ! self.is_admin() {
+    if ! self.is_admin() || message.is_none() {
       return Ok(())
     }
+
+    let message = message.unwrap().as_single_xsd_string().unwrap().to_lowercase();
+    println!("MESSAGE: {:}", message);
+
+    if !message.contains("help") {
+      println!("User didn't ask for help");
+      return Ok(());      
+    }
+
 
     let dest_actor = Actor::find_or_fetch(&actor_url.to_string(), pool).await;
     match dest_actor {
