@@ -599,13 +599,8 @@ impl Feed {
     } else {
       if self.description.is_some() {
         svc.set_summary(self.description.clone().unwrap());
-        let mut icon = Image::new();
-        icon.set_url(iri!(format!("https://{}/assets/icon.png", instance_domain)));
-        svc.set_icon(icon.into_any_base()?);
-
-        let mut image = Image::new();
-        image.set_url(iri!(format!("https://{}/assets/image.png", instance_domain)));
-        svc.set_image(image.into_any_base()?);
+      } else if self.title.is_some() {
+        svc.set_summary(self.title.clone().unwrap());
       }
   
       if self.icon_url.is_some() {
@@ -615,6 +610,10 @@ impl Feed {
       } else if self.image_url.is_some() {
         let mut icon = Image::new();
         icon.set_url(iri!(self.image_url.clone().unwrap()));
+        svc.set_icon(icon.into_any_base()?);
+      } else {
+        let mut icon = Image::new();
+        icon.set_url(iri!(format!("https://{}/assets/icon.png", instance_domain)));
         svc.set_icon(icon.into_any_base()?);
       }
   
