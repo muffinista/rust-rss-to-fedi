@@ -274,20 +274,28 @@ impl<'r> FromRequest<'r> for User {
     match cookie {
       Some(cookie) => {
         let access_token = cookie.value();
+        println!("access token: {:}", access_token);
         let user = User::find_by_access(&access_token.to_string(), &pool).await;
+
         match user {
           Ok(user) => {
             if user.is_some() {
+              println!("found user!");
               Outcome::Success(user.unwrap())
             }
             else {
+              println!("no matching using!");
               Outcome::Forward(())
             }
           },
-          Err(_why) => Outcome::Forward(())
+          Err(why) => {
+            println!("ERR: {:?}", why);
+            Outcome::Forward(())
+          }
         }
       },
       None => {
+        println!("No cookie to check");
         return Outcome::Forward(())
       }
     }
