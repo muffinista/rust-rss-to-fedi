@@ -749,6 +749,7 @@ impl Feed {
     println!("{:}", body);
 
     reply
+      // .set_sensitive(true)
       .set_attributed_to(iri!(my_url))
       .set_in_reply_to(iri!(source_id))
       .set_content(body)

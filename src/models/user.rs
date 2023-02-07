@@ -270,7 +270,7 @@ impl<'r> FromRequest<'r> for User {
   async fn from_request(request: &'r Request<'_>) -> request::Outcome<User, Self::Error> {
     let pool = request.rocket().state::<PgPool>().unwrap();
     let cookie = request.cookies().get_private("access_token");
-    
+    println!("{:?}", cookie);
     match cookie {
       Some(cookie) => {
         let access_token = cookie.value();

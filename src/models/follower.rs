@@ -31,7 +31,7 @@ impl Follower {
         if actor.is_none() {
           Ok(None)
         } else {
-          Ok(Some(actor.unwrap().url))
+          Ok(Some(actor.unwrap().inbox_url))
         }
       },
       Err(why) => Err(why)
