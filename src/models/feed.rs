@@ -408,14 +408,18 @@ impl Feed {
     let items = self.parse(pool).await;
     match items {
       Ok(items) => {
-        let count = self.follower_count(pool).await?;
-        if count > 0 {
-          println!("delivering {} items to {} users", items.len(), count);
-          for item in items {
-            item.deliver(&self, &pool).await?;
+        if items.len() > 0 {
+          let count = self.follower_count(pool).await?;
+          if count > 0 {
+            println!("delivering {} items to {} users", items.len(), count);
+            for item in items {
+              item.deliver(&self, &pool).await?;
+            }  
+          } else {
+            println!("skipping delivery of {} items because no followers :(", items.len());
           }  
         } else {
-          println!("skipping delivery of {} items because no followers :(", items.len());
+          println!("Nothing new so nothing to deliver");
         }
 
         self.mark_fresh(pool).await?;
@@ -500,7 +504,7 @@ impl Feed {
         let update = self.save(pool).await;
         match update {
           Ok(_update) => {
-            println!("updating feed entries");
+            // println!("updating feed entries");
             let result = self.feed_to_entries(data, pool).await;
             match result {
               Ok(result) => Ok(result),
@@ -660,7 +664,7 @@ impl Feed {
   /// handle an incoming message
   pub async fn incoming_message(&self, pool: &PgPool, actor_url: &str, activity: &AcceptedActivity) -> Result<(), AnyError> {
 
-    println!("ACTOR: {:}", actor_url);
+    // println!("ACTOR: {:}", actor_url);
 
     // ignore messages that aren't to admin feed
     if ! self.is_admin() {
@@ -671,7 +675,7 @@ impl Feed {
     match dest_actor {
       Ok(dest_actor) => {
         if dest_actor.is_none() {
-          println!("Actor not found");
+          // println!("Actor not found");
           return Ok(());
         }
         let dest_actor = dest_actor.unwrap();

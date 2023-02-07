@@ -13,7 +13,6 @@ use crate::models::item::Item;
 pub async fn show_item(username: &str, id: i32, db: &State<PgPool>) -> Result<Redirect, Status> {
   let lookup_feed = Feed::find_by_name(&username.to_string(), db).await;
 
-  println!("{:?}", lookup_feed);
   match lookup_feed {
     Ok(lookup_feed) => {
       if lookup_feed.is_some() {

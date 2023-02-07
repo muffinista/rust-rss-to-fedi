@@ -42,7 +42,7 @@ impl Actor {
     let mut clean_url = Url::parse(url).unwrap();
     clean_url.set_fragment(None);
 
-    println!("{:?}", clean_url);
+    // println!("{:?}", clean_url);
     let domain = clean_url.host().unwrap();
     let on_blocklist = BlockedDomain::exists(&domain.to_string(), pool).await?;
     if on_blocklist {
@@ -50,7 +50,7 @@ impl Actor {
     }
 
     let lookup_url = clean_url.as_str().to_string();
-    println!("find actor {:}", lookup_url);
+    // println!("find actor {:}", lookup_url);
 
     let exists = Actor::exists_by_url(&lookup_url, pool).await?;
     if ! exists {
@@ -58,7 +58,7 @@ impl Actor {
       let result = Actor::fetch(&lookup_url, pool).await;
       match result {
         Ok(_result) => {
-          println!("fetched and created {:}", lookup_url);
+          // println!("fetched and created {:}", lookup_url);
         }
         Err(why) => {
           return Err(why)
@@ -191,9 +191,9 @@ impl Actor {
   }
 
   pub fn verify_signature(&self, payload: &str, signature: &[u8]) -> Result<bool, AnyError> {
-    println!("{:}", payload);
-    println!("{:?}", signature);
-    println!("{:}", self.public_key);
+    // println!("{:}", payload);
+    // println!("{:?}", signature);
+    // println!("{:}", self.public_key);
 
     let key = PKey::from_rsa(Rsa::public_key_from_pem(self.public_key.as_ref()).unwrap()).unwrap();
     let mut verifier = sign::Verifier::new(MessageDigest::sha256(), &key)?;
@@ -212,20 +212,11 @@ mod test {
   async fn test_find_or_fetch(pool: PgPool) -> Result<(), String> {
     let url = "https://botsin.space/users/muffinista".to_string();
     let actor = Actor::find_or_fetch(&url, &pool).await.unwrap().expect("Failed to load actor");
-    println!("{:?}", actor);
+    // println!("{:?}", actor);
 
     assert_eq!(actor.url, url);
     assert_eq!(actor.public_key_id, "https://botsin.space/users/muffinista#main-key");
 
-
-    // let _m = mock("GET", "/users/muffinista")
-    //   .with_status(200)
-    //   .with_header("Accept", "application/ld+json")
-    //   .with_body("{\"inbox\": \"https://foo.com/users/muffinista/inbox\"}")
-    //   .create();
-
-    // let result = follower.find_inbox().await.unwrap();
-    // assert!(result == "https://foo.com/users/muffinista/inbox");
     Ok(())
   }
 

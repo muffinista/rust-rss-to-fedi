@@ -26,7 +26,7 @@ use anyhow::{anyhow};
 /// query webfinger endpoint for actor and try and find data url
 ///
 pub async fn find_actor_url(actor: &str) -> Result<Option<Url>, WebfingerError> {
-  println!("query webfinger for {}", actor);
+  // println!("query webfinger for {}", actor);
   let webfinger = resolve(format!("acct:{}", actor), true).await;
 
   match webfinger {
@@ -67,7 +67,6 @@ pub fn parse_webfinger(webfinger: Webfinger) -> Option<Url> {
   let rel = "self".to_string();
   let mime_type = Some("application/activity+json".to_string());
 
-  println!("wf {:?}", webfinger);
   let query:Option<webfinger::Link> = webfinger
     .links
     .into_iter()

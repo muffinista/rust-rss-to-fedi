@@ -83,7 +83,6 @@ mod test {
     let feed_url = format!("{}/feed.xml", &mockito::server_url()).to_string();
 
     let result = url_to_feed_url(&feed_url).await.unwrap();
-    println!("{:?}", result);
 
     match result {
       Some(result) => assert_eq!(feed_url, result),
@@ -107,7 +106,6 @@ mod test {
     let feed_url = "http://testfeed.com/atom.xml";
 
     let result = url_to_feed_url(&page_url).await.unwrap();
-    println!("{:?}", result);
 
     match result {
       Some(result) => assert_eq!(feed_url, result),
@@ -130,7 +128,6 @@ mod test {
     let page_url = format!("{}/", &mockito::server_url()).to_string();
 
     let result = url_to_feed_url(&page_url).await.unwrap();
-    println!("{:?}", result);
 
     assert!(result.is_none());
 
@@ -146,7 +143,6 @@ mod test {
     let page_url = format!("{}/", &mockito::server_url()).to_string();
 
     let result = url_to_feed_url(&page_url).await.unwrap();
-    println!("{:?}", result);
 
     assert!(result.is_none());
 
@@ -163,7 +159,6 @@ mod test {
     let feed_url = format!("{}/feed.xml", &mockito::server_url()).to_string();
 
     let result = url_to_feed_url(&feed_url).await.unwrap();
-    println!("{:?}", result);
 
     assert!(result.is_none());
 

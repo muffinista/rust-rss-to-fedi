@@ -278,7 +278,6 @@ mod test {
     assert_eq!(response.status(), Status::Ok);
 
     let body = response.into_string().await.unwrap();
-    println!("{:?}", body);
     assert!(body.contains("-----BEGIN PUBLIC KEY-----"));
     assert!(body.contains(&name));
 
@@ -305,7 +304,6 @@ mod test {
     assert_eq!(response.status(), Status::Ok);
 
     let body = response.into_string().await.unwrap();
-    println!("{:}", body);
     assert!(body.contains(r#"{"src":"https://muffinlabs.com/","url":"http://muffinlabs.com/atom.xml","error":null}"#));
 
     Ok(())
@@ -334,7 +332,6 @@ mod test {
     assert_eq!(response.status(), Status::Ok);
 
     let body = response.into_string().await.unwrap();
-    println!("{:?}", body);
  
     assert!(body.contains("OrderedCollectionPage"));
     assert!(body.contains("/colin11"));
