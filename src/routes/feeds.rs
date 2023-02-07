@@ -51,6 +51,12 @@ pub async fn add_feed(user: User, db: &State<PgPool>, form: Form<FeedForm>) -> R
       // @todo handle issues here
       let _refresh_result = feed.refresh(&db).await;
 
+      let notify = feed.notify_about_creation(&user, &db).await;
+      match notify {
+        Ok(_notify) => println!("user notified!"),
+        Err(why) => println!("something went wrong with notification: {:?}", why)
+      }
+
       let dest = uri!(show_feed(feed.name));
       Ok(Flash::success(Redirect::to(dest), "Feed created!"))
     },

@@ -549,11 +549,16 @@ impl Feed {
     path_to_url(&uri!(render_feed_followers(&self.name, None::<i32>)))
   }
 
+  pub fn address(&self) -> String {
+    let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
+    format!("{}@{}", self.name, instance_domain)
+  }
+
   
   ///
   /// Generate valid ActivityPub data for this feed
   ///
-  pub fn to_activity_pub(&self) -> Result<String, AnyError> {    
+  pub fn to_activity_pub(&self) -> Result<String, AnyError> {
     let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
     let feed_url = self.ap_url();
     let mut svc = Ext1::new(
@@ -828,6 +833,94 @@ impl Feed {
       Some(AcceptedTypes::Accept) => Ok(()),
       None => Ok(())
     }
+  }
+
+  pub async fn creation_message(&self, user: &User) -> Result<ApObject<Create>, AnyError> {
+    let mut reply: SensitiveNote = SensitiveNote::new();
+
+    let my_url = self.permalink_url();
+    let actor_url = user.actor_url.as_ref().unwrap().to_string();
+
+    // generate a hash of the incoming actor id. we'll tack
+    // this on the end of the ID for the reply to make it
+    // vaguely unique to the conversation
+    let mut hasher = Md5::new();
+    hasher.update(&self.url);
+    let result = format!("{:X}", hasher.finalize());
+
+    let mut mention = Mention::new();
+
+    mention
+      .set_href(iri!(&actor_url))
+      .set_name("en");
+
+    let tera = match Tera::new("templates/email/*.*") {
+      Ok(t) => t,
+      Err(e) => {
+        println!("Parsing error(s): {}", e);
+        ::std::process::exit(1);
+      }
+    };
+  
+    let mut template_context = Context::new();
+    template_context.insert("link", &my_url);
+    template_context.insert("address", &self.address());
+    
+    let body = tera.render("send-creation-status.text.tera", &template_context).unwrap();
+    println!("{:}", body);
+
+    reply
+      .set_sensitive(true)
+      .set_attributed_to(iri!(my_url))
+      .set_content(body)
+      .set_url(iri!(my_url))
+      .set_id(iri!(format!("{}/{}", my_url, result)))
+      .set_to(iri!(&actor_url))
+      .set_tag(mention.into_any_base()?);
+
+    let mut action: ApObject<Create> = ApObject::new(
+      Create::new(
+        iri!(my_url),
+        reply.into_any_base()?
+      )
+    );
+
+    action
+      .set_context(context())
+      .add_context(security())
+      .add_context("as:sensitive".to_string());
+
+    Ok(action) 
+  }
+
+  pub async fn notify_about_creation(&self, user: &User, pool: &PgPool) -> Result<(), AnyError> {
+    let dest_actor = Actor::find_or_fetch(&user.actor_url.as_ref().expect("No actor url!").to_string(), pool).await;
+    match dest_actor {
+      Ok(dest_actor) => {
+        if dest_actor.is_none() {
+          return Ok(());
+        }
+        let dest_actor = dest_actor.unwrap();
+
+        let message = self.creation_message(user).await?;
+        let msg = serde_json::to_string(&message).unwrap();
+        println!("{}", msg);
+    
+        let my_url = self.ap_url();
+    
+        let result = deliver_to_inbox(&Url::parse(&dest_actor.inbox_url)?, &my_url, &self.private_key, &msg).await;
+    
+        match result {
+          Ok(result) => println!("sent! {:?}", result),
+          Err(why) => println!("failure! {:?}", why)
+        }    
+      },
+      Err(why) => {
+        println!("couldnt find actor: {:?}", why);
+      }
+    }
+
+    Ok(())
   }
 
   ///

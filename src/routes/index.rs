@@ -52,7 +52,7 @@ mod test {
     assert_eq!(response.status(), Status::Ok);
     let output = response.into_string().await;
     match output {
-      Some(output) => assert!(output.contains("You can get started by sending")),
+      Some(output) => assert!(output.contains("To get started")),
       None => panic!()
     }
   }
