@@ -3,7 +3,7 @@
   This is a tool you can use to get RSS feeds into the fediverse.
 </p>
 
-<p>To get started you can copy and paste this message into your Fediverse client. This will send a message to <b>@admin@{{ instance_domain }}</b>. You'll get a response with a URL that you can use to login and create an account that will post the RSS feed.</p>
+<p>To get started you can copy and paste this message into your Fediverse client. This will send a message to <b>@admin@{{ instance_domain }}</b>. You'll get a response with a URL that you can use to login. Then you can setup an account that will post the RSS feed, as well as manage any accounts you've setup previously.</p>
 
 <div class="copy-block">
   <textarea class="admin-address" type="text">@admin@{{ instance_domain }} Help!</textarea>
