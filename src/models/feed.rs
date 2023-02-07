@@ -676,15 +676,13 @@ impl Feed {
         }
         let dest_actor = dest_actor.unwrap();
 
-        let dest_inbox = dest_actor.find_inbox().await.unwrap();
-
         let message = self.generate_login_message(activity, &dest_actor, pool).await?;
         let msg = serde_json::to_string(&message).unwrap();
         println!("{}", msg);
     
         let my_url = self.ap_url();
     
-        let result = deliver_to_inbox(&Url::parse(&dest_inbox)?, &my_url, &self.private_key, &msg).await;
+        let result = deliver_to_inbox(&Url::parse(&dest_actor.inbox_url)?, &my_url, &self.private_key, &msg).await;
     
         match result {
           Ok(result) => println!("sent! {:?}", result),

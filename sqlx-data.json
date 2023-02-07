@@ -272,6 +272,24 @@
     },
     "query": "SELECT * FROM feeds WHERE name = $1"
   },
+  "2321be368b11e70767a1685bfaea46ca5a37eee628a22a08fee5ff9e3ebdf3d3": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Timestamptz",
+          "Timestamptz",
+          "Timestamptz"
+        ]
+      }
+    },
+    "query": "INSERT INTO actors\n        (url, inbox_url, public_key_id, public_key, created_at, updated_at, refreshed_at)\n        VALUES($1, $2, $3, $4, $5, $6, $7)\n        ON CONFLICT (url) DO UPDATE\n          SET inbox_url = EXCLUDED.inbox_url,\n            public_key_id = EXCLUDED.public_key_id,\n            public_key = EXCLUDED.public_key,\n            updated_at = EXCLUDED.updated_at,\n            refreshed_at = EXCLUDED.updated_at"
+  },
   "2f41862f85e856da569e79423972c4ac1d3fbe9e9a5f4c0277beb7e2344f1d5b": {
     "describe": {
       "columns": [],
@@ -363,11 +381,17 @@
           "name": "refreshed_at",
           "ordinal": 6,
           "type_info": "Timestamptz"
+        },
+        {
+          "name": "inbox_url",
+          "ordinal": 7,
+          "type_info": "Varchar"
         }
       ],
       "nullable": [
         false,
         true,
+        false,
         false,
         false,
         false,
@@ -1655,23 +1679,6 @@
       }
     },
     "query": "SELECT * FROM followers WHERE feed_id = $1 LIMIT $2 OFFSET $3"
-  },
-  "c4115e60449288151a6d99217a35089f0bb205e943e9c1ac510dfcc90c54936e": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
-          "Varchar",
-          "Varchar",
-          "Varchar",
-          "Timestamptz",
-          "Timestamptz",
-          "Timestamptz"
-        ]
-      }
-    },
-    "query": "INSERT INTO actors\n        (url, public_key_id, public_key, created_at, updated_at, refreshed_at)\n        VALUES($1, $2, $3, $4, $5, $6)\n        ON CONFLICT (url) DO UPDATE\n          SET public_key_id = EXCLUDED.public_key_id,\n            public_key = EXCLUDED.public_key,\n            updated_at = EXCLUDED.updated_at,\n            refreshed_at = EXCLUDED.updated_at"
   },
   "c5d20d9c167556ef154b97c7b4510985a5571342d651a7d8c2bfb4e5aa7b09f6": {
     "describe": {

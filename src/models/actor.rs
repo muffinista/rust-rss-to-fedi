@@ -15,15 +15,12 @@ use openssl::{
   sign,
 };
 
-use reqwest::header::{HeaderValue, HeaderMap};
-
 use crate::models::BlockedDomain;
-
-use crate::utils::http::http_client;
 
 #[derive(Debug)]
 pub struct Actor {
   pub url: String,
+  pub inbox_url: String,
   pub public_key_id: String,
   pub public_key: String,
 
@@ -107,6 +104,7 @@ impl Actor {
         let data:Value = serde_json::from_str(&resp).unwrap();
         if data["id"].is_string() && data["publicKey"].is_object() {
           Actor::create(&data["id"].as_str().unwrap().to_string(),
+                        &data["inbox"].as_str().unwrap().to_string(),
                         &data["publicKey"]["id"].as_str().unwrap().to_string(),
                         &data["publicKey"]["publicKeyPem"].as_str().unwrap().to_string(),
                         pool
@@ -125,6 +123,7 @@ impl Actor {
   }
   
   pub async fn create(url: &String,
+      inbox_url: &String,
       public_key_id: &String,
       public_key: &String,
       pool: &PgPool) -> Result<(), sqlx::Error> {
@@ -133,14 +132,15 @@ impl Actor {
 
     // create new row, or update existing row
     sqlx::query!("INSERT INTO actors
-        (url, public_key_id, public_key, created_at, updated_at, refreshed_at)
-        VALUES($1, $2, $3, $4, $5, $6)
+        (url, inbox_url, public_key_id, public_key, created_at, updated_at, refreshed_at)
+        VALUES($1, $2, $3, $4, $5, $6, $7)
         ON CONFLICT (url) DO UPDATE
-          SET public_key_id = EXCLUDED.public_key_id,
+          SET inbox_url = EXCLUDED.inbox_url,
+            public_key_id = EXCLUDED.public_key_id,
             public_key = EXCLUDED.public_key,
             updated_at = EXCLUDED.updated_at,
             refreshed_at = EXCLUDED.updated_at",
-        url, public_key_id, public_key, now, now, now)
+        url, inbox_url, public_key_id, public_key, now, now, now)
       .execute(pool)
       .await?;
 
@@ -189,36 +189,6 @@ impl Actor {
       Err(why) => Err(why)
     }
   }
-
-  ///
-  /// Ping the actor's profile data to get their inbox
-  /// @todo -- cache this
-  ///
-  pub async fn find_inbox(&self) -> Result<String, AnyError> {
-    let profile_url = Url::parse(&self.url)?;
-      
-    let mut headers = HeaderMap::new();
-
-    headers.insert(
-      reqwest::header::ACCEPT,
-      HeaderValue::from_str("application/ld+json").unwrap(),
-    );
-
-    // query that
-    let client = http_client();
-    let res = client
-      .get(profile_url)
-      .headers(headers)
-      .send()
-      .await?;
-
-
-    let body = res.text().await?;
-
-    let v: Value = serde_json::from_str(&body).unwrap();
-    Ok(v["inbox"].as_str().unwrap().to_string())
-  }
-
 
   pub fn verify_signature(&self, payload: &str, signature: &[u8]) -> Result<bool, AnyError> {
     println!("{:}", payload);
