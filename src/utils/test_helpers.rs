@@ -4,6 +4,7 @@ use crate::models::feed::Feed;
 use crate::models::follower::Follower;
 use crate::models::item::Item;
 use crate::models::keys::generate_key;
+use crate::models::Actor;
 
 use chrono::Utc;
 use uuid::Uuid;
@@ -33,6 +34,19 @@ pub async fn real_user(pool: &PgPool) -> sqlx::Result<User> {
   let user:User = User::find_or_create_by_email(&"foo@bar.com".to_string(), &pool).await?;
   
   Ok(user)
+}
+
+pub async fn real_actor(pool: &PgPool) -> sqlx::Result<Actor> {
+  Actor::create(
+    &"https://foo.com/users/user".to_string(),
+    &"https://foo.com/users/user/inbox".to_string(),
+    &"public_key_id".to_string(),
+    &"public_key".to_string(),
+    &pool).await?;
+  
+  let actor: Actor = Actor::find_or_fetch(&"https://foo.com/users/user".to_string(), &pool).await.unwrap().unwrap();
+
+  Ok(actor)
 }
 
 pub async fn real_feed(pool: &PgPool) -> sqlx::Result<Feed> {

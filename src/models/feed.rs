@@ -9,7 +9,6 @@ use activitystreams_ext::{Ext1};
 use activitystreams::{
   activity::*,
   actor::{ApActor, ApActorExt, Service},
-  base::BaseExt,
   iri,
   iri_string::types::IriString,
   prelude::*,
@@ -18,7 +17,7 @@ use activitystreams::{
   collection::{OrderedCollection, OrderedCollectionPage},
   link::Mention,
   object::ApObject,
-  object::*
+  object::*,
 };
 
 use sqlx::postgres::PgPool;
@@ -46,6 +45,19 @@ use crate::routes::feeds::*;
 use crate::routes::ap::inbox::*;
 use crate::routes::ap::outbox::*;
 use crate::routes::login::*;
+
+use crate::traits::sensitive::*;
+
+pub type SensitiveNote = CanBeSensitive<ApObject<Note>>;
+
+impl SensitiveNote {
+  pub fn new() -> SensitiveNote {
+    CanBeSensitive {
+      sensitive: false,
+      inner: ApObject::new(Note::new()),
+    }
+  }
+}
 
 
 #[derive(Debug, Serialize)]
@@ -367,8 +379,8 @@ impl Feed {
     //     "accept-ranges": "bytes",
     //     "strict-transport-security": "max-age=15724800; includeSubDomains",
     // }
-    eprintln!("Response: {:?} {}", res.version(), res.status());
-    eprintln!("Headers: {:#?}\n", res.headers());
+    // eprintln!("Response: {:?} {}", res.version(), res.status());
+    // eprintln!("Headers: {:#?}\n", res.headers());
       
     res.text().await
   }
@@ -712,7 +724,7 @@ impl Feed {
     // let n: ApObject<Note> = serde_json::from_str(&s).unwrap();
     // println!("NOTE: {:?}", n.content().unwrap().as_single_xsd_string());
 
-    let mut reply: ApObject<Note> = ApObject::new(Note::new());
+    let mut reply: SensitiveNote = SensitiveNote::new();
 
     let my_url = self.ap_url();
     let source_id = object.as_single_id().unwrap().to_string();
@@ -749,7 +761,7 @@ impl Feed {
     println!("{:}", body);
 
     reply
-      // .set_sensitive(true)
+      .set_sensitive(true)
       .set_attributed_to(iri!(my_url))
       .set_in_reply_to(iri!(source_id))
       .set_content(body)
@@ -767,7 +779,8 @@ impl Feed {
 
     action
       .set_context(context())
-      .add_context(security());
+      .add_context(security())
+      .add_context("as:sensitive".to_string());
 
     Ok(action) 
   }
@@ -1020,8 +1033,10 @@ mod test {
   use crate::models::feed::AcceptedActivity;
   use crate::models::item::Item;
   use crate::models::enclosure::Enclosure;
+  use crate::models::Actor;
+
   use crate::utils::utils::*;
-  use crate::utils::test_helpers::{fake_user, fake_feed, real_feed, real_user, real_item};
+  use crate::utils::test_helpers::{fake_user, fake_feed, real_feed, real_user, real_item, real_actor};
 
   use crate::routes::feeds::*;
   use crate::routes::ap::outbox::*;
@@ -1363,20 +1378,28 @@ mod test {
   }
 
 
-  // #[sqlx::test]
-  // async fn test_mention(pool: PgPool) -> Result<(), String> {
-  //   let feed:Feed = real_feed(&pool).await.unwrap();
+  #[sqlx::test]
+  async fn test_generate_login_message(pool: PgPool) -> Result<(), String> {
+    let actor = format!("{}/users/colin", &mockito::server_url());
 
-  //   let path = "fixtures/create-note.json";
-  //   let json = fs::read_to_string(path).unwrap();
-  //   let message:AcceptedActivity = serde_json::from_str(&json).unwrap();
+    let json = format!(r#"{{"id": "{}/1/2/3", "actor":"{}","object":{{ "id": "{}" }} ,"type":"Follow"}}"#, &mockito::server_url(), actor, actor).to_string();
+    let act:AcceptedActivity = serde_json::from_str(&json).unwrap();
 
-  //   let result = feed.handle_activity(&pool, &message).await.unwrap();
+    let feed:Feed = real_feed(&pool).await.unwrap();
+    let dest_actor:Actor = real_actor(&pool).await.unwrap();
+
+    let message = feed.generate_login_message(&act, &dest_actor, &pool).await.unwrap();
+
+    let s = serde_json::to_string(&message).unwrap();
+    println!("{:?}", s);
+
+    assert!(s.contains(r#"sensitive":true"#));
 
 
-  //   Ok(())
+    // println!("{:?}", message);
 
-  // }
+    Ok(())
+  }
 
 
   #[sqlx::test]

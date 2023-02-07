@@ -65,7 +65,7 @@ mod test {
       .create();
 
     let result = follower.find_inbox(&pool).await.unwrap();
-    assert!(result.expect("Failed to find inbox") == "http://127.0.0.1:1234/users/muffinista");
+    assert!(result.expect("Failed to find inbox") == "https://botsin.space/users/muffinista/inbox");
     Ok(())
   }
 }

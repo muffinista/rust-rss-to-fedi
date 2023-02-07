@@ -1,1 +1,1 @@
-Hi! Here's a <a href="{{link}}">login link</a> to setup feeds.
+Hi! Here's a <a href="{{link}}" rel="nofollow">login link</a> to setup feeds.
