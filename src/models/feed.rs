@@ -683,18 +683,27 @@ impl Feed {
 
     println!("ACTOR: {:}", actor_url);
 
-    let message = activity.content();
-    println!("MESSAGE: {:?}", message);
+    // THIS GETS THE CONTENT OF THE STATUS and is clearly
+    // a bit of a hack, but it's hard to get the content of the
+    // note to not end up in an unparsed bit of modelling anyway 
+    let s = serde_json::to_string(&activity.object()?).unwrap();
+    let note: ApObject<Note> = serde_json::from_str(&s).unwrap();
+    let content = note.content().unwrap();
+    let message = content.as_single_xsd_string();
+
+    // let message = activity.object()?.as_single_base();
+    // println!("MESSAGE: {:?}", message);
 
     // ignore messages that aren't to admin feed
     if ! self.is_admin() || message.is_none() {
       return Ok(())
     }
 
-    let message = message.unwrap().as_single_xsd_string().unwrap().to_lowercase();
-    println!("MESSAGE: {:}", message);
 
-    if !message.contains("help") {
+    // let message = message.unwrap().as_single_xsd_string().unwrap().to_lowercase();
+    // println!("MESSAGE: {:}", message);
+
+    if !message.unwrap().to_lowercase().contains("help") {
       println!("User didn't ask for help");
       return Ok(());      
     }
