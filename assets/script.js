@@ -49,12 +49,20 @@ if (button) {
   button.addEventListener("click", checkForValidFeed);
 }
 
-let adminAddress = document.querySelector("#admin-address");
+let adminAddress = document.querySelector(".copy-block > .admin-address");
 function copy() {
   adminAddress.select();
   document.execCommand("copy");
+
+  let zinger = document.querySelector(".copy-block > small");
+  zinger.classList.remove("hidden");
+  setTimeout(() => {
+    zinger.classList.add("hidden")
+  }, 2000);
+
 }
 
 if (adminAddress) {
-  document.querySelector("#copy").addEventListener("click", copy);
+  adminAddress.addEventListener("click", copy);
+  document.querySelector(".copy-block > a").addEventListener("click", copy);
 }
