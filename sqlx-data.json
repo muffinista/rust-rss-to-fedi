@@ -1262,6 +1262,19 @@
     },
     "query": "INSERT INTO users (actor_url, login_token, created_at, updated_at)\n      VALUES($1, $2, $3, $4)\n      RETURNING id"
   },
+  "a7a9429c3ffb36ccf5df4149b1e59bbc82cd1044c99ace434042f6138e08bfec": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Int4"
+        ]
+      }
+    },
+    "query": "UPDATE users SET login_token = $1 WHERE id = $2"
+  },
   "a8435c9aa78f7540d54897864816aad21a914d8d36ac22e9395f738b26867008": {
     "describe": {
       "columns": [
