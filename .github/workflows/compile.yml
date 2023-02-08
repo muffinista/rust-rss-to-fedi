@@ -8,7 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  SQLX_OFFLINE: true
+  # SQLX_OFFLINE: true
   POSTGRES_HOST: postgres
   POSTGRES_PORT: 5432
   POSTGRES_PASSWORD: postgres
