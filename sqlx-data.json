@@ -656,7 +656,7 @@
     },
     "query": "INSERT INTO feeds\n        (user_id, url, name, private_key, public_key, status_publicity, created_at, updated_at, refreshed_at)\n        VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9)\n        RETURNING id"
   },
-  "64ab49a91806396f2a52d938c8a958161cf18cd96ca72cc3b663ffdef10b5309": {
+  "65b6cccf28d15cd5495f7df2b30d41012dec5bc637b2a1ca8c3d162a25fbb4ce": {
     "describe": {
       "columns": [
         {
@@ -674,12 +674,14 @@
           "Varchar",
           "Varchar",
           "Int4",
+          "Varchar",
+          "Varchar",
           "Timestamptz",
           "Timestamptz"
         ]
       }
     },
-    "query": "INSERT INTO enclosures \n            (item_id, url, content_type, size, created_at, updated_at)\n            VALUES($1, $2, $3, $4, $5, $6)\n            RETURNING id"
+    "query": "INSERT INTO enclosures \n            (item_id, url, content_type, size, description, credits, created_at, updated_at)\n            VALUES($1, $2, $3, $4, $5, $6, $7, $8)\n            RETURNING id"
   },
   "69f07967f37f786e507af8669f171467843e7838d8e27fc822fa4e244ab68e6c": {
     "describe": {
