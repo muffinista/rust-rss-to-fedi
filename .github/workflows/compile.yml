@@ -42,5 +42,7 @@ jobs:
       #rustup update && cargo update
     - name: Build
       run: cargo build --verbose
+    - name: Setup db for tests
+      run: cargo sqlx database reset -y
     - name: Run tests
       run: cargo test --verbose
