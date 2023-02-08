@@ -551,7 +551,7 @@ impl Feed {
 
   pub fn address(&self) -> String {
     let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
-    format!("{}@{}", self.name, instance_domain)
+    format!("@{}@{}", self.name, instance_domain)
   }
 
   
@@ -858,10 +858,15 @@ impl Feed {
     let result = format!("{:X}", hasher.finalize());
 
     let mut mention = Mention::new();
-
     mention
       .set_href(iri!(&actor_url))
       .set_name("en");
+
+    let mut feed_mention = Mention::new();
+    feed_mention
+      .set_href(iri!(&my_url))
+      .set_name(self.address().to_string());
+  
 
     let tera = match Tera::new("templates/email/*.*") {
       Ok(t) => t,
@@ -876,7 +881,6 @@ impl Feed {
     template_context.insert("address", &self.address());
     
     let body = tera.render("send-creation-status.text.tera", &template_context).unwrap();
-    println!("{:}", body);
 
     reply
       .set_sensitive(true)
@@ -885,7 +889,8 @@ impl Feed {
       .set_url(iri!(my_url))
       .set_id(iri!(format!("{}/{}", my_url, result)))
       .set_to(iri!(&actor_url))
-      .set_tag(mention.into_any_base()?);
+      .add_tag(mention.into_any_base()?)
+      .add_tag(feed_mention.into_any_base()?);
 
     let mut action: ApObject<Create> = ApObject::new(
       Create::new(
@@ -1114,23 +1119,7 @@ impl Feed {
       },
       Err(why) => Err(why.into())
     }
-
-    // match result {
-    //   Ok(result) => {
-    //     let v: Vec<AnyBase> = result
-    //       .into_iter()
-    //       .filter_map(|outbox| Some(outbox.to_activity_pub(&self, &pool).await.unwrap().into_any_base().ok()?))
-    //       .collect();
-    //     // collection.add_item(action.into_any_base()?);
-    //     collection.set_many_items(v);
-
-    //     Ok(collection)
-          
-    //   },
-    //   Err(why) => Err(why.into())
-    // }
   }
-
 }
 
 #[cfg(test)]
@@ -1503,12 +1492,28 @@ mod test {
     let message = feed.generate_login_message(&act, &dest_actor, &pool).await.unwrap();
 
     let s = serde_json::to_string(&message).unwrap();
-    println!("{:?}", s);
+    println!("{}", s);
 
     assert!(s.contains(r#"sensitive":true"#));
 
 
     // println!("{:?}", message);
+
+    Ok(())
+  }
+
+  #[sqlx::test]
+  async fn test_creation_message(pool: PgPool) -> Result<(), String> {
+    let user = real_user(&pool).await.unwrap();
+    let feed: Feed = real_feed(&pool).await.unwrap();
+
+    let message = feed.creation_message(&user).await.unwrap();
+
+    let s = serde_json::to_string(&message).unwrap();
+    println!("{:}", s);
+
+    assert!(s.contains(r#"sensitive":true"#));
+
 
     Ok(())
   }
