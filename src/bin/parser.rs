@@ -5,7 +5,7 @@ use sqlx::postgres::PgPoolOptions;
 use std::env;
 use std::fs;
 
-// use rustypub::models::user::User;
+/*// use rustypub::models::user::User;
 use rustypub::models::feed::Feed;
 use rustypub::models::feed::*;
 
@@ -26,7 +26,7 @@ use activitystreams::{
   object::ApObject,
   object::*,
   unparsed::*
-};
+};*/
 
 
 #[tokio::main]
@@ -45,7 +45,9 @@ async fn main() -> Result<(), reqwest::Error>  {
     .ok();
 
   let json = fs::read_to_string("unlisted.json").unwrap();
-  let act:AcceptedActivity = serde_json::from_str(&json).unwrap();
+  println!("{:?}", json);
+
+/*  let act:AcceptedActivity = serde_json::from_str(&json).unwrap();
 
   let (actor, object, original) = act.clone().into_parts();
 
@@ -69,6 +71,6 @@ async fn main() -> Result<(), reqwest::Error>  {
   // println!("==================================");
 
   // println!("{:?}", x.clone().take_base().unwrap().into_generic().unwrap()["content"]);
-
+*/
   Ok(())
 }
