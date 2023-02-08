@@ -23,9 +23,6 @@ jobs:
       postgres:
         # Docker Hub image
         image: postgres
-        # Provide the password for postgres
-        env:
-          POSTGRES_PASSWORD: postgres
         # Set health checks to wait until postgres has started
         options: >-
           --health-cmd pg_isready
@@ -44,5 +41,9 @@ jobs:
       run: cargo build --verbose
     - name: Setup db for tests
       run: cargo sqlx database reset -y
+      env:
+        DATABASE_URL: "postgres://postgres:postgres@postgres/rusty"
     - name: Run tests
       run: cargo test --verbose
+      env:
+        DATABASE_URL: "postgres://postgres:postgres@postgres/rusty"
