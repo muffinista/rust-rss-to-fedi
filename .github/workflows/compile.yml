@@ -12,7 +12,7 @@ env:
   POSTGRES_HOST: postgres
   POSTGRES_PORT: 5432
   POSTGRES_PASSWORD: postgres
-  ROCKET_SECRET_KEY: 41V7EhqoBNEM4V40VXeNoxdEbD2R2tgHoiUeHxBPpEw= DISABLE_SIGNATURE_CHECKS: true
+  DISABLE_SIGNATURE_CHECKS: true
   DOMAIN_NAME: "0.0.0.0:8000"
   DATABASE_URL: "postgres://postgres:postgres@postgres/rusty"
 jobs:
