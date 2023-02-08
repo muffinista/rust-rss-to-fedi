@@ -1,4 +1,4 @@
-<h1>feedsin.space!</h1>
+<h1>{{ instance_domain }}!</h1>
 <p>
   This is a tool you can use to get RSS feeds into the fediverse.
 </p>
