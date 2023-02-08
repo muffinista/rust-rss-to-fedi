@@ -12,6 +12,9 @@ env:
   POSTGRES_HOST: postgres
   POSTGRES_PORT: 5432
   POSTGRES_PASSWORD: postgres
+  ROCKET_SECRET_KEY: 41V7EhqoBNEM4V40VXeNoxdEbD2R2tgHoiUeHxBPpEw= DISABLE_SIGNATURE_CHECKS: true
+  DOMAIN_NAME: "0.0.0.0:8000"
+  DATABASE_URL: "postgres://postgres:postgres@postgres/rusty"
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -33,6 +36,9 @@ jobs:
     - uses: actions/checkout@v3
     - name: Switch to nightly
       run: rustup override set nightly
+    - name: Setup sqlx
+      run: cargo install sqlx-cli --no-default-features --features rustls,postgres
+
       #rustup update && cargo update
     - name: Build
       run: cargo build --verbose
