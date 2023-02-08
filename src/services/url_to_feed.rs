@@ -7,7 +7,20 @@ use scraper::{Html, Selector};
 
 
 pub fn is_valid_feed(data:&String) -> bool {
-  parser::parse(data.as_bytes()).is_ok()
+  let result = parser::parse(data.as_bytes());
+  
+  if !result.is_ok() {
+    return false;
+  }
+  
+  // don't load mastodon feeds
+  // this prevents a pretty obvious way to use this service for block evasion
+  let generator = result.unwrap().generator;
+  if generator.is_some() && generator.unwrap().content.contains("Mastodon ") {
+    return false;
+  }
+
+  true
 }
 
 ///
