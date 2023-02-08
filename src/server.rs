@@ -38,6 +38,7 @@ pub async fn build_server(pool: PgPool) -> Rocket<Build> {
       crate::routes::feeds::render_feed_followers,
       crate::routes::feeds::show_feed,
       crate::routes::items::show_item,
+      crate::routes::items::show_item_json,
       crate::routes::webfinger::lookup_webfinger,
       crate::routes::ap::inbox::user_inbox,
       crate::routes::ap::outbox::render_feed_outbox    
