@@ -44,17 +44,20 @@ pub async fn attempt_login(db: &State<PgPool>, cookies: &CookieJar<'_>, login_to
           },
           Err(why) => {
             println!("{}", why);
-            Err(Status::NotFound)
+            // Err(Status::NotFound)
+            Ok(Redirect::to("/"))
           }
         }
       }
       else {
-        Err(Status::NotFound)
+        // Err(Status::NotFound)
+        Ok(Redirect::to("/"))
       } 
     },
     Err(why) => {
       print!("{}", why);
-      Err(Status::NotFound)
+      // Err(Status::NotFound)
+      Ok(Redirect::to("/"))
     }
   }
 }
