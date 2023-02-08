@@ -1993,6 +1993,16 @@
           "name": "updated_at",
           "ordinal": 6,
           "type_info": "Timestamptz"
+        },
+        {
+          "name": "description",
+          "ordinal": 7,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "credits",
+          "ordinal": 8,
+          "type_info": "Varchar"
         }
       ],
       "nullable": [
@@ -2002,7 +2012,9 @@
         true,
         true,
         false,
-        false
+        false,
+        true,
+        true
       ],
       "parameters": {
         "Left": [

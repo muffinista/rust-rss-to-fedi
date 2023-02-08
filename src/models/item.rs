@@ -146,6 +146,18 @@ impl Item {
       .id;
 
     for media in &entry.media {      
+      let description = if media.description.is_some() {
+        Some(media.description.as_ref().unwrap().content.clone())
+      } else {
+        None
+      };
+
+      let credits = if media.credits.len() > 0 {
+        Some(media.credits[0].entity.clone())
+      } else {
+        None
+      };
+
       for content in &media.content {
         if content.url.is_some() {
           let url = Some(content.url.as_ref().unwrap().as_str());
@@ -163,10 +175,10 @@ impl Item {
           };
 
           sqlx::query!("INSERT INTO enclosures 
-            (item_id, url, content_type, size, created_at, updated_at)
-            VALUES($1, $2, $3, $4, $5, $6)
+            (item_id, url, content_type, size, description, credits, created_at, updated_at)
+            VALUES($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING id",
-            item_id, url, content_type, size, now, now)
+            item_id, url, content_type, size, description, credits, now, now)
           .fetch_one(pool)
           .await?;
         }
@@ -262,6 +274,10 @@ impl Item {
       if enclosure.content_type.is_some() {
         let content_type: &String = &enclosure.content_type.clone().unwrap();
         attachment.set_media_type(content_type.parse::<Mime>().unwrap());
+      }
+
+      if enclosure.description.is_some() {
+        attachment.set_summary(enclosure.description.unwrap());
       }
 
       note.add_attachment(attachment.into_any_base()?);

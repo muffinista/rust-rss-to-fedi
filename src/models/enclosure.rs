@@ -13,6 +13,9 @@ pub struct Enclosure {
   pub content_type: Option<String>,
   pub size: Option<i32>,
 
+  pub description: Option<String>,
+  pub credits: Option<String>,
+
   pub created_at: chrono::DateTime::<Utc>,
   pub updated_at: chrono::DateTime::<Utc>
 }
