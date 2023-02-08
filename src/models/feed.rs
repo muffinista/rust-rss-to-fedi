@@ -129,6 +129,13 @@ impl Feed {
     .await
   }
 
+  pub async fn all(pool: &PgPool) -> Result<Vec<Feed>, sqlx::Error> {
+    sqlx::query_as!(Feed, "SELECT * FROM feeds ORDER BY id DESC")
+    .fetch_all(pool)
+    .await
+  }
+
+
   pub async fn find_by_user_and_name(user: &User, name: &String, pool: &PgPool) -> Result<Option<Feed>, sqlx::Error> {
     sqlx::query_as!(Feed, "SELECT * FROM feeds WHERE name = $1 AND user_id = $2", name, user.id)
       .fetch_optional(pool)
@@ -271,6 +278,17 @@ impl Feed {
     
     old_feed   
   }
+
+  pub async fn admin_delete(id: i32, pool: &PgPool) -> Result<Feed, sqlx::Error> {
+    let old_feed = Feed::find(id, pool).await;
+    
+    sqlx::query!("DELETE FROM feeds WHERE id = $1", id)
+      .execute(pool)
+      .await?;
+    
+    old_feed   
+  }
+
 
   pub fn is_admin(&self) -> bool {
     self.admin == true

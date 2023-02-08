@@ -1,3 +1,4 @@
+pub mod admin;
 pub mod ap;
 pub mod feeds;
 pub mod items;

@@ -41,7 +41,10 @@ pub async fn build_server(pool: PgPool) -> Rocket<Build> {
       crate::routes::items::show_item_json,
       crate::routes::webfinger::lookup_webfinger,
       crate::routes::ap::inbox::user_inbox,
-      crate::routes::ap::outbox::render_feed_outbox    
+      crate::routes::ap::outbox::render_feed_outbox,
+      crate::routes::admin::index_admin,
+      crate::routes::admin::show_feed_admin,
+      crate::routes::admin::delete_feed_admin
     ])
     .attach(Template::fairing())
 }

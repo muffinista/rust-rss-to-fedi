@@ -1,0 +1,10 @@
+{% extends "default" %}
+{% block title %}Feed admin!{% endblock title %}
+
+{% block content %}
+<ul>
+  {% for feed in feeds %}
+    <li><a href="/admin/feed/{{feed.name}}">{{feed.name}}</a></li>
+  {% endfor %}
+</ul>
+{% endblock content %}

@@ -183,6 +183,10 @@ impl User {
     .map(char::from)
     .collect()    
   }
+
+  pub fn is_admin(&self) -> bool {
+    self.id == 1
+  }
 }
 
 
