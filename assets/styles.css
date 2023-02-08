@@ -88,5 +88,5 @@ section > ul {
   cursor: pointer;
 }
 .copy-block > small.hidden {
-  display: none;
+  visibility: hidden;
 }

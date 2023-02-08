@@ -621,7 +621,7 @@ impl Feed {
         let mut image = Image::new();
         image.set_url(iri!(self.image_url.clone().unwrap()));
         svc.set_image(image.into_any_base()?);
-      }  
+      }
     }
 
     // in theory we could return an object here instead of JSON so we can

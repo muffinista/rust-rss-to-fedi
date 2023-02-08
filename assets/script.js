@@ -49,20 +49,25 @@ if (button) {
   button.addEventListener("click", checkForValidFeed);
 }
 
-let adminAddress = document.querySelector(".copy-block > .admin-address");
-function copy() {
-  adminAddress.select();
+function copy(target) {
+  target.querySelector(".copy-target").select();
   document.execCommand("copy");
 
-  let zinger = document.querySelector(".copy-block > small");
+  let zinger = target.querySelector("small");
   zinger.classList.remove("hidden");
   setTimeout(() => {
     zinger.classList.add("hidden")
   }, 2000);
-
 }
 
-if (adminAddress) {
-  adminAddress.addEventListener("click", copy);
-  document.querySelector(".copy-block > a").addEventListener("click", copy);
-}
+document.querySelectorAll(".copy-block").forEach((el) => {
+  let adminAddress = el.querySelector(".copy-target");
+ 
+  console.log(adminAddress);
+  if (adminAddress) {
+    adminAddress.addEventListener("click", (event) => {
+      copy(el);
+    });
+    el.querySelector("a").addEventListener("click", () => { copy(el); });
+  }  
+});
