@@ -17,6 +17,9 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+    - name: Switch to nightly
+      run: rustup override set nightly
+      #rustup update && cargo update
     - name: Build
       run: cargo build --verbose
     - name: Run tests
