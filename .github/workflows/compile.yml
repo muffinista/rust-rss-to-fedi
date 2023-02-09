@@ -14,7 +14,7 @@ env:
   POSTGRES_PASSWORD: postgres
   DISABLE_SIGNATURE_CHECKS: true
   DOMAIN_NAME: "0.0.0.0:8000"
-  DATABASE_URL: "postgres://postgres:postgres@postgres/rusty"
+  DATABASE_URL: "postgres://postgres:postgres@postgres/postgres"
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -46,8 +46,8 @@ jobs:
     - name: Setup db for tests
       run: cargo sqlx database reset -y
       env:
-        DATABASE_URL: "postgres://postgres:postgres@postgres/rusty"
+        DATABASE_URL: "postgres://postgres:postgres@postgres/postgres"
     - name: Run tests
       run: cargo test --verbose
       env:
-        DATABASE_URL: "postgres://postgres:postgres@postgres/rusty"
+        DATABASE_URL: "postgres://postgres:postgres@postgres/postgres"
