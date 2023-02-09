@@ -862,7 +862,7 @@ impl Feed {
     }
   }
 
-  pub async fn creation_message(&self, user: &User) -> Result<ApObject<Create>, AnyError> {
+  pub async fn creation_message(&self, new_feed: &Feed, user: &User) -> Result<ApObject<Create>, AnyError> {
     let mut reply: SensitiveNote = SensitiveNote::new();
 
     let my_url = self.ap_url();
@@ -875,15 +875,17 @@ impl Feed {
     hasher.update(&self.url);
     let result = format!("{:X}", hasher.finalize());
 
+    // mention the creator so they get pinged
     let mut mention = Mention::new();
     mention
       .set_href(iri!(&actor_url))
       .set_name("en");
 
+    // mention the new feed account so it gets hyperlinked
     let mut feed_mention = Mention::new();
     feed_mention
-      .set_href(iri!(&my_url))
-      .set_name(self.address().to_string());
+      .set_href(iri!(&new_feed.ap_url()))
+      .set_name(new_feed.address().to_string());
   
 
     let tera = match Tera::new("templates/email/*.*") {
@@ -895,8 +897,8 @@ impl Feed {
     };
   
     let mut template_context = Context::new();
-    template_context.insert("link", &self.permalink_url());
-    template_context.insert("address", &self.address());
+    template_context.insert("link", &new_feed.permalink_url());
+    template_context.insert("address", &new_feed.address());
     
     let body = tera.render("send-creation-status.text.tera", &template_context).unwrap();
 
@@ -925,7 +927,12 @@ impl Feed {
     Ok(action) 
   }
 
-  pub async fn notify_about_creation(&self, user: &User, pool: &PgPool) -> Result<(), AnyError> {
+  pub async fn notify_about_creation(&self, user: &User, new_feed: &Feed, pool: &PgPool) -> Result<(), AnyError> {
+
+    if ! self.admin {
+      return Err(anyhow!("Call this from the admin feed!"))
+    }
+
     let dest_actor = Actor::find_or_fetch(&user.actor_url.as_ref().expect("No actor url!").to_string(), pool).await;
     match dest_actor {
       Ok(dest_actor) => {
@@ -934,7 +941,7 @@ impl Feed {
         }
         let dest_actor = dest_actor.unwrap();
 
-        let message = self.creation_message(user).await?;
+        let message = self.creation_message(new_feed, user).await?;
         let msg = serde_json::to_string(&message).unwrap();
         println!("{}", msg);
     
@@ -1525,7 +1532,7 @@ mod test {
     let user = real_user(&pool).await.unwrap();
     let feed: Feed = real_feed(&pool).await.unwrap();
 
-    let message = feed.creation_message(&user).await.unwrap();
+    let message = feed.creation_message(&feed, &user).await.unwrap();
 
     let s = serde_json::to_string(&message).unwrap();
     println!("{:}", s);

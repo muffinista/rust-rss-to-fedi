@@ -51,7 +51,8 @@ pub async fn add_feed(user: User, db: &State<PgPool>, form: Form<FeedForm>) -> R
       // @todo handle issues here
       let _refresh_result = feed.refresh(&db).await;
 
-      let notify = feed.notify_about_creation(&user, &db).await;
+      let admin = Feed::for_admin(&db).await.unwrap().expect("Admin feed missing?");
+      let notify = admin.notify_about_creation(&user, &feed, &db).await;
       match notify {
         Ok(_notify) => println!("user notified!"),
         Err(why) => println!("something went wrong with notification: {:?}", why)
