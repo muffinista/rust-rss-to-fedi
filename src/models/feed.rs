@@ -51,6 +51,9 @@ use crate::routes::login::*;
 
 use crate::traits::sensitive::*;
 
+///
+/// Extend Notes with a 'sensitive' field which Mastodon uses
+///
 pub type SensitiveNote = CanBeSensitive<ApObject<Note>>;
 
 impl SensitiveNote {
@@ -63,6 +66,10 @@ impl SensitiveNote {
 }
 
 
+///
+/// The is the model for a feed. Most of the data we hold onto here is from attributes
+/// in the RSS
+///
 #[derive(Debug, Serialize)]
 pub struct Feed {
   pub id: i32,
@@ -109,9 +116,10 @@ impl fmt::Display for FeedError {
 
 const PER_PAGE:i32 = 10i32;
 
-// https://docs.rs/activitystreams/0.7.0-alpha.20/activitystreams/index.html#parse
-// also examples/handle_incoming.rs
 
+///
+/// This is a list of activity types that we want to handle
+///
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
 pub enum AcceptedTypes {
   Accept,
@@ -122,6 +130,10 @@ pub enum AcceptedTypes {
 }
 
 pub type AcceptedActivity = ActorAndObject<AcceptedTypes>;
+
+///
+/// Extend Service with a public key
+///
 pub type ExtendedService = Ext1<ApActor<Service>, PublicKey>;
 
 
@@ -132,19 +144,28 @@ impl Feed {
     .await
   }
 
+  ///
+  /// Return all the feeds for the admin section
+  /// @todo add pagination
+  ///
   pub async fn all(pool: &PgPool) -> Result<Vec<Feed>, sqlx::Error> {
     sqlx::query_as!(Feed, "SELECT * FROM feeds ORDER BY id DESC")
     .fetch_all(pool)
     .await
   }
 
-
+  ///
+  /// Query the db for a feed owned by this user with the given name
+  ///
   pub async fn find_by_user_and_name(user: &User, name: &String, pool: &PgPool) -> Result<Option<Feed>, sqlx::Error> {
     sqlx::query_as!(Feed, "SELECT * FROM feeds WHERE name = $1 AND user_id = $2", name, user.id)
       .fetch_optional(pool)
       .await
   }
 
+  ///
+  /// Query the db for a maximum of _limit_ feeds older than _age_ seconds
+  ///
   pub async fn stale(pool: &PgPool, age:i64, limit: i64) -> Result<Vec<Feed>, sqlx::Error> {
     let age = Utc::now() - Duration::seconds(age);
     sqlx::query_as!(Feed, "SELECT * FROM feeds WHERE admin = false AND refreshed_at < $1 LIMIT $2", age, limit)
@@ -152,24 +173,25 @@ impl Feed {
     .await
   }
 
+  ///
+  /// Find the 'admin' feed. This is a special feed that will be used to
+  /// send messages, handle authentications, etc
+  ///
   pub async fn for_admin(pool: &PgPool) -> Result<Option<Feed>, sqlx::Error> {
     sqlx::query_as!(Feed, "SELECT * FROM feeds WHERE admin = true LIMIT 1")
     .fetch_optional(pool)
     .await
   }
 
+  ///
+  /// Find all the feeds for the given user
+  ///
   pub async fn for_user(user: &User, pool: &PgPool) -> Result<Vec<Feed>, sqlx::Error> {
     sqlx::query_as!(Feed, "SELECT * FROM feeds WHERE user_id = $1", user.id)
     .fetch_all(pool)
     .await
   }
-  
-  pub async fn find_by_url(url: &String, pool: &PgPool) -> Result<Feed, sqlx::Error> {
-    sqlx::query_as!(Feed, "SELECT * FROM feeds WHERE url = $1", url)
-    .fetch_one(pool)
-    .await
-  }
-  
+    
   pub async fn find_by_name(name: &String, pool: &PgPool) -> Result<Option<Feed>, sqlx::Error> {
     sqlx::query_as!(Feed, "SELECT * FROM feeds WHERE name = $1", name)
       .fetch_optional(pool)
@@ -182,6 +204,9 @@ impl Feed {
       .await
   }
 
+  ///
+  /// Check if a feed exists with the given name
+  ///
   pub async fn exists_by_name(name: &String, pool: &PgPool) -> Result<bool, sqlx::Error> {
     let result = sqlx::query!("SELECT count(1) AS tally FROM feeds WHERE name = $1", name)
       .fetch_one(pool)
@@ -192,18 +217,10 @@ impl Feed {
       Err(why) => Err(why)
     }
   }
-
-  pub async fn exists_by_url(url: &String, pool: &PgPool) -> Result<bool, sqlx::Error> {
-    let result = sqlx::query!("SELECT count(1) AS tally FROM feeds WHERE url = $1", url)
-      .fetch_one(pool)
-      .await;
-
-    match result {
-      Ok(result) => Ok(result.tally.unwrap() > 0),
-      Err(why) => Err(why)
-    }
-  }
   
+  ///
+  /// Create a feed
+  ///
   pub async fn create(user: &User,
       url: &String,
       name: &String, pool: &PgPool) -> Result<Feed, sqlx::Error> {
@@ -228,6 +245,9 @@ impl Feed {
     Feed::find(feed_id, pool).await
   }
 
+  ///
+  /// Save/update the feed
+  ///
   pub async fn save(&self, pool: &PgPool) -> Result<&Feed, sqlx::Error> {
     let now = Utc::now();
 
@@ -343,6 +363,9 @@ impl Feed {
     }
   }
 
+  ///
+  /// Get a count of how many items we have for this feed
+  ///
   pub async fn entries_count(&self, pool: &PgPool)  -> Result<i32, AnyError> {
     let result = sqlx::query!("SELECT COUNT(1) AS tally FROM items WHERE feed_id = $1", self.id)
       .fetch_one(pool)
@@ -354,28 +377,9 @@ impl Feed {
     }
   }
 
-  pub async fn update_icon_url(&self, url:&str, pool: &PgPool) -> Result<(), sqlx::Error> {
-    let result = sqlx::query!("UPDATE feeds SET icon_url = $1 WHERE id = $2", url, self.id)
-      .execute(pool)
-      .await;
-
-    match result {
-      Ok(_result) => Ok(()),
-      Err(why) => Err(why)
-    }
-  }
-
-  pub async fn update_image_url(&self, url:&str, pool: &PgPool) -> Result<(), sqlx::Error> {
-    let result = sqlx::query!("UPDATE feeds SET image_url = $1 WHERE id = $2", url, self.id)
-      .execute(pool)
-      .await;
-
-    match result {
-      Ok(_result) => Ok(()),
-      Err(why) => Err(why)
-    }
-  }
-
+  ///
+  /// Find the user who owns this feed
+  ///
   pub async fn user(&self, pool: &PgPool) -> Result<User, sqlx::Error> {
     sqlx::query_as!(User, "SELECT * FROM users WHERE id = $1", self.user_id)
       .fetch_one(pool)
@@ -566,10 +570,16 @@ impl Feed {
     path_to_url(&uri!(show_feed(&self.name)))
   }
 
+  ///
+  /// URL for the followers route
+  ///
   pub fn followers_url(&self) -> String {
     path_to_url(&uri!(render_feed_followers(&self.name, None::<i32>)))
   }
 
+  ///
+  /// return the email-style address for this feed
+  ///
   pub fn address(&self) -> String {
     let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
     format!("@{}@{}", self.name, instance_domain)
@@ -1166,45 +1176,6 @@ mod test {
 
     assert_eq!(updated_feed.name, newname);
 
-    Ok(())
-  }
-
-  #[sqlx::test]
-  async fn test_find_by_url(pool: PgPool) -> sqlx::Result<()> {
-    let feed:Feed = real_feed(&pool).await?;
-    let url = &feed.url;
-
-    let feed2 = Feed::find_by_url(&url, &pool).await?;
-
-    let name = &feed.name;
-
-    assert_eq!(feed, feed2);
-    assert_eq!(&feed2.name, name);
-    assert_eq!(&feed2.url, url);
-    
-    Ok(())
-  }
-
-  #[sqlx::test]
-  async fn test_exists_by_url(pool: PgPool) -> sqlx::Result<()> {
-    let url: String = "https://foo.com/rss.xml".to_string();
-
-    let _feed:Feed = real_feed(&pool).await?;
-    let result = Feed::exists_by_url(&url, &pool).await?;
-    
-    assert_eq!(true, result);
-    
-    Ok(())
-  }
-
-  #[sqlx::test]
-  async fn test_find_by_name(pool: PgPool) -> sqlx::Result<()> {
-    let feed:Feed = real_feed(&pool).await?;
-    let feed2 = Feed::find_by_url(&feed.url, &pool).await?;
-    
-    assert_eq!(feed, feed2);
-    assert_eq!(feed2.url, feed.url);
-    
     Ok(())
   }
 

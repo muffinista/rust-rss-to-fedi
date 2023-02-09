@@ -2,7 +2,10 @@ use sqlx::postgres::PgPool;
 
 use chrono::Utc;
 
-#[derive(Debug)]
+///
+/// Simple model to track blocked domains. If a domain is blocked,
+/// we won't interact with it
+///
 pub struct BlockedDomain {
   pub name: String,
   pub created_at: chrono::DateTime::<Utc>,
@@ -11,7 +14,7 @@ pub struct BlockedDomain {
 
 impl BlockedDomain {
   ///
-  /// Ping the actor's profile data to get their inbox
+  /// Check if the specfied domain is on the block list
   ///
   pub async fn exists(name: &String, pool: &PgPool) -> Result<bool, sqlx::Error> {
     let result = sqlx::query!("SELECT count(1) AS tally FROM blocked_domains WHERE name = $1", name)

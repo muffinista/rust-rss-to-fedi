@@ -5,7 +5,10 @@ use chrono::Utc;
 
 use crate::models::item::Item;
 
-#[derive(Debug)]
+
+///
+/// Model for enclosures on RSS feeds. We'll attach enclosures to messages
+///
 pub struct Enclosure {
   pub id: i32,
   pub item_id: i32,
@@ -27,6 +30,9 @@ impl PartialEq for Enclosure {
 }
 
 impl Enclosure {
+  ///
+  /// Query the db to get all the enclosures for the given item
+  ///
   pub async fn for_item(item: &Item, pool: &PgPool) -> Result<Vec<Enclosure>, sqlx::Error> {
     sqlx::query_as!(Enclosure, "SELECT * FROM enclosures WHERE item_id = $1 ORDER by id", item.id)
     .fetch_all(pool)

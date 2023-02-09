@@ -6,7 +6,7 @@ use url::Url;
 use sqlx::postgres::PgPool;
 use serde_json::Value;
 
-use chrono::{Utc, prelude::*};
+use chrono::Utc;
 
 use openssl::{
   hash::MessageDigest,
@@ -17,7 +17,13 @@ use openssl::{
 
 use crate::models::BlockedDomain;
 
-#[derive(Debug)]
+///
+/// Model for an ActivityPub actor. This could be a remote user who also has
+/// a User model. We'll track the inbox Url, public key info, and their username.
+///
+/// Then, when we need to communicate with someone, we have their inbox and key data
+/// cached locally
+///
 pub struct Actor {
   pub url: String,
   pub inbox_url: String,
@@ -39,6 +45,9 @@ impl PartialEq for Actor {
 }
 
 impl Actor {
+  ///
+  /// Query the DB for the actor with the given URL. If not found, fetch the data and cache it
+  ///
   pub async fn find_or_fetch(url: &String, pool: &PgPool) -> Result<Option<Actor>, AnyError> {
     let mut clean_url = Url::parse(url).unwrap();
     clean_url.set_fragment(None);
@@ -77,6 +86,9 @@ impl Actor {
     }
   }
 
+  ///
+  /// Check if this Actor exists in the database
+  ///
   pub async fn exists_by_url(url: &String, pool: &PgPool) -> Result<bool, sqlx::Error> {
     // look for an actor but exclude old data
     // let age = Utc::now() - Duration::seconds(3600);
@@ -91,6 +103,9 @@ impl Actor {
     }
   }
 
+  ///
+  /// Fetch the remote actor data and store it
+  ///
   pub async fn fetch(url: &String, pool: &PgPool) -> Result<(), AnyError> {
     println!("FETCH ACTOR: {:}", url);
     let resp = crate::services::mailer::fetch_object(url).await;
@@ -130,6 +145,9 @@ impl Actor {
     Ok(())
   }
   
+  ///
+  /// Store actor data in the database
+  ///
   pub async fn create(url: &String,
       inbox_url: &String,
       public_key_id: &String,
@@ -156,6 +174,9 @@ impl Actor {
     Ok(())
   }
 
+  ///
+  /// Delete the specified actor
+  ///
   pub async fn delete(url: &String, pool: &PgPool) -> Result<(), sqlx::Error> {
     sqlx::query!("DELETE FROM actors WHERE url = $1", url)
       .execute(pool)
@@ -164,41 +185,44 @@ impl Actor {
     Ok(())
   }
 
-  pub async fn mark_stale(&self, pool: &PgPool) -> Result<(), sqlx::Error> {
-    let old = Utc.with_ymd_and_hms(1900, 1, 1, 0, 0, 0).unwrap();
-    let result = sqlx::query!("UPDATE actors SET refreshed_at = $1 WHERE url = $2", old, self.url)
-      .execute(pool)
-      .await;
+  // pub async fn mark_stale(&self, pool: &PgPool) -> Result<(), sqlx::Error> {
+  //   let old = Utc.with_ymd_and_hms(1900, 1, 1, 0, 0, 0).unwrap();
+  //   let result = sqlx::query!("UPDATE actors SET refreshed_at = $1 WHERE url = $2", old, self.url)
+  //     .execute(pool)
+  //     .await;
 
-    match result {
-      Ok(_result) => Ok(()),
-      Err(why) => Err(why)
-    }
-  }
+  //   match result {
+  //     Ok(_result) => Ok(()),
+  //     Err(why) => Err(why)
+  //   }
+  // }
 
-  pub async fn mark_error(&self, err:&String, pool: &PgPool) -> Result<(), sqlx::Error> {
-    let result = sqlx::query!("UPDATE actors SET error = $1 WHERE url = $2", err, self.url)
-      .execute(pool)
-      .await;
+  // pub async fn mark_error(&self, err:&String, pool: &PgPool) -> Result<(), sqlx::Error> {
+  //   let result = sqlx::query!("UPDATE actors SET error = $1 WHERE url = $2", err, self.url)
+  //     .execute(pool)
+  //     .await;
 
-    match result {
-      Ok(_result) => Ok(()),
-      Err(why) => Err(why)
-    }
-  }
+  //   match result {
+  //     Ok(_result) => Ok(()),
+  //     Err(why) => Err(why)
+  //   }
+  // }
 
-  pub async fn mark_fresh(&self, pool: &PgPool) -> Result<(), sqlx::Error> {
-    let now = Utc::now();
-    let result = sqlx::query!("UPDATE actors SET refreshed_at = $1 WHERE url = $2", now, self.url)
-      .execute(pool)
-      .await;
+  // pub async fn mark_fresh(&self, pool: &PgPool) -> Result<(), sqlx::Error> {
+  //   let now = Utc::now();
+  //   let result = sqlx::query!("UPDATE actors SET refreshed_at = $1 WHERE url = $2", now, self.url)
+  //     .execute(pool)
+  //     .await;
 
-    match result {
-      Ok(_result) => Ok(()),
-      Err(why) => Err(why)
-    }
-  }
+  //   match result {
+  //     Ok(_result) => Ok(()),
+  //     Err(why) => Err(why)
+  //   }
+  // }
 
+  ///
+  /// Given a message payload and a signature, confirm that they came from this Actor
+  ///
   pub fn verify_signature(&self, payload: &str, signature: &[u8]) -> Result<bool, AnyError> {
     // println!("{:}", payload);
     // println!("{:?}", signature);

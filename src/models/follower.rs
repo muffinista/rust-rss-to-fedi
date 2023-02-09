@@ -5,6 +5,9 @@ use anyhow::Error as AnyError;
 use crate::models::Actor;
 use chrono::Utc;
 
+///
+/// Model for a follower of a feed
+///
 #[derive(Debug)]
 pub struct Follower {
   pub id: i32,
