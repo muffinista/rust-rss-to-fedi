@@ -8,7 +8,6 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  # SQLX_OFFLINE: true
   POSTGRES_HOST: postgres
   POSTGRES_PORT: 5432
   POSTGRES_PASSWORD: postgres
@@ -42,7 +41,9 @@ jobs:
 
       #rustup update && cargo update
     - name: Build
-      run: cargo build --verbose
+      run: cargo build
+      env:
+        SQLX_OFFLINE: true
     - name: Setup db for tests
       run: cargo sqlx database reset -y
       env:
