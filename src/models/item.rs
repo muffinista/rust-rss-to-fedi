@@ -194,7 +194,7 @@ impl Item {
   /// generate an HTML-ish version of this item suitable
   /// for adding to an AP message
   ///
-  pub fn to_html(&self, suffix: &Option<String>) -> String {
+  pub fn to_html(&self) -> String {
     let tera = match Tera::new("templates/ap/*.*") {
       Ok(t) => t,
       Err(e) => {
@@ -210,9 +210,6 @@ impl Item {
     if self.url.is_some() {
       context.insert("link", &self.url.as_ref().unwrap());
     }
-    if suffix.is_some() {
-      context.insert("suffix", &suffix.as_ref().unwrap());
-    }
     
     tera.render("feed-item.html.tera", &context).unwrap()
   }
@@ -227,7 +224,7 @@ impl Item {
 
     note
       .set_attributed_to(iri!(feed_url))
-      .set_content(self.to_html(&feed.hashtag))
+      .set_content(self.to_html())
       // @todo direct url to item
       .set_url(iri!(feed_url))
       .set_id(iri!(item_url))
