@@ -25,7 +25,6 @@ feed-rs = "1.2"
 reqwest = { version = "0.11", features = ["json"] }
 http-signature-normalization-reqwest = { version = "0.8.0", default-features = false, features = ["sha-2", "middleware"] }
 
-# this is only here for the parser bin
 tokio = "1.22.0"
 webfinger = { version = "0.5.1", features = ["async", "async-trait"] }
 async-trait = {version = "*"}
