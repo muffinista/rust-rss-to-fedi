@@ -1,2 +1,3 @@
-Hi! You just created the feed {{address}} <a href="{{link}}">{{link}}</a>
+Hi! Here's a link to the feed you just created: <a href="{{link}}">{{address}}</a> <a href="{{link}}">{{link}}</a>
+
 

@@ -4,6 +4,9 @@ use anyhow::Error as AnyError;
 use rocket::uri;
 use url::Url;
 
+use rand::{thread_rng, Rng};
+use rand::distributions::Alphanumeric;
+
 use activitystreams_ext::{Ext1};
 
 use activitystreams::{
@@ -862,30 +865,31 @@ impl Feed {
     }
   }
 
-  pub async fn creation_message(&self, new_feed: &Feed, user: &User) -> Result<ApObject<Create>, AnyError> {
+  ///
+  /// generate an AP message to this user with a link to this feed
+  ///
+  pub async fn link_to_feed_message(&self, actor: &Actor) -> Result<ApObject<Create>, AnyError> {
     let mut reply: SensitiveNote = SensitiveNote::new();
 
-    let my_url = self.ap_url();
-    let actor_url = user.actor_url.as_ref().unwrap().to_string();
+    let my_url = self.permalink_url();
 
-    // generate a hash of the incoming actor id. we'll tack
-    // this on the end of the ID for the reply to make it
-    // vaguely unique to the conversation
-    let mut hasher = Md5::new();
-    hasher.update(&self.url);
-    let result = format!("{:X}", hasher.finalize());
+    let random_id: String = thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(30)
+        .map(char::from)
+        .collect();
 
     // mention the creator so they get pinged
     let mut mention = Mention::new();
     mention
-      .set_href(iri!(&actor_url))
+      .set_href(iri!(&actor.url))
       .set_name("en");
 
     // mention the new feed account so it gets hyperlinked
     let mut feed_mention = Mention::new();
     feed_mention
-      .set_href(iri!(&new_feed.ap_url()))
-      .set_name(new_feed.address().to_string());
+      .set_href(iri!(&self.permalink_url()))
+      .set_name(self.address().to_string());
   
 
     let tera = match Tera::new("templates/email/*.*") {
@@ -897,8 +901,8 @@ impl Feed {
     };
   
     let mut template_context = Context::new();
-    template_context.insert("link", &new_feed.permalink_url());
-    template_context.insert("address", &new_feed.address());
+    template_context.insert("link", &self.permalink_url());
+    template_context.insert("address", &self.address());
     
     let body = tera.render("send-creation-status.text.tera", &template_context).unwrap();
 
@@ -907,8 +911,9 @@ impl Feed {
       .set_attributed_to(iri!(my_url))
       .set_content(body)
       .set_url(iri!(my_url))
-      .set_id(iri!(format!("{}/{}", my_url, result)))
-      .set_to(iri!(&actor_url))
+      .set_id(iri!(format!("{}/{}", my_url, random_id)))
+      .set_to(iri!(&actor.url))
+      // .add_to(iri!(&self.permalink_url()))
       .add_tag(mention.into_any_base()?)
       .add_tag(feed_mention.into_any_base()?);
 
@@ -925,41 +930,6 @@ impl Feed {
       .add_context("as:sensitive".to_string());
 
     Ok(action) 
-  }
-
-  pub async fn notify_about_creation(&self, user: &User, new_feed: &Feed, pool: &PgPool) -> Result<(), AnyError> {
-
-    if ! self.admin {
-      return Err(anyhow!("Call this from the admin feed!"))
-    }
-
-    let dest_actor = Actor::find_or_fetch(&user.actor_url.as_ref().expect("No actor url!").to_string(), pool).await;
-    match dest_actor {
-      Ok(dest_actor) => {
-        if dest_actor.is_none() {
-          return Ok(());
-        }
-        let dest_actor = dest_actor.unwrap();
-
-        let message = self.creation_message(new_feed, user).await?;
-        let msg = serde_json::to_string(&message).unwrap();
-        println!("{}", msg);
-    
-        let my_url = self.ap_url();
-    
-        let result = deliver_to_inbox(&Url::parse(&dest_actor.inbox_url)?, &my_url, &self.private_key, &msg).await;
-    
-        match result {
-          Ok(result) => println!("sent! {:?}", result),
-          Err(why) => println!("failure! {:?}", why)
-        }    
-      },
-      Err(why) => {
-        println!("couldnt find actor: {:?}", why);
-      }
-    }
-
-    Ok(())
   }
 
   ///
@@ -1528,11 +1498,11 @@ mod test {
   }
 
   #[sqlx::test]
-  async fn test_creation_message(pool: PgPool) -> Result<(), String> {
-    let user = real_user(&pool).await.unwrap();
+  async fn test_link_to_feed_message(pool: PgPool) -> Result<(), String> {
+    let actor = real_actor(&pool).await.unwrap();
     let feed: Feed = real_feed(&pool).await.unwrap();
 
-    let message = feed.creation_message(&feed, &user).await.unwrap();
+    let message = feed.link_to_feed_message(&actor).await.unwrap();
 
     let s = serde_json::to_string(&message).unwrap();
     println!("{:}", s);

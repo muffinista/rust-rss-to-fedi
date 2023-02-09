@@ -6,6 +6,14 @@ use rocket::outcome::{Outcome};
 
 use chrono::Utc;
 
+use crate::models::Actor;
+use crate::models::Feed;
+use crate::services::mailer::deliver_to_inbox;
+
+use anyhow::Error as AnyError;
+
+use url::Url;
+
 #[derive(Debug)]
 pub struct User {
   pub id: i32,
@@ -187,6 +195,43 @@ impl User {
   pub fn is_admin(&self) -> bool {
     self.id == 1
   }
+
+  pub async fn send_link_to_feed(&self, feed: &Feed, pool: &PgPool) -> Result<(), AnyError> {
+    let dest_actor = Actor::find_or_fetch(&self.actor_url.as_ref().expect("No actor url!").to_string(), pool).await;
+
+    match dest_actor {
+      Ok(dest_actor) => {
+        if dest_actor.is_none() {
+          return Ok(());
+        }
+        let dest_actor = dest_actor.unwrap();
+
+        let message = feed.link_to_feed_message(&dest_actor).await?;
+        let msg = serde_json::to_string(&message).unwrap();
+        println!("{}", msg);
+    
+        let feed_ap_url = feed.ap_url();
+    
+        let result = deliver_to_inbox(
+          &Url::parse(&dest_actor.inbox_url)?,
+          &feed_ap_url,
+          &feed.private_key,
+          &msg).await;
+    
+        match result {
+          Ok(result) => println!("sent! {:?}", result),
+          Err(why) => println!("failure! {:?}", why)
+        }    
+      },
+      Err(why) => {
+        println!("couldnt find actor: {:?}", why);
+      }
+    }
+
+    Ok(())
+  }
+  
+
 }
 
 
