@@ -21,6 +21,8 @@ pub struct User {
   pub actor_url: Option<String>,
   pub login_token: String,
   pub access_token: Option<String>,
+  pub username: Option<String>,
+
   pub created_at: chrono::DateTime::<Utc>,
   pub updated_at: chrono::DateTime::<Utc>
 }
@@ -195,6 +197,33 @@ impl User {
   pub fn is_admin(&self) -> bool {
     self.id == 1
   }
+
+  ///
+  /// update user record with a few things from their actor
+  ///
+  pub async fn apply_actor(&self, actor: &Actor, pool: &PgPool) -> Result<(), sqlx::Error> {
+    let query = sqlx::query!(
+      "UPDATE users SET username = $1 WHERE id = $2", actor.username, self.id)
+      .execute(pool)
+      .await;
+      
+    match query {
+      Ok(_q) => return Ok(()),
+      Err(why) => return Err(why)
+    }
+  }
+
+  pub fn full_username(&self) -> Option<String> {
+    if self.username.is_none() || self.actor_url.is_none() {
+      return None
+    };
+
+    let url = Url::parse(&self.actor_url.as_ref().unwrap()).unwrap();
+    let domain = url.host().unwrap();
+
+    Some(format!("{}@{}", &self.username.as_ref().unwrap(), domain))
+  }
+
 
   pub async fn send_link_to_feed(&self, feed: &Feed, pool: &PgPool) -> Result<(), AnyError> {
     let dest_actor = Actor::find_or_fetch(&self.actor_url.as_ref().expect("No actor url!").to_string(), pool).await;

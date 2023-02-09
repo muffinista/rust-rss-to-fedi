@@ -783,6 +783,9 @@ impl Feed {
 
 
     let user = User::find_or_create_by_actor_url(&dest_actor.url, pool).await.unwrap();
+
+    user.apply_actor(dest_actor, pool).await.unwrap();
+
     let auth_url = path_to_url(&uri!(attempt_login(&user.login_token)));
 
     let mut mention = Mention::new();

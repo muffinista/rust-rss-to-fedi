@@ -25,6 +25,7 @@ pub fn fake_user() -> User {
     actor_url: Some("http://foobar.com".to_string()), 
     login_token: "lt".to_string(), 
     access_token: Some("at".to_string()), 
+    username: Some("username".to_string()),
     created_at: Utc::now(), 
     updated_at: Utc::now() 
   }
@@ -42,6 +43,7 @@ pub async fn real_actor(pool: &PgPool) -> sqlx::Result<Actor> {
     &"https://foo.com/users/user/inbox".to_string(),
     &"public_key_id".to_string(),
     &"public_key".to_string(),
+    Some("username".to_string()),
     &pool).await?;
   
   let actor: Actor = Actor::find_or_fetch(&"https://foo.com/users/user".to_string(), &pool).await.unwrap().unwrap();

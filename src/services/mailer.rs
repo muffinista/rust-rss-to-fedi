@@ -3,8 +3,6 @@ use reqwest::Request;
 use reqwest_middleware::RequestBuilder;
 use reqwest::header::{HeaderValue, HeaderMap};
 
-use webfinger::{resolve, Webfinger, WebfingerError};
-
 use crate::utils::http::http_client;
 
 use openssl::{
@@ -22,18 +20,18 @@ use base64::{Engine as _, engine::general_purpose};
 
 use anyhow::{anyhow};
 
-///
-/// query webfinger endpoint for actor and try and find data url
-///
-pub async fn find_actor_url(actor: &str) -> Result<Option<Url>, WebfingerError> {
-  // println!("query webfinger for {}", actor);
-  let webfinger = resolve(format!("acct:{}", actor), true).await;
+// ///
+// /// query webfinger endpoint for actor and try and find data url
+// ///
+// pub async fn find_actor_url(actor: &str) -> Result<Option<Url>, WebfingerError> {
+//   // println!("query webfinger for {}", actor);
+//   let webfinger = resolve(format!("acct:{}", actor), true).await;
 
-  match webfinger {
-    Ok(webfinger) => Ok(parse_webfinger(webfinger)),
-    Err(why) => Err(why)
-  }
-}
+//   match webfinger {
+//     Ok(webfinger) => Ok(parse_webfinger(webfinger)),
+//     Err(why) => Err(why)
+//   }
+// }
 
 pub async fn fetch_object(url: &str) -> Result<Option<String>, reqwest::Error> {
   let client = reqwest::Client::new();
@@ -60,23 +58,23 @@ pub async fn fetch_object(url: &str) -> Result<Option<String>, reqwest::Error> {
   }
 }
 
-///
-/// parse webfinger data for activity URL
-///
-pub fn parse_webfinger(webfinger: Webfinger) -> Option<Url> {
-  let rel = "self".to_string();
-  let mime_type = Some("application/activity+json".to_string());
+// ///
+// /// parse webfinger data for activity URL
+// ///
+// pub fn parse_webfinger(webfinger: Webfinger) -> Option<Url> {
+//   let rel = "self".to_string();
+//   let mime_type = Some("application/activity+json".to_string());
 
-  let query:Option<webfinger::Link> = webfinger
-    .links
-    .into_iter()
-    .find(|link| &link.rel == &rel && &link.mime_type == &mime_type);
+//   let query:Option<webfinger::Link> = webfinger
+//     .links
+//     .into_iter()
+//     .find(|link| &link.rel == &rel && &link.mime_type == &mime_type);
 
-  match query {
-    Some(query) => Some(Url::parse(&query.href.unwrap()).unwrap()),
-    None => None
-  }
-}
+//   match query {
+//     Some(query) => Some(Url::parse(&query.href.unwrap()).unwrap()),
+//     None => None
+//   }
+// }
 
 ///
 /// deliver a payload to an inbox
@@ -156,42 +154,42 @@ pub async fn sign_request(
 }
 
 
-#[cfg(test)]
-mod test {
-  use url::Url;
-  use webfinger::Webfinger;
+// #[cfg(test)]
+// mod test {
+//   use url::Url;
+//   use webfinger::Webfinger;
 
-  use crate::services::mailer::*;
+//   use crate::services::mailer::*;
 
-  #[tokio::test]
-  async fn test_parse_webfinger() {
-    let json = r#"
-      {
-          "subject": "acct:test@example.org",
-          "aliases": [
-              "https://example.org/@test/"
-          ],
-          "links": [
-              {
-                  "rel": "http://webfinger.net/rel/profile-page",
-                  "href": "https://example.org/@test/"
-              },
-              {
-                  "rel": "http://schemas.google.com/g/2010#updates-from",
-                  "type": "application/atom+xml",
-                  "href": "https://example.org/@test/feed.atom"
-              },
-              {
-                  "rel": "self",
-                  "type": "application/activity+json",
-                  "href": "https://example.org/@test/json"
-              }
-          ]
-      }"#;
+//   #[tokio::test]
+//   async fn test_parse_webfinger() {
+//     let json = r#"
+//       {
+//           "subject": "acct:test@example.org",
+//           "aliases": [
+//               "https://example.org/@test/"
+//           ],
+//           "links": [
+//               {
+//                   "rel": "http://webfinger.net/rel/profile-page",
+//                   "href": "https://example.org/@test/"
+//               },
+//               {
+//                   "rel": "http://schemas.google.com/g/2010#updates-from",
+//                   "type": "application/atom+xml",
+//                   "href": "https://example.org/@test/feed.atom"
+//               },
+//               {
+//                   "rel": "self",
+//                   "type": "application/activity+json",
+//                   "href": "https://example.org/@test/json"
+//               }
+//           ]
+//       }"#;
 
-    let wf:Webfinger = serde_json::from_str::<Webfinger>(json).unwrap();
+//     let wf:Webfinger = serde_json::from_str::<Webfinger>(json).unwrap();
 
-    let inbox:Url = parse_webfinger(wf).unwrap();
-    assert_eq!("https://example.org/@test/json", inbox.to_string());
-  }
-}
+//     let inbox:Url = parse_webfinger(wf).unwrap();
+//     assert_eq!("https://example.org/@test/json", inbox.to_string());
+//   }
+// }

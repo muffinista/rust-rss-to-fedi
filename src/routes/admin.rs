@@ -49,6 +49,7 @@ pub async fn show_feed_admin(user: User, username: &str, db: &State<PgPool>) -> 
                 is_admin: feed.is_admin(),
                 noindex: !feed.listed,
                 logged_in: logged_in,
+                username: user.full_username(),
                 owned_by: true,
                 feed: feed,
                 items: items,

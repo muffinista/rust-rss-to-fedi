@@ -37,6 +37,11 @@
           "name": "updated_at",
           "ordinal": 6,
           "type_info": "Timestamptz"
+        },
+        {
+          "name": "username",
+          "ordinal": 7,
+          "type_info": "Varchar"
         }
       ],
       "nullable": [
@@ -46,7 +51,8 @@
         false,
         true,
         false,
-        false
+        false,
+        true
       ],
       "parameters": {
         "Left": [
@@ -137,6 +143,19 @@
       }
     },
     "query": "SELECT * FROM items WHERE id = $1"
+  },
+  "1edf705781e8fea4530e9f97c15fe066d28f6af0e08b2c908f36db5b7eed349f": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Int4"
+        ]
+      }
+    },
+    "query": "UPDATE users SET username = $1 WHERE id = $2"
   },
   "2047f7e7d2eecb032b246b04c22896572968f5168c09c8ff9ed297886ff14304": {
     "describe": {
@@ -272,24 +291,6 @@
     },
     "query": "SELECT * FROM feeds WHERE name = $1"
   },
-  "2321be368b11e70767a1685bfaea46ca5a37eee628a22a08fee5ff9e3ebdf3d3": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
-          "Varchar",
-          "Varchar",
-          "Varchar",
-          "Varchar",
-          "Timestamptz",
-          "Timestamptz",
-          "Timestamptz"
-        ]
-      }
-    },
-    "query": "INSERT INTO actors\n        (url, inbox_url, public_key_id, public_key, created_at, updated_at, refreshed_at)\n        VALUES($1, $2, $3, $4, $5, $6, $7)\n        ON CONFLICT (url) DO UPDATE\n          SET inbox_url = EXCLUDED.inbox_url,\n            public_key_id = EXCLUDED.public_key_id,\n            public_key = EXCLUDED.public_key,\n            updated_at = EXCLUDED.updated_at,\n            refreshed_at = EXCLUDED.updated_at"
-  },
   "2f41862f85e856da569e79423972c4ac1d3fbe9e9a5f4c0277beb7e2344f1d5b": {
     "describe": {
       "columns": [],
@@ -386,6 +387,11 @@
           "name": "inbox_url",
           "ordinal": 7,
           "type_info": "Varchar"
+        },
+        {
+          "name": "username",
+          "ordinal": 8,
+          "type_info": "Varchar"
         }
       ],
       "nullable": [
@@ -396,7 +402,8 @@
         false,
         false,
         false,
-        false
+        false,
+        true
       ],
       "parameters": {
         "Left": [
@@ -964,6 +971,11 @@
           "name": "updated_at",
           "ordinal": 6,
           "type_info": "Timestamptz"
+        },
+        {
+          "name": "username",
+          "ordinal": 7,
+          "type_info": "Varchar"
         }
       ],
       "nullable": [
@@ -973,7 +985,8 @@
         false,
         true,
         false,
-        false
+        false,
+        true
       ],
       "parameters": {
         "Left": [
@@ -1087,6 +1100,11 @@
           "name": "updated_at",
           "ordinal": 6,
           "type_info": "Timestamptz"
+        },
+        {
+          "name": "username",
+          "ordinal": 7,
+          "type_info": "Varchar"
         }
       ],
       "nullable": [
@@ -1096,7 +1114,8 @@
         false,
         true,
         false,
-        false
+        false,
+        true
       ],
       "parameters": {
         "Left": [
@@ -1744,6 +1763,11 @@
           "name": "updated_at",
           "ordinal": 6,
           "type_info": "Timestamptz"
+        },
+        {
+          "name": "username",
+          "ordinal": 7,
+          "type_info": "Varchar"
         }
       ],
       "nullable": [
@@ -1753,7 +1777,8 @@
         false,
         true,
         false,
-        false
+        false,
+        true
       ],
       "parameters": {
         "Left": [
@@ -2183,6 +2208,25 @@
     },
     "query": "UPDATE actors SET error = $1 WHERE url = $2"
   },
+  "de4263ad1921efa40647d411bb7bea071eab52b0e6f7d3fea399e95f49a0a9d5": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Timestamptz",
+          "Timestamptz",
+          "Timestamptz"
+        ]
+      }
+    },
+    "query": "INSERT INTO actors\n        (url, inbox_url, public_key_id, public_key, username, created_at, updated_at, refreshed_at)\n        VALUES($1, $2, $3, $4, $5, $6, $7, $8)\n        ON CONFLICT (url) DO UPDATE\n          SET inbox_url = EXCLUDED.inbox_url,\n            public_key_id = EXCLUDED.public_key_id,\n            public_key = EXCLUDED.public_key,\n            updated_at = EXCLUDED.updated_at,\n            refreshed_at = EXCLUDED.updated_at"
+  },
   "e5e5360ba6289f67f7838d67dec2a63af70ba7b50e9241cc9c120854eff537c4": {
     "describe": {
       "columns": [],
@@ -2354,6 +2398,11 @@
           "name": "updated_at",
           "ordinal": 6,
           "type_info": "Timestamptz"
+        },
+        {
+          "name": "username",
+          "ordinal": 7,
+          "type_info": "Varchar"
         }
       ],
       "nullable": [
@@ -2363,7 +2412,8 @@
         false,
         true,
         false,
-        false
+        false,
+        true
       ],
       "parameters": {
         "Left": [

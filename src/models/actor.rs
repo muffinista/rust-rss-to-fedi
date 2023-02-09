@@ -28,7 +28,8 @@ pub struct Actor {
   pub updated_at: chrono::DateTime::<Utc>,
   pub refreshed_at: chrono::DateTime::<Utc>,
 
-  pub error: Option<String>
+  pub error: Option<String>,
+  pub username: Option<String>
 }
 
 impl PartialEq for Actor {
@@ -103,10 +104,17 @@ impl Actor {
         let resp = resp.unwrap();
         let data:Value = serde_json::from_str(&resp).unwrap();
         if data["id"].is_string() && data["publicKey"].is_object() {
+          let username = if data["preferredUsername"].is_string() {
+            Some(data["preferredUsername"].as_str().unwrap().to_string())
+          } else {
+            None
+          };
+
           Actor::create(&data["id"].as_str().unwrap().to_string(),
                         &data["inbox"].as_str().unwrap().to_string(),
                         &data["publicKey"]["id"].as_str().unwrap().to_string(),
                         &data["publicKey"]["publicKeyPem"].as_str().unwrap().to_string(),
+                        username,
                         pool
           ).await?;
         } else {
@@ -126,21 +134,22 @@ impl Actor {
       inbox_url: &String,
       public_key_id: &String,
       public_key: &String,
+      username: Option<String>,
       pool: &PgPool) -> Result<(), sqlx::Error> {
 
     let now = Utc::now();
 
     // create new row, or update existing row
     sqlx::query!("INSERT INTO actors
-        (url, inbox_url, public_key_id, public_key, created_at, updated_at, refreshed_at)
-        VALUES($1, $2, $3, $4, $5, $6, $7)
+        (url, inbox_url, public_key_id, public_key, username, created_at, updated_at, refreshed_at)
+        VALUES($1, $2, $3, $4, $5, $6, $7, $8)
         ON CONFLICT (url) DO UPDATE
           SET inbox_url = EXCLUDED.inbox_url,
             public_key_id = EXCLUDED.public_key_id,
             public_key = EXCLUDED.public_key,
             updated_at = EXCLUDED.updated_at,
             refreshed_at = EXCLUDED.updated_at",
-        url, inbox_url, public_key_id, public_key, now, now, now)
+        url, inbox_url, public_key_id, public_key, username, now, now, now)
       .execute(pool)
       .await?;
 

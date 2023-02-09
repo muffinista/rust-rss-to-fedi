@@ -171,9 +171,14 @@ pub async fn show_feed(user: Option<User>, username: &str, flash: Option<FlashMe
       match feed_lookup {
         Some(feed) => {
           let logged_in = user.is_some();
-          let owned_by = logged_in && user.unwrap().id == feed.user_id;
+          let owned_by = logged_in && user.as_ref().unwrap().id == feed.user_id;
           let follow_url = feed.permalink_url();
           let items = Item::for_feed(&feed, 10, &db).await;
+          let username = if user.is_some() {
+            user.as_ref().unwrap().full_username()
+          } else {
+            None
+          };
 
           match items {
             Ok(items) => {
@@ -182,6 +187,7 @@ pub async fn show_feed(user: Option<User>, username: &str, flash: Option<FlashMe
                 is_admin: feed.is_admin(),
                 noindex: !feed.listed,
                 logged_in: logged_in,
+                username: username,
                 owned_by: owned_by,
                 feed: feed,
                 items: items,

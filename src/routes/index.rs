@@ -15,6 +15,7 @@ pub async fn index_logged_in(user: User, db: &State<PgPool>) -> Template {
   let feeds = Feed::for_user(&user, &db).await.unwrap();
   Template::render("home", context! { 
     logged_in: true,
+    username: user.full_username(),
     feeds: feeds,
     instance_domain: instance_domain
   })

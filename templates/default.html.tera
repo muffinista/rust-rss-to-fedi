@@ -14,7 +14,9 @@
       <nav>
         <a href="/">Home</a>
         {% if logged_in %}
-        || <a href="/user/logout">Logout</a>
+        <div class="user-info">
+          {% if username %}<span>Logged in as {{username}}</span> ||{% endif %} <a href="/user/logout">Logout</a>
+        </div>
         {% endif %}
       </nav>
     </header>
