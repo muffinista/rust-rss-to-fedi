@@ -1,0 +1,65 @@
+{
+    "actor": "https://mastodon.biff.colinlabs.com/users/colin",
+    "object": {
+        "id": "https://mastodon.biff.colinlabs.com/users/colin/statuses/109801886723955168",
+        "type": "Note",
+        "summary": null,
+        "to": [
+            "https://mastodon.biff.colinlabs.com/users/colin/followers"
+        ],
+        "url": "https://mastodon.biff.colinlabs.com/@colin/109801886723955168",
+        "conversation": "tag:mastodon.biff.colinlabs.com,2023-02-03:objectId=159:objectType=Conversation",
+        "attachment": [],
+        "inReplyToAtomUri": null,
+        "tag": [
+            {
+                "href": "https://pubcrawl.biff.colinlabs.com/feed/admin",
+                "name": "@admin@pubcrawl.biff.colinlabs.com",
+                "type": "Mention"
+            }
+        ],
+        "attributedTo": "https://mastodon.biff.colinlabs.com/users/colin",
+        "content": "<p><span class=\"h-card\"><a href=\"https://pubcrawl.biff.colinlabs.com/feed/admin\" class=\"u-url mention\">@<span>admin</span></a></span> followers only post</p>",
+        "sensitive": false,
+        "contentMap": {
+            "en": "<p><span class=\"h-card\"><a href=\"https://pubcrawl.biff.colinlabs.com/feed/admin\" class=\"u-url mention\">@<span>admin</span></a></span> followers only post</p>"
+        },
+        "atomUri": "https://mastodon.biff.colinlabs.com/users/colin/statuses/109801886723955168",
+        "cc": [
+            "https://pubcrawl.biff.colinlabs.com/feed/admin"
+        ],
+        "inReplyTo": null,
+        "published": "2023-02-03T17:03:48Z",
+        "replies": {
+            "first": {
+                "items": [],
+                "next": "https://mastodon.biff.colinlabs.com/users/colin/statuses/109801886723955168/replies?only_other_accounts=true&page=true",
+                "partOf": "https://mastodon.biff.colinlabs.com/users/colin/statuses/109801886723955168/replies",
+                "type": "CollectionPage"
+            },
+            "id": "https://mastodon.biff.colinlabs.com/users/colin/statuses/109801886723955168/replies",
+            "type": "Collection"
+        }
+    },
+    "published": "2023-02-03T17:03:48Z",
+    "to": [
+        "https://mastodon.biff.colinlabs.com/users/colin/followers"
+    ],
+    "cc": [
+        "https://pubcrawl.biff.colinlabs.com/feed/admin"
+    ],
+    "@context": [
+        "https://www.w3.org/ns/activitystreams",
+        {
+            "atomUri": "ostatus:atomUri",
+            "sensitive": "as:sensitive",
+            "ostatus": "http://ostatus.org#",
+            "inReplyToAtomUri": "ostatus:inReplyToAtomUri",
+            "votersCount": "toot:votersCount",
+            "toot": "http://joinmastodon.org/ns#",
+            "conversation": "ostatus:conversation"
+        }
+    ],
+    "id": "https://mastodon.biff.colinlabs.com/users/colin/statuses/109801886723955168/activity",
+    "type": "Create"
+}
