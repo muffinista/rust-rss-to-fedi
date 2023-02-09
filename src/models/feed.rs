@@ -865,7 +865,7 @@ impl Feed {
   pub async fn creation_message(&self, user: &User) -> Result<ApObject<Create>, AnyError> {
     let mut reply: SensitiveNote = SensitiveNote::new();
 
-    let my_url = self.permalink_url();
+    let my_url = self.ap_url();
     let actor_url = user.actor_url.as_ref().unwrap().to_string();
 
     // generate a hash of the incoming actor id. we'll tack
@@ -895,7 +895,7 @@ impl Feed {
     };
   
     let mut template_context = Context::new();
-    template_context.insert("link", &my_url);
+    template_context.insert("link", &self.permalink_url());
     template_context.insert("address", &self.address());
     
     let body = tera.render("send-creation-status.text.tera", &template_context).unwrap();
