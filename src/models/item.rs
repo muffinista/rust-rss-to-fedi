@@ -39,6 +39,9 @@ use chrono::Utc;
 use activitystreams::mime::Mime;
 
 
+///
+/// Model for an item, which is the equivalent of an entry in an rss feed
+///
 #[derive(Debug, Serialize)]
 pub struct Item {
   pub id: i32,

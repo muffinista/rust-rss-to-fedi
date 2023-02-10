@@ -62,26 +62,6 @@
     },
     "query": "SELECT * FROM users WHERE actor_url = $1"
   },
-  "1e2e2f7d777d421c1ec11ed8122b84cae27fa0fbb8dc6da33cb6691b0e9285c4": {
-    "describe": {
-      "columns": [
-        {
-          "name": "tally",
-          "ordinal": 0,
-          "type_info": "Int8"
-        }
-      ],
-      "nullable": [
-        null
-      ],
-      "parameters": {
-        "Left": [
-          "Text"
-        ]
-      }
-    },
-    "query": "SELECT count(1) AS tally FROM feeds WHERE url = $1"
-  },
   "1e9045f52c002a19b815351fee1c7ee7520478ff4f5886b4523fb0dc4df0e204": {
     "describe": {
       "columns": [
@@ -291,32 +271,6 @@
     },
     "query": "SELECT * FROM feeds WHERE name = $1"
   },
-  "2f41862f85e856da569e79423972c4ac1d3fbe9e9a5f4c0277beb7e2344f1d5b": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
-          "Timestamptz",
-          "Text"
-        ]
-      }
-    },
-    "query": "UPDATE actors SET refreshed_at = $1 WHERE url = $2"
-  },
-  "37a2b696a00c6ab96f8db9e9e3572d285843a3025e1ba7d6b4de9c6d599fc951": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
-          "Varchar",
-          "Int4"
-        ]
-      }
-    },
-    "query": "UPDATE feeds SET image_url = $1 WHERE id = $2"
-  },
   "39aadafcfc39f0a28c282ac7561cf6d3fbee9b03b3c84683e702fce730332939": {
     "describe": {
       "columns": [],
@@ -329,21 +283,6 @@
       }
     },
     "query": "DELETE FROM followers WHERE feed_id = $1 AND actor = $2"
-  },
-  "3ba6968cef828826b502e633c155ad165810b60ea7bdfed8324ce1712e12c793": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
-          "Int4",
-          "Varchar",
-          "Timestamptz",
-          "Timestamptz"
-        ]
-      }
-    },
-    "query": "INSERT INTO followers (feed_id, actor, created_at, updated_at) VALUES($1, $2, $3, $4)"
   },
   "4d64e51db24b141b9ca52385419277a1c1e77e7610345088a207766e925a9e1d": {
     "describe": {
@@ -1546,140 +1485,6 @@
     },
     "query": "SELECT count(1) AS tally FROM blocked_domains WHERE name = $1"
   },
-  "ba54f2cfdc62fa7daa7a69952dccb566f1e568c7721b7f43b85356fd64380c1d": {
-    "describe": {
-      "columns": [
-        {
-          "name": "id",
-          "ordinal": 0,
-          "type_info": "Int4"
-        },
-        {
-          "name": "user_id",
-          "ordinal": 1,
-          "type_info": "Int4"
-        },
-        {
-          "name": "name",
-          "ordinal": 2,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "url",
-          "ordinal": 3,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "error",
-          "ordinal": 4,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "public_key",
-          "ordinal": 5,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "private_key",
-          "ordinal": 6,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "image_url",
-          "ordinal": 7,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "icon_url",
-          "ordinal": 8,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "title",
-          "ordinal": 9,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "description",
-          "ordinal": 10,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "site_url",
-          "ordinal": 11,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "created_at",
-          "ordinal": 12,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "updated_at",
-          "ordinal": 13,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "refreshed_at",
-          "ordinal": 14,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "admin",
-          "ordinal": 15,
-          "type_info": "Bool"
-        },
-        {
-          "name": "listed",
-          "ordinal": 16,
-          "type_info": "Bool"
-        },
-        {
-          "name": "hashtag",
-          "ordinal": 17,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "content_warning",
-          "ordinal": 18,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "status_publicity",
-          "ordinal": 19,
-          "type_info": "Varchar"
-        }
-      ],
-      "nullable": [
-        false,
-        false,
-        false,
-        false,
-        true,
-        false,
-        false,
-        true,
-        true,
-        true,
-        true,
-        true,
-        false,
-        false,
-        false,
-        false,
-        false,
-        true,
-        true,
-        true
-      ],
-      "parameters": {
-        "Left": [
-          "Text"
-        ]
-      }
-    },
-    "query": "SELECT * FROM feeds WHERE url = $1"
-  },
   "c0d888f4223f17dfa375286a5932da8c00002bebdf397c17b0b013d50782363e": {
     "describe": {
       "columns": [
@@ -2195,19 +2000,6 @@
     },
     "query": "SELECT * FROM enclosures WHERE item_id = $1 ORDER by id"
   },
-  "ddb6f39abe95e50e9e2823926e69a9c48ad4ca14cd5274057b5aacc56612a244": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
-          "Varchar",
-          "Text"
-        ]
-      }
-    },
-    "query": "UPDATE actors SET error = $1 WHERE url = $2"
-  },
   "de4263ad1921efa40647d411bb7bea071eab52b0e6f7d3fea399e95f49a0a9d5": {
     "describe": {
       "columns": [],
@@ -2226,6 +2018,21 @@
       }
     },
     "query": "INSERT INTO actors\n        (url, inbox_url, public_key_id, public_key, username, created_at, updated_at, refreshed_at)\n        VALUES($1, $2, $3, $4, $5, $6, $7, $8)\n        ON CONFLICT (url) DO UPDATE\n          SET inbox_url = EXCLUDED.inbox_url,\n            public_key_id = EXCLUDED.public_key_id,\n            public_key = EXCLUDED.public_key,\n            updated_at = EXCLUDED.updated_at,\n            refreshed_at = EXCLUDED.updated_at"
+  },
+  "e1c8c677f91099aee0e4db3f4c20d4859692c6328f8edced785ed502ad17e8b1": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Varchar",
+          "Timestamptz",
+          "Timestamptz"
+        ]
+      }
+    },
+    "query": "INSERT INTO followers \n        (feed_id, actor, created_at, updated_at) \n        VALUES($1, $2, $3, $4)\n        ON CONFLICT (feed_id, actor) DO UPDATE\n        SET updated_at = EXCLUDED.updated_at"
   },
   "e5e5360ba6289f67f7838d67dec2a63af70ba7b50e9241cc9c120854eff537c4": {
     "describe": {
@@ -2283,19 +2090,6 @@
       }
     },
     "query": "SELECT * FROM followers WHERE feed_id = $1"
-  },
-  "f167ad37d0a49ca2e8f31ad9ef251606d611c2630d5402c73bf7d9993b2cdca8": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
-          "Varchar",
-          "Int4"
-        ]
-      }
-    },
-    "query": "UPDATE feeds SET icon_url = $1 WHERE id = $2"
   },
   "f2a80e26523db4e81c6f4e11250fbf913c4c65e1d14891775f0ea2f3fc931687": {
     "describe": {

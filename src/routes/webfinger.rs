@@ -14,6 +14,9 @@ use crate::routes::feeds::*;
 use crate::utils::utils::path_to_url;
 
 
+///
+/// Respond to webfinger requests
+///
 #[get("/.well-known/webfinger?<resource>")]
 pub async fn lookup_webfinger(resource: &str, db: &State<PgPool>) -> Result<String, Status> {
   let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");

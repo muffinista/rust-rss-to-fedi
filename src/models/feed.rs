@@ -665,12 +665,16 @@ impl Feed {
 
   ///
   /// add follower to feed
-  /// @todo uniqueness check
+  /// @todo probably move this into follower.rs
   ///
   pub async fn add_follower(&self, pool: &PgPool, actor: &str) -> Result<(), AnyError> {
     let now = Utc::now();
 
-    let result = sqlx::query!("INSERT INTO followers (feed_id, actor, created_at, updated_at) VALUES($1, $2, $3, $4)",
+    let result = sqlx::query!("INSERT INTO followers 
+        (feed_id, actor, created_at, updated_at) 
+        VALUES($1, $2, $3, $4)
+        ON CONFLICT (feed_id, actor) DO UPDATE
+        SET updated_at = EXCLUDED.updated_at",
                  self.id, actor, now, now)
       .execute(pool)
       .await;
@@ -682,7 +686,7 @@ impl Feed {
   }
 
   ///
-  /// handle follow activity
+  /// handle an actor following the feed by adding them to the db and sending an Accept message back
   ///
   pub async fn follow(&self, pool: &PgPool, actor: &str, activity: &AcceptedActivity) -> Result<(), AnyError> {
     // store follower in the db
@@ -708,7 +712,10 @@ impl Feed {
     deliver_to_inbox(&Url::parse(&inbox)?, &self.ap_url(), &self.private_key, &msg).await
   }
 
-  /// handle an incoming message
+  ///
+  /// handle an incoming message. we mostly ignore these except a user can message the admin
+  /// feed to login to the site to add/manage feeds
+  ///
   pub async fn incoming_message(&self, pool: &PgPool, actor_url: &str, activity: &AcceptedActivity) -> Result<(), AnyError> {
 
     println!("ACTOR: {:}", actor_url);
@@ -716,6 +723,7 @@ impl Feed {
     // THIS GETS THE CONTENT OF THE STATUS and is clearly
     // a bit of a hack, but it's hard to get the content of the
     // note to not end up in an unparsed bit of modelling anyway 
+    // @todo figure out the polite way to do this
     let s = serde_json::to_string(&activity.object()?).unwrap();
     let note: ApObject<Note> = serde_json::from_str(&s).unwrap();
     let content = note.content().unwrap();
@@ -738,6 +746,7 @@ impl Feed {
       return Ok(());      
     }
 
+    // grab the actor information for the sender
     let dest_actor = Actor::find_or_fetch(&actor_url.to_string(), pool).await;
     match dest_actor {
       Ok(dest_actor) => {
@@ -747,12 +756,14 @@ impl Feed {
         }
         let dest_actor = dest_actor.unwrap();
 
+        // generate a login message for this user
         let message = self.generate_login_message(activity, &dest_actor, pool).await?;
         let msg = serde_json::to_string(&message).unwrap();
         println!("{}", msg);
     
         let my_url = self.ap_url();
-    
+
+        // send the message!
         let result = deliver_to_inbox(&Url::parse(&dest_actor.inbox_url)?, &my_url, &self.private_key, &msg).await;
     
         match result {
@@ -774,11 +785,6 @@ impl Feed {
   pub async fn generate_login_message(&self, activity: &AcceptedActivity, dest_actor: &Actor, pool: &PgPool) -> Result<ApObject<Create>, AnyError> {
     let (_, object, _) = activity.clone().into_parts();
 
-    // THIS GETS THE CONTENT OF THE STATUS (which we don't really need right now)
-    // let s = serde_json::to_string(&object).unwrap();
-    // let n: ApObject<Note> = serde_json::from_str(&s).unwrap();
-    // println!("NOTE: {:?}", n.content().unwrap().as_single_xsd_string());
-
     let mut reply: SensitiveNote = SensitiveNote::new();
 
     let my_url = self.ap_url();
@@ -792,14 +798,15 @@ impl Feed {
     let result = format!("{:X}", hasher.finalize());
 
 
+    // lookup the user in the db. if they don't exist, add them
     let user = User::find_or_create_by_actor_url(&dest_actor.url, pool).await.unwrap();
 
+    // update with actor information
     user.apply_actor(dest_actor, pool).await.unwrap();
 
     let auth_url = path_to_url(&uri!(attempt_login(&user.login_token)));
 
     let mut mention = Mention::new();
-
     mention
       .set_href(iri!(dest_actor.url.to_string()))
       .set_name("en");
@@ -857,7 +864,7 @@ impl Feed {
   }
 
   ///
-  /// handle any incoming events. we're just handling follow/unfollows for now
+  /// handle any incoming events
   ///
   pub async fn handle_activity(&self, pool: &PgPool, activity: &AcceptedActivity)  -> Result<(), AnyError> {
     let s = serde_json::to_string(&activity).unwrap();
@@ -926,7 +933,6 @@ impl Feed {
       .set_url(iri!(my_url))
       .set_id(iri!(format!("{}/{}", my_url, random_id)))
       .set_to(iri!(&actor.url))
-      // .add_to(iri!(&self.permalink_url()))
       .add_tag(mention.into_any_base()?)
       .add_tag(feed_mention.into_any_base()?);
 

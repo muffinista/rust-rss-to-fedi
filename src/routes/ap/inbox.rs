@@ -36,8 +36,13 @@ impl SignatureValidity {
   }
 }
 
-// https://github.com/Plume-org/Plume/blob/8c098def6173797b3f36f3668ee8038e1048f6a5/plume-common/src/activity_pub/sign.rs#L137
-
+///
+/// Rocket request guard for AP signed requests
+///
+///
+/// This code is lightly modified from Plume:
+///
+/// https://github.com/Plume-org/Plume/blob/8c098def6173797b3f36f3668ee8038e1048f6a5/plume-common/src/activity_pub/sign.rs#L137
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for SignatureValidity {
   type Error = std::convert::Infallible;
