@@ -1531,6 +1531,50 @@
     },
     "query": "SELECT * FROM followers WHERE feed_id = $1 LIMIT $2 OFFSET $3"
   },
+  "c31e08c4a361f7364ffd28820232cf6f86375e75e3fe733a26de4bc420097e2c": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "feed_id",
+          "ordinal": 1,
+          "type_info": "Int4"
+        },
+        {
+          "name": "actor",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "created_at",
+          "ordinal": 3,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "ordinal": 4,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      }
+    },
+    "query": "SELECT * FROM followers WHERE id = $1"
+  },
   "c5d20d9c167556ef154b97c7b4510985a5571342d651a7d8c2bfb4e5aa7b09f6": {
     "describe": {
       "columns": [

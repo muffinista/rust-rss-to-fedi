@@ -1,4 +1,13 @@
+use std::env;
 use sqlx::postgres::PgPool;
+
+//use fang::async_trait;
+use fang::asynk::async_queue::AsyncQueue;
+// use fang::serde::{Deserialize, Serialize};
+// use fang::typetag;
+// use fang::AsyncRunnable;
+// use fang::FangError;
+
 use crate::models::user::User;
 use crate::models::feed::Feed;
 use crate::models::follower::Follower;
@@ -6,11 +15,18 @@ use crate::models::item::Item;
 use crate::models::keys::generate_key;
 use crate::models::Actor;
 
+use crate::server::build_server;
+
 use chrono::Utc;
 use uuid::Uuid;
 
 use rocket::uri;
+use rocket::{Rocket, Build};
 
+
+pub async fn build_test_server(pool: PgPool) -> Rocket<Build> {
+  build_server(pool).await
+}
 
 pub async fn login_user(client: &rocket::local::asynchronous::Client, user: &User) {
   // login the user

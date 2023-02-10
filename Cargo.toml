@@ -42,6 +42,9 @@ sanitize_html = "0.7.0"
 reqwest-retry = "0.2.1"
 md-5 = "0.10.5"
 
+fang = { version = "0.10" , features = ["asynk"], default-features = false }
+env_logger = "0.10.0"
+log = "0.4.17"
 
 [dependencies.rocket_dyn_templates]
 rocket_dyn_templates = "0.1.0-rc.2"

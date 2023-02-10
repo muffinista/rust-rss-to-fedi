@@ -65,13 +65,13 @@ mod test {
 
   use sqlx::postgres::PgPool;
 
-  use crate::utils::test_helpers::{real_feed};
+  use crate::utils::test_helpers::{build_test_server, real_feed};
 
   #[sqlx::test]
   async fn test_render_feed_outbox(pool: PgPool) -> sqlx::Result<()> {
     let feed = real_feed(&pool).await.unwrap();
 
-    let server: Rocket<Build> = build_server(pool).await;
+    let server: Rocket<Build> = build_test_server(pool).await;
     let client = Client::tracked(server).await.unwrap();
 
     let name = feed.name;

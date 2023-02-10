@@ -32,19 +32,18 @@ pub fn index() -> Template {
 
 #[cfg(test)]
 mod test {
-  use crate::server::build_server;
   use rocket::local::asynchronous::Client;
   use rocket::http::Status;
   use rocket::uri;
   use rocket::{Rocket, Build};
   use sqlx::postgres::PgPool;
   
-  use crate::utils::test_helpers::{real_user};
+  use crate::utils::test_helpers::{build_test_server, real_user};
 
 
   #[sqlx::test]
   async fn index_not_logged_in(pool: PgPool) {
-    let server:Rocket<Build> = build_server(pool).await;
+    let server:Rocket<Build> = build_test_server(pool).await;
     let client = Client::tracked(server).await.unwrap();
 
     let req = client.get(uri!(super::index));
@@ -62,7 +61,7 @@ mod test {
   async fn index_logged_in(pool: PgPool) {
     let user = real_user(&pool).await.unwrap();
 
-    let server: Rocket<Build> = build_server(pool).await;
+    let server: Rocket<Build> = build_test_server(pool).await;
     let client = Client::tracked(server).await.unwrap();
 
     crate::models::test_helpers::login_user(&client, &user).await;   

@@ -8,6 +8,9 @@ use rocket_dyn_templates::{Template, context};
 use rocket::uri;
 use rocket::serde::{Serialize, json::Json};
 
+use fang::AsyncRunnable;
+use fang::AsyncQueueable;
+
 use std::env;
 
 use sqlx::postgres::PgPool;
@@ -17,6 +20,10 @@ use crate::models::feed::Feed;
 use crate::models::item::Item;
 
 use crate::services::url_to_feed::url_to_feed_url;
+
+use crate::utils::queue::create_queue;
+
+use crate::tasks::RefreshFeed;
 
 #[derive(FromForm, serde::Deserialize)]
 #[serde(crate = "rocket::serde")]
@@ -44,11 +51,17 @@ pub struct FeedLookup {
 #[post("/feed", data = "<form>")]
 pub async fn add_feed(user: User, db: &State<PgPool>, form: Form<FeedForm>) -> Result<Flash<Redirect>, Status> {
   let feed = Feed::create(&user, &form.url, &form.name, &db).await;
+  let mut queue = create_queue();
   
   match feed {
-    Ok(mut feed) => {
+    Ok(feed) => {
       // @todo handle issues here
-      let _refresh_result = feed.refresh(&db).await;
+      // let _refresh_result = feed.refresh(&db, &mut queue).await;
+      let task = RefreshFeed { id: feed.id };
+      queue
+        .insert_task(&task as &dyn AsyncRunnable)
+        .await
+        .unwrap();
 
       let notify = user.send_link_to_feed(&feed, &db).await;
       match notify {
@@ -253,7 +266,7 @@ mod test {
 
   use crate::server::build_server;
   use crate::utils::utils::*;
-  use crate::utils::test_helpers::{real_user, real_feed};
+  use crate::utils::test_helpers::{build_test_server, real_user, real_feed};
 
   use sqlx::postgres::PgPool;
   
@@ -261,7 +274,7 @@ mod test {
   async fn test_show_feed(pool: PgPool) -> sqlx::Result<()> {
     let feed = real_feed(&pool).await.unwrap();
 
-    let server: Rocket<Build> = build_server(pool).await;
+    let server: Rocket<Build> = build_test_server(pool).await;
     let client = Client::tracked(server).await.unwrap();
 
     let req = client.get(uri!(super::show_feed(&feed.name))).header(Header::new("Accept", "text/html"));
@@ -279,7 +292,7 @@ mod test {
   async fn test_render_feed(pool: PgPool) -> sqlx::Result<()> {
     let feed = real_feed(&pool).await.unwrap();
 
-    let server: Rocket<Build> = build_server(pool).await;
+    let server: Rocket<Build> = build_test_server(pool).await;
     let client = Client::tracked(server).await.unwrap();
 
     let name = feed.name;
@@ -299,7 +312,7 @@ mod test {
   async fn test_test_feed(pool: PgPool) -> sqlx::Result<()> {
     let user = real_user(&pool).await.unwrap();
 
-    let server: Rocket<Build> = build_server(pool).await;
+    let server: Rocket<Build> = build_test_server(pool).await;
     let client = Client::tracked(server).await.unwrap();
 
     crate::models::test_helpers::login_user(&client, &user).await;   
@@ -333,7 +346,7 @@ mod test {
         .unwrap();
     }
     
-    let server: Rocket<Build> = build_server(pool).await;
+    let server: Rocket<Build> = build_test_server(pool).await;
     let client = Client::tracked(server).await.unwrap();
 
     let name = feed.name;

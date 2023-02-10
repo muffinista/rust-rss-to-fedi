@@ -36,6 +36,8 @@ use std::{env, error::Error, fmt};
 
 use md5::{Md5, Digest};
 
+use fang::AsyncQueueable;
+
 use crate::models::Actor;
 use crate::models::user::User;
 use crate::models::item::Item;
@@ -435,7 +437,7 @@ impl Feed {
   ///
   /// grab new data for this feed, and deliver any new entries to followers
   ///
-  pub async fn refresh(&mut self, pool: &PgPool) -> Result<(), AnyError> {
+  pub async fn refresh(&mut self, pool: &PgPool, queue: &mut dyn AsyncQueueable) -> Result<(), AnyError> {
     // skip processing for admin accounts
     if self.is_admin() {
       self.mark_fresh(pool).await?;
@@ -450,7 +452,7 @@ impl Feed {
           if count > 0 {
             println!("delivering {} items to {} users", items.len(), count);
             for item in items {
-              item.deliver(&self, &pool).await?;
+              item.deliver(&self, pool, queue).await?;
             }  
           } else {
             println!("skipping delivery of {} items because no followers :(", items.len());

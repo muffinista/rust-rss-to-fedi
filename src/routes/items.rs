@@ -89,7 +89,7 @@ mod test {
 
   use crate::models::feed::Feed;
   use crate::models::item::Item;
-  use crate::utils::test_helpers::{real_item, real_feed};
+  use crate::utils::test_helpers::{build_test_server, real_item, real_feed};
 
   use sqlx::postgres::PgPool;
 
@@ -98,7 +98,7 @@ mod test {
     let feed: Feed = real_feed(&pool).await?;
     let item: Item = real_item(&feed, &pool).await?;
 
-    let server: Rocket<Build> = build_server(pool).await;
+    let server: Rocket<Build> = build_test_server(pool).await;
     let client = Client::tracked(server).await.unwrap();
 
     let req = client.get(uri!(super::show_item(&feed.name, item.id)));
@@ -114,7 +114,7 @@ mod test {
     let feed: Feed = real_feed(&pool).await?;
     let item: Item = real_item(&feed, &pool).await?;
 
-    let server: Rocket<Build> = build_server(pool).await;
+    let server: Rocket<Build> = build_test_server(pool).await;
     let client = Client::tracked(server).await.unwrap();
 
     let req = client.get(uri!(super::show_item_json(&feed.name, item.id))).header(Header::new("Accept", "application/json"));

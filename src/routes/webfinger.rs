@@ -68,19 +68,18 @@ pub async fn lookup_webfinger(resource: &str, db: &State<PgPool>) -> Result<Stri
 
 #[cfg(test)]
 mod test {
-  use crate::server::build_server;
   use rocket::local::asynchronous::Client;
   use rocket::http::Status;
   use rocket::uri;
   use rocket::{Rocket, Build};
   use sqlx::postgres::PgPool;
   use std::env;
-  use crate::utils::test_helpers::{real_feed};
+  use crate::utils::test_helpers::{build_test_server, real_feed};
 
   
   #[sqlx::test]
   async fn test_lookup_webfinger_404(pool: PgPool) {
-    let server:Rocket<Build> = build_server(pool).await;
+    let server:Rocket<Build> = build_test_server(pool).await;
     let client = Client::tracked(server).await.unwrap();
 
     let req = client.get(uri!(super::lookup_webfinger("acct:foo@bar.com")));
@@ -95,7 +94,7 @@ mod test {
 
     let feed = real_feed(&pool).await.unwrap();
     
-    let server: Rocket<Build> = build_server(pool).await;
+    let server: Rocket<Build> = build_test_server(pool).await;
     let client = Client::tracked(server).await.unwrap();
     
     let req = client.get(uri!(super::lookup_webfinger(format!("acct:{}@{}", &feed.name, instance_domain))));

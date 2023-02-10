@@ -4,6 +4,8 @@ use feed_rs::model::Entry;
 
 use crate::models::enclosure::Enclosure;
 use crate::models::feed::Feed;
+use crate::models::Follower;
+
 use crate::services::mailer::*;
 
 use activitystreams::activity::*;
@@ -17,6 +19,10 @@ use activitystreams::object::ObjectExt;
 use activitystreams::link::Mention;
 use activitystreams::link::LinkExt;
 
+use fang::AsyncRunnable;
+use fang::AsyncQueueable;
+
+use crate::tasks::DeliverItem;
 
 use anyhow::Error as AnyError;
 
@@ -308,7 +314,7 @@ impl Item {
   }
 
 
-  pub async fn deliver(&self, feed: &Feed, pool: &PgPool) -> Result<(), AnyError> {
+  pub async fn deliver(&self, feed: &Feed, pool: &PgPool, queue: &mut dyn AsyncQueueable) -> Result<(), AnyError> {
     let message = self.to_activity_pub(feed, pool).await.unwrap();
     let item_publicity = match &feed.status_publicity {
       Some(value) => value.as_str(),
@@ -339,48 +345,67 @@ impl Item {
     } else {
       let followers = feed.followers_list(pool).await?;
       for follower in followers { 
-        let inbox = follower.find_inbox(pool).await;
-        match inbox {
-          Ok(inbox) => {
-            if inbox.is_none() {
-              println!("inbox not found");
-              return Ok(());
-            }
-
-            let inbox = inbox.unwrap();
-
-            println!("INBOX: {}", inbox);
-            // generate and send
-            let mut targeted = message.clone();
-            targeted.set_many_tos(vec![iri!(inbox)]);
-              
-            let msg = serde_json::to_string(&targeted).unwrap();
-            println!("{}", msg);
-  
-            let result = deliver_to_inbox(&Url::parse(&inbox)?, &feed.ap_url(), &feed.private_key, &msg).await;
-  
-            match result {
-              Ok(result) => println!("sent! {:?}", result),
-              Err(why) => println!("delivery failure! {:?}", why)
-            }
-  
-          },
-          Err(why) => {
-            println!("lookup failure! {:?}", why);
-            // @todo retry! mark as undeliverable? delete user?
-            // panic!("oops!");
-          }
-        }
+        let task = DeliverItem { feed_id: feed.id, item_id: self.id, follower_id: follower.id };
+        let _result = queue
+          .insert_task(&task as &dyn AsyncRunnable)
+          .await
+          .unwrap();
       };  
     }
 
     Ok(())
   }
+
+  pub async fn deliver_to(&self, follower: &Follower, feed: &Feed, pool: &PgPool) -> Result<(), AnyError> {
+    let inbox = follower.find_inbox(pool).await;
+    match inbox {
+      Ok(inbox) => {
+        if inbox.is_none() {
+          println!("inbox not found");
+          return Ok(());
+        }
+
+        let inbox = inbox.unwrap();
+        let message = self.to_activity_pub(feed, pool).await.unwrap();
+
+        println!("INBOX: {}", inbox);
+        // generate and send
+        let mut targeted = message.clone();
+        targeted.set_many_tos(vec![iri!(inbox)]);
+          
+        let msg = serde_json::to_string(&targeted).unwrap();
+        println!("{}", msg);
+
+        let result = deliver_to_inbox(&Url::parse(&inbox)?, &feed.ap_url(), &feed.private_key, &msg).await;
+
+        match result {
+          Ok(result) => {
+            println!("sent! {:?}", result);
+            Ok(())
+          },
+          Err(why) => {
+            println!("delivery failure! {:?}", why);
+            Err(why)
+          }
+        }
+
+      },
+      Err(why) => {
+        println!("lookup failure! {:?}", why);
+        // @todo retry! mark as undeliverable? delete user?
+        // panic!("oops!");
+        Err(why)
+      }
+    }
+
+  }
+
 }
 
 
 #[cfg(test)]
 mod test {
+  use std::env;
   use sqlx::postgres::PgPool;
   use crate::models::feed::Feed;
   use crate::models::item::Item;
@@ -388,6 +413,8 @@ mod test {
   use crate::utils::test_helpers::{real_item, real_feed, fake_item, real_item_with_enclosure};
 
   use mockito::mock;
+  use fang::AsyncQueue;
+  use fang::NoTls;
 
   #[sqlx::test]
   async fn test_find(pool: PgPool) -> sqlx::Result<()> {
@@ -509,6 +536,8 @@ mod test {
   
   #[sqlx::test]
   async fn test_deliver(pool: PgPool) -> Result<(), String> {
+    let db_uri = env::var("DATABASE_URL").expect("DATABASE_URL is not set");
+
     let mut feed: Feed = real_feed(&pool).await.unwrap();
     let item: Item = fake_item();
 
@@ -542,15 +571,26 @@ mod test {
 
     let _follower = feed.add_follower(&pool, &actor).await;
 
+    let max_pool_size: u32 = 5;
+
+    let mut queue:AsyncQueue<NoTls> = AsyncQueue::builder()
+      // Postgres database url
+      .uri(&db_uri)
+      // Max number of connections that are allowed
+      .max_pool_size(max_pool_size)
+      .build();
+
+    queue.connect(NoTls).await.unwrap();
+
 
     feed.status_publicity = Some("unlisted".to_string());
-    assert!(item.deliver(&feed, &pool).await.is_ok());
+    assert!(item.deliver(&feed, &pool, &mut queue).await.is_ok());
 
     feed.status_publicity = Some("public".to_string());
-    assert!(item.deliver(&feed, &pool).await.is_ok());
+    assert!(item.deliver(&feed, &pool, &mut queue).await.is_ok());
 
     feed.status_publicity = Some("direct".to_string());
-    assert!(item.deliver(&feed, &pool).await.is_ok());
+    assert!(item.deliver(&feed, &pool, &mut queue).await.is_ok());
 
     Ok(())
   }

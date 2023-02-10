@@ -24,6 +24,12 @@ impl PartialEq for Follower {
 }
 
 impl Follower {
+  pub async fn find(id: i32, pool: &PgPool) -> Result<Option<Follower>, sqlx::Error> {
+    sqlx::query_as!(Follower, "SELECT * FROM followers WHERE id = $1", id)
+      .fetch_optional(pool)
+      .await
+  }
+
   ///
   /// Ping the actor's profile data to get their inbox
   ///

@@ -198,7 +198,6 @@ pub async fn user_inbox(digest: Option<SignatureValidity>, username: &str, activ
 
 #[cfg(test)]
 mod test {
-  use crate::server::build_server;
   use rocket::local::asynchronous::Client;
   use rocket::http::Status;
   use rocket::uri;
@@ -206,7 +205,7 @@ mod test {
 
   use sqlx::postgres::PgPool;
 
-  use crate::utils::test_helpers::{real_feed};
+  use crate::utils::test_helpers::{build_test_server, real_feed};
   
   #[sqlx::test]
   async fn test_user_inbox(pool: PgPool) -> sqlx::Result<()> {
@@ -214,7 +213,7 @@ mod test {
     let actor = "https://activitypub.pizza/users/colin".to_string();
     let json = format!(r#"{{"actor":"{}","object":"{}/feed","type":"Follow"}}"#, actor, actor).to_string();
 
-    let server:Rocket<Build> = build_server(pool).await;
+    let server:Rocket<Build> = build_test_server(pool).await;
     let client = Client::tracked(server).await.unwrap();
 
     let req = client.post(uri!(super::user_inbox(&feed.name))).body(json);

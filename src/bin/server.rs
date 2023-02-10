@@ -3,6 +3,7 @@
 use std::env;
 
 use sqlx::postgres::PgPoolOptions;
+
 use rustypub::server::build_server;
 
 #[rocket::main]
@@ -15,7 +16,6 @@ pub async fn main() -> Result<(), rocket::Error> {
     .connect(&db_uri)
     .await
     .expect("Failed to create pool");
-
 
   let server = build_server(pool)
     .await
