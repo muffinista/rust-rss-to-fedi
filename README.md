@@ -4,15 +4,16 @@ post messages from RSS feeds.
 
 ## Using the service
 
-I run an instance of this code at feedsin.space. Before you can setup
-a feed, you need to send a fediverse message to @admin@feedsin.space
-with the word "help". This is an automated account, and it will
-respond with a link that you can use to authenticate with the
-service. Once you're logged in, you can create a feed. The feed
-requires a username and the feed URL. Once you've specified those,
-there will be an account at @username@feedsin.space. feedsin.space
-will scan the RSS feed every now and then, and if there's a new entry,
-it'll be posted as a status by the account.
+I run an instance of this code at
+[feedsin.space](feedsin.space). Before you can setup a feed, you need
+to send a fediverse message to @admin@feedsin.space with the word
+"help". This is an automated account, and it will respond with a link
+that you can use to authenticate with the service. Once you're logged
+in, you can create a feed. The feed requires a username and the feed
+URL. Once you've specified those, there will be an account at
+@username@feedsin.space. feedsin.space will scan the RSS feed every
+now and then, and if there's a new entry, it'll be posted as a status
+by the account.
 
 ## Running the code
 
