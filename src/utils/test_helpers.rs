@@ -1,8 +1,7 @@
-use std::env;
 use sqlx::postgres::PgPool;
 
 //use fang::async_trait;
-use fang::asynk::async_queue::AsyncQueue;
+//use fang::asynk::async_queue::AsyncQueue;
 // use fang::serde::{Deserialize, Serialize};
 // use fang::typetag;
 // use fang::AsyncRunnable;

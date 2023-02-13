@@ -264,7 +264,6 @@ mod test {
 
   use chrono::Utc;
 
-  use crate::server::build_server;
   use crate::utils::utils::*;
   use crate::utils::test_helpers::{build_test_server, real_user, real_feed};
 

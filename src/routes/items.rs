@@ -80,8 +80,6 @@ pub async fn show_item_json(username: &str, id: i32, db: &State<PgPool>) -> Resu
 
 #[cfg(test)]
 mod test {
-  use crate::server::build_server;
-
   use rocket::local::asynchronous::Client;
   use rocket::http::{Header, Status};
   use rocket::uri;

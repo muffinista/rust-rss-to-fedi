@@ -20,6 +20,15 @@ use base64::{Engine as _, engine::general_purpose};
 
 use anyhow::{anyhow};
 
+use std::env;
+
+static BASE_USER_AGENT: &str = concat!(
+  env!("CARGO_PKG_NAME"),
+  "/",
+  env!("CARGO_PKG_VERSION"),
+);
+
+
 // ///
 // /// query webfinger endpoint for actor and try and find data url
 // ///
@@ -38,6 +47,7 @@ pub async fn fetch_object(url: &str) -> Result<Option<String>, reqwest::Error> {
   let response = client
     .get(url)
     .header("Accept", "application/activity+json")
+    .header("User-Agent", user_agent())
     .send()
     .await;
 
@@ -113,10 +123,20 @@ pub async fn deliver_to_inbox(inbox: &Url, key_id: &str, private_key: &str, json
   }
 }
 
+///
+/// Generate a user agent for the current version of the code and the running instance
+///
+pub fn user_agent() -> String {
+  let domain_name = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
+  format!("{}; +{})", BASE_USER_AGENT, domain_name)
+}
 
-// @todo this is silly
 fn generate_request_headers(_inbox: &Url) -> HeaderMap {
   let mut headers = HeaderMap::new();
+  headers.insert(
+    "user-agent",
+    HeaderValue::from_str(&user_agent()).expect("Invalid user agent"),
+  );
   headers.insert(
     "date",
     HeaderValue::from_str(&fmt_http_date(SystemTime::now())).expect("Date is valid"),

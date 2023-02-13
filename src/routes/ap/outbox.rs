@@ -57,7 +57,6 @@ pub async fn render_feed_outbox(username: &str, page: Option<i32>, db: &State<Pg
 
 #[cfg(test)]
 mod test {
-  use crate::server::build_server;
   use rocket::local::asynchronous::Client;
   use rocket::http::Status;
   use rocket::uri;
