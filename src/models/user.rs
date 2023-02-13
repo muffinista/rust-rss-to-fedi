@@ -39,7 +39,18 @@ impl User {
     .fetch_one(pool)
     .await
   }
-  
+
+  ///
+  /// Find the 'admin' user. This is a special feed that will be used to
+  /// send messages, handle authentications, etc
+  ///
+  pub async fn for_admin(pool: &PgPool) -> Result<Option<User>, sqlx::Error> {
+    sqlx::query_as!(User, "SELECT users.* FROM users INNER JOIN feeds ON users.id = feeds.user_id WHERE feeds.admin = true LIMIT 1")
+    .fetch_optional(pool)
+    .await
+  }
+
+
   ///
   /// Find user by email
   ///

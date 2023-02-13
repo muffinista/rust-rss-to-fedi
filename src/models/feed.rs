@@ -39,9 +39,9 @@ use md5::{Md5, Digest};
 use fang::AsyncQueueable;
 
 use crate::models::Actor;
-use crate::models::user::User;
-use crate::models::item::Item;
-use crate::models::follower::Follower;
+use crate::models::User;
+use crate::models::Item;
+use crate::models::Follower;
 use crate::utils::keys::*;
 use crate::utils::utils::*;
 use crate::services::mailer::*;
