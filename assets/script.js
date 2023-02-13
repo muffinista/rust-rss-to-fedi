@@ -71,3 +71,24 @@ document.querySelectorAll(".copy-block").forEach((el) => {
     el.querySelector("a").addEventListener("click", () => { copy(el); });
   }  
 });
+
+
+//
+// feed deletion confirmation dialog handler
+//
+let deleteConfirm = document.querySelector(".delete-confirm");
+if ( deleteConfirm ) {
+  let dialog = document.querySelector("#delete-confirmation");
+  function showModal() {
+    dialog.showModal();
+  }
+
+  deleteConfirm.addEventListener("click", showModal);
+  dialog.addEventListener('close', () => {
+    if (dialog.returnValue == "default") {
+      deleteConfirm.removeEventListener("click", showModal);
+      deleteConfirm.type = "submit";
+      deleteConfirm.click();
+    }
+  });
+}

@@ -10,6 +10,7 @@ use rocket::serde::{Serialize, json::Json};
 
 use fang::AsyncRunnable;
 use fang::AsyncQueueable;
+use fang::NoTls;
 
 use std::env;
 
@@ -55,9 +56,8 @@ pub async fn add_feed(user: User, db: &State<PgPool>, form: Form<FeedForm>) -> R
   
   match feed {
     Ok(feed) => {
-      // @todo handle issues here
-      // let _refresh_result = feed.refresh(&db, &mut queue).await;
       let task = RefreshFeed { id: feed.id };
+      queue.connect(NoTls).await.unwrap();
       queue
         .insert_task(&task as &dyn AsyncRunnable)
         .await

@@ -4,6 +4,18 @@
 
   <form method="POST" action="/feed/{{feed.id}}/delete">
     <input type="hidden" name="_method" value="delete" />
-    <button class="check" type="submit">Delete this feed!</button>
+    <button class="check delete-confirm" type="button">Delete this feed!</button>
   </form>
+
+  <dialog id="delete-confirmation">
+    <form method="dialog">
+      <p>
+        Are you sure you want to delete this feed?
+      </p>
+      <div>
+        <button value="cancel">Cancel</button>
+        <button id="confirmBtn" value="default"> Yes, I'm sure</button>
+      </div>
+    </form>
+  </dialog>
 </section>
