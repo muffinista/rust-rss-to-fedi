@@ -6,10 +6,7 @@ use fang::AsyncRunnable;
 use fang::FangError;
 use fang::Scheduled;
 
-use std::env;
-
-use sqlx::postgres::PgPoolOptions;
-
+use crate::models::utils::worker_db_pool;
 
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "fang::serde")]
@@ -26,13 +23,7 @@ impl UpdateStaleFeeds {
 #[typetag::serde]
 impl AsyncRunnable for UpdateStaleFeeds {
   async fn run(&self, queue: &mut dyn AsyncQueueable) -> Result<(), FangError> {
-    let db_uri = env::var("DATABASE_URL").expect("DATABASE_URL is not set");
-
-    let pool = PgPoolOptions::new()
-      .max_connections(5)
-      .connect(&db_uri)
-      .await
-      .expect("Failed to create pool");
+    let pool = worker_db_pool().await;
 
     let result = crate::services::loader::update_stale_feeds(&pool, queue).await;
     match result {

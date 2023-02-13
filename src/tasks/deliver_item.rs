@@ -5,13 +5,11 @@ use fang::typetag;
 use fang::AsyncRunnable;
 use fang::FangError;
 
-use std::env;
-
 use crate::models::Feed;
 use crate::models::Item;
 use crate::models::Follower;
 
-use sqlx::postgres::PgPoolOptions;
+use crate::models::utils::worker_db_pool;
 
 
 #[derive(Serialize, Deserialize)]
@@ -33,13 +31,7 @@ impl DeliverItem {
 #[typetag::serde]
 impl AsyncRunnable for DeliverItem {
   async fn run(&self, _queue: &mut dyn AsyncQueueable) -> Result<(), FangError> {
-    let db_uri = env::var("DATABASE_URL").expect("DATABASE_URL is not set");
-
-    let pool = PgPoolOptions::new()
-      .max_connections(5)
-      .connect(&db_uri)
-      .await
-      .expect("Failed to create pool");
+    let pool = worker_db_pool().await;
 
     let feed = Feed::find(self.feed_id, &pool).await;
     match feed {

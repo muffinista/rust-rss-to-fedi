@@ -77,7 +77,6 @@ pub async fn show_item_json(username: &str, id: i32, db: &State<PgPool>) -> Resu
 }
 
 
-
 #[cfg(test)]
 mod test {
   use rocket::local::asynchronous::Client;
