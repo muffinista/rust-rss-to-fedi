@@ -27,7 +27,6 @@
 
     Total feeds: {{total}} 
 
-
     <ul>
       {% for feed in feeds %}
         <li><a href="/admin/feed/{{feed.name}}">{{feed.name}}</a></li>

@@ -41,7 +41,7 @@ pub async fn attempt_login(db: &State<PgPool>, cookies: &CookieJar<'_>, login_to
               Err(why) => { println!("reset login error: {}", why) }
             }
 
-            let dest = uri!(crate::routes::index::index_logged_in);
+            let dest = uri!(crate::routes::index::index_logged_in(Some(1)));
             Ok(Redirect::to(dest))
           },
           Err(why) => {

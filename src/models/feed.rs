@@ -164,11 +164,33 @@ impl Feed {
       .await
   }
 
+  pub async fn paged_for_user(user: &User, page: i32, pool: &PgPool) -> Result<Vec<Feed>, sqlx::Error> {
+    let offset:i64 = ((page - 1) * PER_PAGE) as i64;
+
+    sqlx::query_as!(Feed, "SELECT * FROM feeds WHERE user_id = $1 ORDER BY id DESC LIMIT $2 OFFSET $3", user.id, PER_PAGE as i64, offset )
+      .fetch_all(pool)
+      .await
+  }
+
   ///
   /// Get a count of how many items we have for this feed
   ///
   pub async fn count(pool: &PgPool)  -> Result<i32, AnyError> {
     let result = sqlx::query!("SELECT COUNT(1) AS tally FROM feeds")
+      .fetch_one(pool)
+      .await;
+
+    match result {
+      Ok(result) => Ok(result.tally.unwrap() as i32),
+      Err(why) => Err(why.into())
+    }
+  }
+  
+  ///
+  /// Get a count of how many items we have for this feed
+  ///
+  pub async fn count_for_user(user: &User, pool: &PgPool)  -> Result<i32, AnyError> {
+    let result = sqlx::query!("SELECT COUNT(1) AS tally FROM feeds WHERE user_id = $1", user.id)
       .fetch_one(pool)
       .await;
 

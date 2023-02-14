@@ -5,4 +5,12 @@
       <li><a href="/feed/{{feed.name}}">{{feed.name}}</a></li>
     {% endfor %}
   </ul>
+
+  {% if page > 1 %}
+  <a href="/?page={{page-1}}">prev</a>
+  {% endif %}
+
+  {% if page < total_pages %}
+  <a href="/?page={{page+1}}">next</a>
+  {% endif %}
 </section>
