@@ -641,6 +641,44 @@
     },
     "query": "INSERT INTO enclosures \n            (item_id, url, content_type, size, description, credits, created_at, updated_at)\n            VALUES($1, $2, $3, $4, $5, $6, $7, $8)\n            RETURNING id"
   },
+  "66886d60ce0f23bfefd0b54e095de6cf4720eb823e565bb93a63884a8bd4d7bb": {
+    "describe": {
+      "columns": [
+        {
+          "name": "name",
+          "ordinal": 0,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "value",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "created_at",
+          "ordinal": 2,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "ordinal": 3,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      }
+    },
+    "query": "SELECT * FROM settings WHERE name = $1"
+  },
   "69f07967f37f786e507af8669f171467843e7838d8e27fc822fa4e244ab68e6c": {
     "describe": {
       "columns": [],
@@ -1061,6 +1099,26 @@
       }
     },
     "query": "DELETE FROM feeds WHERE user_id = $1 AND id = $2"
+  },
+  "9d4de4b31efa1cd76e3591edc8b1f03b81618424220b038dbbe312312d3b7b84": {
+    "describe": {
+      "columns": [
+        {
+          "name": "tally",
+          "ordinal": 0,
+          "type_info": "Int8"
+        }
+      ],
+      "nullable": [
+        null
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      }
+    },
+    "query": "SELECT count(1) AS tally FROM settings WHERE name = $1"
   },
   "a02481587547b67c70403e1b445bbb00ee0b4aec8006dd7bd17fbc8ed643abb0": {
     "describe": {
@@ -1544,6 +1602,21 @@
       }
     },
     "query": "SELECT count(1) AS tally FROM blocked_domains WHERE name = $1"
+  },
+  "bd581a8ccbd43983ac3b0f10039a7e42fbeadfc906561c579fdbf850286dd31c": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Varchar",
+          "Timestamptz",
+          "Timestamptz"
+        ]
+      }
+    },
+    "query": "INSERT INTO settings (name, value, created_at, updated_at)\n      VALUES ($1, $2, $3, $4)\n      ON CONFLICT (name) DO UPDATE\n        SET value = EXCLUDED.value,\n        updated_at = EXCLUDED.updated_at"
   },
   "c0d888f4223f17dfa375286a5932da8c00002bebdf397c17b0b013d50782363e": {
     "describe": {
