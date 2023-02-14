@@ -1,17 +1,26 @@
 use std::env;
 use rocket_dyn_templates::{Template, context};
 
-use rocket::{get, delete};
+use rocket::{FromForm, get, put, delete};
+use rocket::form::Form;
 use rocket::State;
-
+use rocket::uri;
+use rocket::response::{Flash, Redirect};
 use rocket::http::Status;
-use rocket::response::Redirect;
 
 use sqlx::postgres::PgPool;
 
 use crate::models::User;
 use crate::models::Feed;
 use crate::models::Item;
+use crate::models::Setting;
+
+#[derive(FromForm, serde::Deserialize)]
+#[serde(crate = "rocket::serde")]
+pub struct AdminSettingsForm {
+  signups_enabled: String
+}
+
 
 #[get("/admin")]
 pub async fn index_admin(user: User, db: &State<PgPool>) -> Result<Template, Status> {
@@ -21,11 +30,32 @@ pub async fn index_admin(user: User, db: &State<PgPool>) -> Result<Template, Sta
 
   let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
   let feeds = Feed::all(&db).await.unwrap();
+  let signups_enabled = Setting::value_or(&"signups_enabled".to_string(), &"true".to_string(), &db).await.unwrap();
+
   Ok(Template::render("admin", context! { 
     feeds: feeds,
+    signups_enabled: signups_enabled,
     instance_domain: instance_domain
   }))
 }
+
+
+#[put("/admin/settings", data = "<form>")]
+pub async fn update_settings_admin(user: User, db: &State<PgPool>, form: Form<AdminSettingsForm>) -> Result<Flash<Redirect>, Status> {
+  if ! user.is_admin() {
+    return Err(Status::NotFound)
+  }
+
+  let result = Setting::update(&"signups_enabled".to_string(), &form.signups_enabled, &db).await;
+
+  let dest = uri!(index_admin());
+
+  match result {
+    Ok(_result) => Ok(Flash::success(Redirect::to(dest), "Settings updated!")),
+    Err(_why) => Ok(Flash::error(Redirect::to(dest), "Sorry, something went wrong!"))
+  }
+}
+
 
 #[get("/admin/feed/<username>", format = "text/html", rank = 2)]
 pub async fn show_feed_admin(user: User, username: &str, db: &State<PgPool>) -> Result<Template, Status> {

@@ -2,9 +2,33 @@
 {% block title %}Feed admin!{% endblock title %}
 
 {% block content %}
-<ul>
-  {% for feed in feeds %}
-    <li><a href="/admin/feed/{{feed.name}}">{{feed.name}}</a></li>
-  {% endfor %}
-</ul>
+  <section class="admin">
+    <h1>Feed Admin</h1>
+    <form method="POST" action="/admin/settings" class="update-feed">
+      <input type="hidden" name="_method" value="put" />
+      <fieldset>
+        <legend>Settings</legend>
+        <div class="form-row">
+          <label for="signups_enabled">Signups Enabled:</label>
+          <div class="input">
+            <label for="signups_enabled_true">
+              <input type="radio" id="signups_enabled_true" name="signups_enabled" value="true" {% if signups_enabled == "true" %}checked{% endif %}/> <b>Yes</b>
+            </label>
+            <label for="signups_enabled_false">
+              <input type="radio" id="signups_enabled_false" name="signups_enabled" value="false" {% if signups_enabled == "false" %}checked{% endif %}/> <b>No</b></label>
+          </div>
+        </div>
+      </fieldset>
+
+      <div class="form-row">
+        <button class="check" type="submit">Update</button>
+      </div>
+    </form>
+
+    <ul>
+      {% for feed in feeds %}
+        <li><a href="/admin/feed/{{feed.name}}">{{feed.name}}</a></li>
+      {% endfor %}
+    </ul>
+  </section>
 {% endblock content %}
