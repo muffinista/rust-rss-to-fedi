@@ -21,7 +21,7 @@ pub async fn index_logged_in(user: User, db: &State<PgPool>) -> Template {
     username: user.full_username(),
     feeds: feeds,
     instance_domain: instance_domain,
-    signups_enabled: signups_enabled
+    signups_enabled: signups_enabled == "true"
   })
 }
 

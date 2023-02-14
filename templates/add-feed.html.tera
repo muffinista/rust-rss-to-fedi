@@ -31,7 +31,5 @@
   {% else %}
     <p>Sorry, new feeds are disabled right now (nothing personal).</p>
   {% endif %}
-    
-
 </section>
 

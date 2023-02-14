@@ -22,18 +22,34 @@ pub struct AdminSettingsForm {
 }
 
 
-#[get("/admin")]
-pub async fn index_admin(user: User, db: &State<PgPool>) -> Result<Template, Status> {
+const PER_PAGE:i32 = 10i32;
+
+
+#[get("/admin?<page>")]
+pub async fn index_admin(user: User, page: Option<i32>, db: &State<PgPool>) -> Result<Template, Status> {
   if ! user.is_admin() {
     return Err(Status::NotFound)
   }
 
   let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
-  let feeds = Feed::all(&db).await.unwrap();
+  let page = if page.is_some() {
+    page.unwrap()
+  } else {
+    1
+  };
+
+  let feeds = Feed::paged(page, &db).await.unwrap();
   let signups_enabled = Setting::value_or(&"signups_enabled".to_string(), &"true".to_string(), &db).await.unwrap();
+
+  let count = Feed::count(&db).await.unwrap();
+  let total_pages:i32 = ((count / PER_PAGE) + 1 ) as i32;
+
 
   Ok(Template::render("admin", context! { 
     feeds: feeds,
+    page: page,
+    total_pages: total_pages,
+    total: count,
     signups_enabled: signups_enabled,
     instance_domain: instance_domain
   }))
@@ -48,7 +64,7 @@ pub async fn update_settings_admin(user: User, db: &State<PgPool>, form: Form<Ad
 
   let result = Setting::update(&"signups_enabled".to_string(), &form.signups_enabled, &db).await;
 
-  let dest = uri!(index_admin());
+  let dest = uri!(index_admin(Some(1)));
 
   match result {
     Ok(_result) => Ok(Flash::success(Redirect::to(dest), "Settings updated!")),
@@ -133,7 +149,7 @@ mod test {
     let server:Rocket<Build> = build_test_server(pool).await;
     let client = Client::tracked(server).await.unwrap();
 
-    let req = client.get(uri!(super::index_admin));
+    let req = client.get(uri!(super::index_admin(Some(1))));
     let response = req.dispatch().await;
 
     assert_eq!(response.status(), Status::NotFound);
@@ -148,7 +164,7 @@ mod test {
 
     crate::models::test_helpers::login_user(&client, &user).await;   
 
-    let req = client.get(uri!(super::index_admin));
+    let req = client.get(uri!(super::index_admin(Some(1))));
     let response = req.dispatch().await;
 
     assert_eq!(response.status(), Status::Ok);
