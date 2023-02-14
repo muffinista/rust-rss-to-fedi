@@ -8,16 +8,20 @@ use sqlx::postgres::PgPool;
 
 use crate::models::user::User;
 use crate::models::feed::Feed;
+use crate::models::Setting;
 
 #[get("/")]
 pub async fn index_logged_in(user: User, db: &State<PgPool>) -> Template {
   let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
   let feeds = Feed::for_user(&user, &db).await.unwrap();
+  let signups_enabled = Setting::value_or(&"signups_enabled".to_string(), &"true".to_string(), &db).await.unwrap();
+
   Template::render("home", context! { 
     logged_in: true,
     username: user.full_username(),
     feeds: feeds,
-    instance_domain: instance_domain
+    instance_domain: instance_domain,
+    signups_enabled: signups_enabled
   })
 }
 

@@ -19,6 +19,7 @@ use sqlx::postgres::PgPool;
 use crate::models::user::User;
 use crate::models::feed::Feed;
 use crate::models::item::Item;
+use crate::models::Setting;
 
 use crate::services::url_to_feed::url_to_feed_url;
 
@@ -51,6 +52,13 @@ pub struct FeedLookup {
 
 #[post("/feed", data = "<form>")]
 pub async fn add_feed(user: User, db: &State<PgPool>, form: Form<FeedForm>) -> Result<Flash<Redirect>, Status> {
+  let signups_enabled = Setting::value_or(&"signups_enabled".to_string(), &"true".to_string(), &db).await.unwrap();
+
+  if signups_enabled != "true" {
+    return Ok(Flash::error(Redirect::to("/"), "Sorry, something went wrong!"));
+  }
+
+
   let feed = Feed::create(&user, &form.url, &form.name, &db).await;
   let mut queue = create_queue();
   
