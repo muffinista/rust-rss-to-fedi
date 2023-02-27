@@ -11,14 +11,14 @@
         <label for="url">Feed URL:</label>
         <div class="input">
           <input type="text" name="url" required />
-          <div class="help">The feed you want to use</div>
+          <div class="help">The URL of the feed you are adding</div>
         </div>
       </div>
       <div class="form-row">
         <label for="name">Name:</label>
         <div class="input">
           <input type="text" name="name" required />
-          <div class="help">The username of the account</div>
+          <div class="help">The username you want to use. The feed will be available on the fediverse at @username@{{ instance_domain }}</div>
         </div>
       </div>
       <div class="add-feed-results">

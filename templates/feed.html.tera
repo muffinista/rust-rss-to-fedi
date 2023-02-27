@@ -52,6 +52,8 @@
         <li>
           <a href="{{ item.url | safe }}">{{ item.title }}</a>
         </li>
+        {% else %}
+        <li>No entries</li>
         {% endfor %}
       </ul>
     </section>
