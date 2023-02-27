@@ -9,7 +9,7 @@ use crate::models::Feed;
 use crate::models::Item;
 use crate::models::Follower;
 
-use crate::models::utils::worker_db_pool;
+use crate::utils::pool::worker_db_pool;
 
 
 #[derive(Serialize, Deserialize)]
@@ -50,23 +50,23 @@ impl AsyncRunnable for DeliverItem {
                 match result {
                   Ok(_result) => (),
                   Err(why) => {
-                    println!("{:}", why);
+                    println!("{why:}");
                   }
                 }
               },
               Err(why) => {
-                println!("{:}", why);
+                println!("Something went wrong: {why:}");
               }   
             }
     
           },
           Err(why) => {
-            println!("{:}", why);
+            println!("Something went wrong: {why:}");
           }
         }
       },
       Err(why) => {
-        println!("{:}", why);
+        println!("Something went wrong: {why:}");
       }
     }
  

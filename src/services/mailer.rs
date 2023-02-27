@@ -68,33 +68,16 @@ pub async fn fetch_object(url: &str) -> Result<Option<String>, reqwest::Error> {
   }
 }
 
-// ///
-// /// parse webfinger data for activity URL
-// ///
-// pub fn parse_webfinger(webfinger: Webfinger) -> Option<Url> {
-//   let rel = "self".to_string();
-//   let mime_type = Some("application/activity+json".to_string());
-
-//   let query:Option<webfinger::Link> = webfinger
-//     .links
-//     .into_iter()
-//     .find(|link| &link.rel == &rel && &link.mime_type == &mime_type);
-
-//   match query {
-//     Some(query) => Some(Url::parse(&query.href.unwrap()).unwrap()),
-//     None => None
-//   }
-// }
 
 ///
 /// deliver a payload to an inbox
 ///
 pub async fn deliver_to_inbox(inbox: &Url, key_id: &str, private_key: &str, json: &str) -> Result<(), anyhow::Error> {
   let client = http_client();
-  let heads = generate_request_headers(&inbox);
+  let heads = generate_request_headers(inbox);
 
-  println!("deliver to {:}", inbox);
-  println!("message {:}", json);
+  println!("deliver to {inbox:}");
+  println!("message {json:}");
 
   let request_builder = client
     .post(inbox.to_string())
@@ -103,7 +86,7 @@ pub async fn deliver_to_inbox(inbox: &Url, key_id: &str, private_key: &str, json
   
   let request = sign_request(
     request_builder,
-    format!("{}#main-key", key_id.to_string()),
+    format!("{key_id}#main-key"),
     private_key.to_string(),
     json.to_string()
   )
@@ -128,7 +111,7 @@ pub async fn deliver_to_inbox(inbox: &Url, key_id: &str, private_key: &str, json
 ///
 pub fn user_agent() -> String {
   let domain_name = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
-  format!("{}; +{})", BASE_USER_AGENT, domain_name)
+  format!("{BASE_USER_AGENT}; +{domain_name})")
 }
 
 fn generate_request_headers(_inbox: &Url) -> HeaderMap {

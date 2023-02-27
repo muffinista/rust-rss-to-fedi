@@ -61,7 +61,7 @@ pub struct Item {
   pub updated_at: chrono::DateTime::<Utc>
 }
 
-fn sanitize_string(input: &String) -> String {
+fn sanitize_string(input: &str) -> String {
   // relaxed or basic makes sense here probably
   // https://docs.rs/sanitize_html/latest/sanitize_html/rules/predefined/index.html
   sanitize_str(&RELAXED, input).unwrap()
@@ -130,7 +130,7 @@ impl Item {
       None
     };
 
-    let item_url = if entry.links.len() > 0 {
+    let item_url = if !entry.links.is_empty() {
       Some(&entry.links[0].href)
     } else {
       None
@@ -161,7 +161,7 @@ impl Item {
         None
       };
 
-      let credits = if media.credits.len() > 0 {
+      let credits = if !media.credits.is_empty() {
         Some(media.credits[0].entity.clone())
       } else {
         None
@@ -207,7 +207,7 @@ impl Item {
     let tera = match Tera::new("templates/ap/*.*") {
       Ok(t) => t,
       Err(e) => {
-        println!("Parsing error(s): {}", e);
+        println!("Parsing error(s): {e}");
         ::std::process::exit(1);
       }
     };
@@ -270,7 +270,7 @@ impl Item {
     //
     // add any enclosures
     //
-    let enclosures = Enclosure::for_item(&self, &pool).await?;
+    let enclosures = Enclosure::for_item(self, pool).await?;
     for enclosure in enclosures {
       let mut attachment = Document::new();
       let enclosure_url = enclosure.url.clone();
@@ -339,7 +339,7 @@ impl Item {
       let mut mention = Mention::new();
 
       mention
-        .set_href(iri!(dest_url.to_string()))
+        .set_href(iri!(dest_url))
         .set_name("en");
   
     } else {
@@ -368,30 +368,30 @@ impl Item {
         let inbox = inbox.unwrap();
         let message = self.to_activity_pub(feed, pool).await.unwrap();
 
-        println!("INBOX: {}", inbox);
+        println!("INBOX: {inbox}");
         // generate and send
         let mut targeted = message.clone();
         targeted.set_many_tos(vec![iri!(inbox)]);
           
         let msg = serde_json::to_string(&targeted).unwrap();
-        println!("{}", msg);
+        println!("{msg}");
 
         let result = deliver_to_inbox(&Url::parse(&inbox)?, &feed.ap_url(), &feed.private_key, &msg).await;
 
         match result {
           Ok(result) => {
-            println!("sent! {:?}", result);
+            println!("sent! {result:?}");
             Ok(())
           },
           Err(why) => {
-            println!("delivery failure! {:?}", why);
+            println!("delivery failure! {why:?}");
             Err(why)
           }
         }
 
       },
       Err(why) => {
-        println!("lookup failure! {:?}", why);
+        println!("lookup failure! {why:?}");
         // @todo retry! mark as undeliverable? delete user?
         // panic!("oops!");
         Err(why)

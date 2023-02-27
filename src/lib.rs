@@ -6,3 +6,5 @@ pub mod models;
 pub mod routes;
 pub mod server;
 pub mod tasks;
+
+const PER_PAGE:i32 = 10i32;

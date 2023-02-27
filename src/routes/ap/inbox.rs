@@ -96,7 +96,7 @@ impl<'r> FromRequest<'r> for SignatureValidity {
         .collect::<Vec<_>>()
         .join("\n");
 
-    let sender = Actor::find_or_fetch(&key_id.unwrap().to_string(), &pool).await;
+    let sender = Actor::find_or_fetch(key_id.unwrap(), pool).await;
     match sender {
       Ok(sender) => {
         if sender.is_none() {
@@ -172,7 +172,7 @@ pub async fn user_inbox(digest: Option<SignatureValidity>, username: &str, activ
   if env::var("DISABLE_SIGNATURE_CHECKS").is_ok() {
     println!("Skipping signature check because DISABLE_SIGNATURE_CHECKS is set");
   } else if digest.is_none() || !digest.unwrap().is_secure() {
-    println!("digest failure sad {:?}", digest);
+    println!("digest failure {digest:?}");
     return Err(Status::NotFound)
   }
   let feed_lookup = Feed::find_by_name(&username.to_string(), db).await;

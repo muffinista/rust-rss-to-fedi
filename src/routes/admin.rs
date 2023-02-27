@@ -15,14 +15,13 @@ use crate::models::Feed;
 use crate::models::Item;
 use crate::models::Setting;
 
+use crate::PER_PAGE;
+
 #[derive(FromForm, serde::Deserialize)]
 #[serde(crate = "rocket::serde")]
 pub struct AdminSettingsForm {
   signups_enabled: String
 }
-
-
-const PER_PAGE:i32 = 10i32;
 
 
 #[get("/admin?<page>")]
@@ -38,11 +37,11 @@ pub async fn index_admin(user: User, page: Option<i32>, db: &State<PgPool>) -> R
     1
   };
 
-  let feeds = Feed::paged(page, &db).await.unwrap();
-  let signups_enabled = Setting::value_or(&"signups_enabled".to_string(), &"true".to_string(), &db).await.unwrap();
+  let feeds = Feed::paged(page, db).await.unwrap();
+  let signups_enabled = Setting::value_or(&"signups_enabled".to_string(), &"true".to_string(), db).await.unwrap();
 
-  let count = Feed::count(&db).await.unwrap();
-  let total_pages:i32 = ((count / PER_PAGE) + 1 ) as i32;
+  let count = Feed::count(db).await.unwrap();
+  let total_pages:i32 = (count / PER_PAGE) + 1;
 
 
   Ok(Template::render("admin", context! { 
@@ -62,7 +61,7 @@ pub async fn update_settings_admin(user: User, db: &State<PgPool>, form: Form<Ad
     return Err(Status::NotFound)
   }
 
-  let result = Setting::update(&"signups_enabled".to_string(), &form.signups_enabled, &db).await;
+  let result = Setting::update(&"signups_enabled".to_string(), &form.signups_enabled, db).await;
 
   let dest = uri!(index_admin(Some(1)));
 
@@ -87,7 +86,7 @@ pub async fn show_feed_admin(user: User, username: &str, db: &State<PgPool>) -> 
         Some(feed) => {
           let logged_in = true; // user.is_some();
           let follow_url = feed.permalink_url();
-          let items = Item::for_feed(&feed, 10, &db).await;
+          let items = Item::for_feed(&feed, 10, db).await;
 
           match items {
             Ok(items) => {
@@ -120,14 +119,14 @@ pub async fn delete_feed_admin(user: User, id: i32, db: &State<PgPool>) -> Resul
     return Err(Status::NotFound)
   }
 
-  let feed = Feed::admin_delete(id, &db).await;
+  let feed = Feed::admin_delete(id, db).await;
   
   match feed {
     Ok(_feed) => {
       Ok(Redirect::to("/admin"))
     },
     Err(why) => {
-      print!("{}", why);
+      print!("{why}");
       Err(Status::NotFound)
     }
   }
@@ -162,7 +161,7 @@ mod test {
     let server: Rocket<Build> = build_test_server(pool).await;
     let client = Client::tracked(server).await.unwrap();
 
-    crate::models::test_helpers::login_user(&client, &user).await;   
+    crate::utils::test_helpers::login_user(&client, &user).await;   
 
     let req = client.get(uri!(super::index_admin(Some(1))));
     let response = req.dispatch().await;

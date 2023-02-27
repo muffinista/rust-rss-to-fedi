@@ -6,7 +6,7 @@ use fang::AsyncRunnable;
 use fang::FangError;
 use fang::Scheduled;
 
-use crate::models::utils::worker_db_pool;
+use crate::utils::pool::worker_db_pool;
 
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "fang::serde")]
@@ -15,6 +15,12 @@ pub struct UpdateStaleFeeds {}
 impl UpdateStaleFeeds {
   pub fn new() -> Self {
     Self {}
+  }
+}
+
+impl Default for UpdateStaleFeeds {
+  fn default() -> Self {
+    Self::new()
   }
 }
 
@@ -31,7 +37,7 @@ impl AsyncRunnable for UpdateStaleFeeds {
         println!("It worked!");
       },
       Err(why) => {
-        println!("Something went wrong: {:}", why.to_string());
+        println!("Something went wrong: {why:}");
       }
     }
         
@@ -57,10 +63,4 @@ impl AsyncRunnable for UpdateStaleFeeds {
     1
     // 20
   }
-
-  // // backoff mode for retries
-  // fn backoff(&self, attempt: u32) -> u32 {
-  //   u32::pow(2, attempt)
-  // }
-
 }

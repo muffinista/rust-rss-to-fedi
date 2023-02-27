@@ -22,27 +22,29 @@ pub async fn create_admin_feed(pool: &PgPool) -> Result<(), sqlx::Error> {
         let name = "admin";
         let url = "fake";
         let user = User::find_or_create_by_actor_url(
-          &format!("https://{}/{}", instance_domain, name),
-          &pool
+          &format!("https://{instance_domain}/{name}"),
+          pool
         ).await;
 
         match user {
           Ok(user) => {
-            let feed = if Feed::exists_by_name(&name.to_string(), &pool).await? {
-              Feed::load_by_name(&name.to_string(), &pool).await
+            let feed = if Feed::exists_by_name(&name.to_string(), pool).await? {
+              Feed::load_by_name(&name.to_string(), pool).await
             } else {
-              Feed::create(&user, &url.to_string(), &name.to_string(), &pool).await
+              Feed::create(&user, &url.to_string(), &name.to_string(), pool).await
             };
 
             match feed {
               Ok(mut feed) => {
+                let image_url = format!("{instance_domain}/assets/icon.png");
+
+                feed.image_url = Some(image_url);
                 feed.user_id = user.id;
                 feed.admin = true;
                 feed.title = Some("Admin account".to_string());
                 feed.description = Some("This is the admin account for this instance. Send me a message to get a login URL".to_string());
-                let image_url = format!("{}/assets/icon.png", instance_domain).to_string();
-                feed.image_url = Some(image_url);
-                feed.save(&pool).await?;
+
+                feed.save(pool).await?;
                 Ok(())
               },
               Err(why) => Err(why)

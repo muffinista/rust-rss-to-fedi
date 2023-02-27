@@ -1,18 +1,11 @@
 use sqlx::postgres::PgPool;
 
-//use fang::async_trait;
-//use fang::asynk::async_queue::AsyncQueue;
-// use fang::serde::{Deserialize, Serialize};
-// use fang::typetag;
-// use fang::AsyncRunnable;
-// use fang::FangError;
-
 use crate::models::user::User;
 use crate::models::feed::Feed;
 use crate::models::follower::Follower;
 use crate::models::item::Item;
-use crate::models::keys::generate_key;
 use crate::models::Actor;
+use crate::utils::keys::generate_key;
 
 use crate::server::build_server;
 

@@ -83,7 +83,7 @@ impl User {
   /// Find user by access token
   ///
   pub async fn find_by_access(token: &String, pool: &PgPool) -> Result<Option<User>, sqlx::Error> {
-    println!("Find user: {:}", token);
+    println!("Find user: {token:}");
     sqlx::query_as!(User, "SELECT * FROM users WHERE access_token = $1", token)
       .fetch_optional(pool)
       .await
@@ -97,11 +97,10 @@ impl User {
       .await;
       
     match query_check {
-      Ok(_q) => return Ok(token),
-      Err(why) => return Err(why)
+      Ok(_q) => Ok(token),
+      Err(why) => Err(why)
     }
   }
-
   
   
   ///
@@ -109,7 +108,7 @@ impl User {
   ///
   pub async fn apply_access_token(&self, pool: &PgPool) -> Result<String, sqlx::Error> {
     let token = User::generate_access_token();
-    println!("generate token: {:}", token);
+    println!("generate token: {token:}");
 
     let query_check = sqlx::query!(
       "UPDATE users SET access_token = $1 WHERE id = $2", token, self.id)
@@ -117,8 +116,8 @@ impl User {
       .await;
       
     match query_check {
-      Ok(_q) => return Ok(token),
-      Err(why) => return Err(why)
+      Ok(_q) => Ok(token),
+      Err(why) => Err(why)
     }
   }
 
@@ -145,12 +144,12 @@ impl User {
   ///
   pub async fn find_or_create_by_email(email: &String, pool: &PgPool) -> Result<User, sqlx::Error> {
     let user_check = sqlx::query_as!(User, "SELECT * FROM users WHERE email = $1", email)
-    .fetch_one(pool)
-    .await;
+      .fetch_one(pool)
+      .await;
     
     match user_check {
-      Ok(user) => return Ok(user),
-      _ => return User::create_by_email(email, pool).await
+      Ok(user) => Ok(user),
+      _ => User::create_by_email(email, pool).await
     }
   }      
 
@@ -181,8 +180,8 @@ impl User {
     .await;
     
     match user_check {
-      Ok(user) => return Ok(user),
-      _ => return User::create_by_actor_url(actor_url, pool).await
+      Ok(user) => Ok(user),
+      _ => User::create_by_actor_url(actor_url, pool).await
     }
   }
 
@@ -216,8 +215,8 @@ impl User {
       .await;
       
     match query {
-      Ok(_q) => return Ok(()),
-      Err(why) => return Err(why)
+      Ok(_q) => Ok(()),
+      Err(why) => Err(why)
     }
   }
 
@@ -226,7 +225,7 @@ impl User {
       return None
     };
 
-    let url = Url::parse(&self.actor_url.as_ref().unwrap()).unwrap();
+    let url = Url::parse(self.actor_url.as_ref().unwrap()).unwrap();
     let domain = url.host().unwrap();
 
     Some(format!("{}@{}", &self.username.as_ref().unwrap(), domain))
@@ -234,7 +233,7 @@ impl User {
 
 
   pub async fn send_link_to_feed(&self, feed: &Feed, pool: &PgPool) -> Result<(), AnyError> {
-    let dest_actor = Actor::find_or_fetch(&self.actor_url.as_ref().expect("No actor url!").to_string(), pool).await;
+    let dest_actor = Actor::find_or_fetch(self.actor_url.as_ref().expect("No actor url!"), pool).await;
 
     match dest_actor {
       Ok(dest_actor) => {
@@ -245,7 +244,7 @@ impl User {
 
         let message = feed.link_to_feed_message(&dest_actor).await?;
         let msg = serde_json::to_string(&message).unwrap();
-        println!("{}", msg);
+        println!("{msg}");
     
         let feed_ap_url = feed.ap_url();
     
@@ -256,12 +255,12 @@ impl User {
           &msg).await;
     
         match result {
-          Ok(result) => println!("sent! {:?}", result),
-          Err(why) => println!("failure! {:?}", why)
+          Ok(result) => println!("sent! {result:?}"),
+          Err(why) => println!("failure! {why:?}")
         }    
       },
       Err(why) => {
-        println!("couldnt find actor: {:?}", why);
+        println!("couldnt find actor: {why:?}");
       }
     }
 

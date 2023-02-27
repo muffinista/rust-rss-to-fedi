@@ -16,4 +16,3 @@ pub use enclosure::Enclosure;
 pub use blocked_domain::BlockedDomain;
 pub use setting::Setting;
 
-pub use crate::utils::*;

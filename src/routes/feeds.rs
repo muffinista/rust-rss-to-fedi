@@ -52,14 +52,14 @@ pub struct FeedLookup {
 
 #[post("/feed", data = "<form>")]
 pub async fn add_feed(user: User, db: &State<PgPool>, form: Form<FeedForm>) -> Result<Flash<Redirect>, Status> {
-  let signups_enabled = Setting::value_or(&"signups_enabled".to_string(), &"true".to_string(), &db).await.unwrap();
+  let signups_enabled = Setting::value_or(&"signups_enabled".to_string(), &"true".to_string(), db).await.unwrap();
 
   if signups_enabled != "true" {
     return Ok(Flash::error(Redirect::to("/"), "Sorry, something went wrong!"));
   }
 
 
-  let feed = Feed::create(&user, &form.url, &form.name, &db).await;
+  let feed = Feed::create(&user, &form.url, &form.name, db).await;
   let mut queue = create_queue();
   
   match feed {
@@ -71,17 +71,17 @@ pub async fn add_feed(user: User, db: &State<PgPool>, form: Form<FeedForm>) -> R
         .await
         .unwrap();
 
-      let notify = user.send_link_to_feed(&feed, &db).await;
+      let notify = user.send_link_to_feed(&feed, db).await;
       match notify {
         Ok(_notify) => println!("user notified!"),
-        Err(why) => println!("something went wrong with notification: {:?}", why)
+        Err(why) => println!("something went wrong with notification: {why:?}")
       }
 
       let dest = uri!(show_feed(feed.name));
       Ok(Flash::success(Redirect::to(dest), "Feed created!"))
     },
     Err(why) => {
-      print!("{}", why);
+      print!("{why}");
       Ok(Flash::error(Redirect::to("/"), "Sorry, something went wrong!"))
     }
   }
@@ -89,7 +89,7 @@ pub async fn add_feed(user: User, db: &State<PgPool>, form: Form<FeedForm>) -> R
 
 #[put("/feed/<username>", data = "<form>")]
 pub async fn update_feed(user: User, username: &str, db: &State<PgPool>, form: Form<FeedUpdateForm>) -> Result<Flash<Redirect>, Status> {
-  let feed_lookup = Feed::find_by_user_and_name(&user, &username.to_string(), &db).await;
+  let feed_lookup = Feed::find_by_user_and_name(&user, &username.to_string(), db).await;
 
   match feed_lookup {
     Ok(feed_lookup) => {
@@ -100,7 +100,7 @@ pub async fn update_feed(user: User, username: &str, db: &State<PgPool>, form: F
           feed.content_warning = form.content_warning.clone();
           feed.status_publicity = form.status_publicity.clone();
 
-          let result = feed.save(&db).await;
+          let result = feed.save(db).await;
           let dest = uri!(show_feed(&feed.name));
 
           match result {
@@ -118,7 +118,7 @@ pub async fn update_feed(user: User, username: &str, db: &State<PgPool>, form: F
 #[post("/test-feed", data = "<form>")]
 pub async fn test_feed(_user: User, db: &State<PgPool>, form: Json<FeedForm>) -> Result<Json<FeedLookup>, Status> {
   // check if feed name is already in use
-  let feed_exists = Feed::exists_by_name(&form.name, &db).await;
+  let feed_exists = Feed::exists_by_name(&form.name, db).await;
 
   if feed_exists.is_ok() && feed_exists.unwrap() {
     return Ok(Json(FeedLookup {
@@ -149,14 +149,14 @@ pub async fn test_feed(_user: User, db: &State<PgPool>, form: Json<FeedForm>) ->
 
 #[delete("/feed/<id>/delete")]
 pub async fn delete_feed(user: User, id: i32, db: &State<PgPool>) -> Result<Redirect, Status> {
-  let feed = Feed::delete(&user, id, &db).await;
+  let feed = Feed::delete(&user, id, db).await;
   
   match feed {
     Ok(_feed) => {
       Ok(Redirect::to("/"))
     },
     Err(why) => {
-      print!("{}", why);
+      print!("{why}");
       Err(Status::NotFound)
     }
   }
@@ -194,7 +194,7 @@ pub async fn show_feed(user: Option<User>, username: &str, flash: Option<FlashMe
           let logged_in = user.is_some();
           let owned_by = logged_in && user.as_ref().unwrap().id == feed.user_id;
           let follow_url = feed.permalink_url();
-          let items = Item::for_feed(&feed, 10, &db).await;
+          let items = Item::for_feed(&feed, 10, db).await;
           let username = if user.is_some() {
             user.as_ref().unwrap().full_username()
           } else {
@@ -272,8 +272,8 @@ mod test {
 
   use chrono::Utc;
 
-  use crate::utils::utils::*;
   use crate::utils::test_helpers::{build_test_server, real_user, real_feed};
+  use crate::utils::path_to_url;
 
   use sqlx::postgres::PgPool;
   
@@ -322,7 +322,7 @@ mod test {
     let server: Rocket<Build> = build_test_server(pool).await;
     let client = Client::tracked(server).await.unwrap();
 
-    crate::models::test_helpers::login_user(&client, &user).await;   
+    crate::utils::test_helpers::login_user(&client, &user).await;   
     
     let url: String = "https://muffinlabs.com/".to_string();
     let name: String = "testfeed".to_string();

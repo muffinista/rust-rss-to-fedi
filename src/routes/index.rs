@@ -10,13 +10,12 @@ use crate::models::user::User;
 use crate::models::feed::Feed;
 use crate::models::Setting;
 
-const PER_PAGE:i32 = 10i32;
-
+use crate::PER_PAGE;
 
 #[get("/?<page>")]
 pub async fn index_logged_in(user: User, page: Option<i32>, db: &State<PgPool>) -> Template {
   let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
-  let signups_enabled = Setting::value_or(&"signups_enabled".to_string(), &"true".to_string(), &db).await.unwrap();
+  let signups_enabled = Setting::value_or(&"signups_enabled".to_string(), &"true".to_string(), db).await.unwrap();
 
 
   let page = if page.is_some() {
@@ -25,11 +24,10 @@ pub async fn index_logged_in(user: User, page: Option<i32>, db: &State<PgPool>) 
     1
   };
 
-  let feeds = Feed::paged_for_user(&user, page, &db).await.unwrap();
-  let count = Feed::count_for_user(&user, &db).await.unwrap();
+  let feeds = Feed::paged_for_user(&user, page, db).await.unwrap();
+  let count = Feed::count_for_user(&user, db).await.unwrap();
 
-  let total_pages:i32 = ((count / PER_PAGE) + 1 ) as i32;
-
+  let total_pages:i32 = (count / PER_PAGE) + 1;
 
   Template::render("home", context! { 
     logged_in: true,
@@ -86,7 +84,7 @@ mod test {
     let server: Rocket<Build> = build_test_server(pool).await;
     let client = Client::tracked(server).await.unwrap();
 
-    crate::models::test_helpers::login_user(&client, &user).await;   
+    crate::utils::test_helpers::login_user(&client, &user).await;   
 
     let req = client.get(uri!(super::index));
     let response = req.dispatch().await;

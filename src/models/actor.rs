@@ -48,11 +48,10 @@ impl Actor {
   ///
   /// Query the DB for the actor with the given URL. If not found, fetch the data and cache it
   ///
-  pub async fn find_or_fetch(url: &String, pool: &PgPool) -> Result<Option<Actor>, AnyError> {
+  pub async fn find_or_fetch(url: &str, pool: &PgPool) -> Result<Option<Actor>, AnyError> {
     let mut clean_url = Url::parse(url).unwrap();
     clean_url.set_fragment(None);
 
-    // println!("{:?}", clean_url);
     let domain = clean_url.host().unwrap();
     let on_blocklist = BlockedDomain::exists(&domain.to_string(), pool).await?;
     if on_blocklist {
@@ -60,7 +59,6 @@ impl Actor {
     }
 
     let lookup_url = clean_url.as_str().to_string();
-    // println!("find actor {:}", lookup_url);
 
     let exists = Actor::exists_by_url(&lookup_url, pool).await?;
     if ! exists {
@@ -107,7 +105,7 @@ impl Actor {
   /// Fetch the remote actor data and store it
   ///
   pub async fn fetch(url: &String, pool: &PgPool) -> Result<(), AnyError> {
-    println!("FETCH ACTOR: {:}", url);
+    println!("FETCH ACTOR: {url:}");
     let resp = crate::services::mailer::fetch_object(url).await;
 
     match resp {
@@ -137,7 +135,7 @@ impl Actor {
         }
       },
       Err(why) => {
-        println!("fetch failed: {:?}", why);
+        println!("fetch failed: {why:?}");
         return Err(why.into());
       }
     }

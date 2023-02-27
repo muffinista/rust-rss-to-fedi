@@ -43,7 +43,7 @@ use crate::models::User;
 use crate::models::Item;
 use crate::models::Follower;
 use crate::utils::keys::*;
-use crate::utils::utils::*;
+use crate::utils::path_to_url;
 use crate::services::mailer::*;
 
 use crate::routes::feeds::*;
@@ -52,6 +52,8 @@ use crate::routes::ap::outbox::*;
 use crate::routes::login::*;
 
 use crate::traits::sensitive::*;
+
+use crate::PER_PAGE;
 
 ///
 /// Extend Notes with a 'sensitive' field which Mastodon uses
@@ -64,6 +66,12 @@ impl SensitiveNote {
       sensitive: false,
       inner: ApObject::new(Note::new()),
     }
+  }
+}
+
+impl Default for SensitiveNote {
+  fn default() -> Self {
+    Self::new()
   }
 }
 
@@ -115,8 +123,6 @@ impl fmt::Display for FeedError {
     write!(f, "Oh no, something bad went down")
   }
 }
-
-const PER_PAGE:i32 = 10i32;
 
 
 ///
@@ -361,7 +367,7 @@ impl Feed {
 
 
   pub fn is_admin(&self) -> bool {
-    self.admin == true
+    self.admin
   }
 
   pub async fn mark_admin(&self, pool: &PgPool) -> Result<(), sqlx::Error> {
@@ -464,12 +470,12 @@ impl Feed {
   pub async fn feed_to_entries(&self, data: feed_rs::model::Feed, pool: &PgPool) -> Result<Vec<Item>, FeedError> {
     let mut result: Vec<Item> = Vec::new();
     for entry in data.entries.iter() {
-      let exists = Item::exists_by_guid(&entry.id, &self, pool).await.unwrap();
+      let exists = Item::exists_by_guid(&entry.id, self, pool).await.unwrap();
 
       // only create new items
       // @todo update changed items
       if ! exists {
-        let item = Item::create_from_entry(&entry, &self, pool).await;
+        let item = Item::create_from_entry(entry, self, pool).await;
         match item {
           Ok(item) => result.push(item),
           Err(_why) => return Err(FeedError)
@@ -492,12 +498,12 @@ impl Feed {
     let items = self.parse(pool).await;
     match items {
       Ok(items) => {
-        if items.len() > 0 {
+        if !items.is_empty() {
           let count = self.follower_count(pool).await?;
           if count > 0 {
             println!("delivering {} items to {} users", items.len(), count);
             for item in items {
-              item.deliver(&self, pool, queue).await?;
+              item.deliver(self, pool, queue).await?;
             }  
           } else {
             println!("skipping delivery of {} items because no followers :(", items.len());
@@ -566,7 +572,7 @@ impl Feed {
         }
 
         // parse out a likely site link
-        if data.links.len() > 0 {
+        if !data.links.is_empty() {
           let query:Option<feed_rs::model::Link> = data.links
             .clone()
             .into_iter()
@@ -592,13 +598,13 @@ impl Feed {
             let result = self.feed_to_entries(data, pool).await;
             match result {
               Ok(result) => Ok(result),
-              Err(_why) => return Err(FeedError)
+              Err(_why) => Err(FeedError)
             }    
           }
-          Err(_why) => return Err(FeedError)
+          Err(_why) => Err(FeedError)
         }
       },
-      Err(_why) => return Err(FeedError)
+      Err(_why) => Err(FeedError)
     }
   }
 
@@ -646,7 +652,7 @@ impl Feed {
       ),
       PublicKey {
         public_key: PublicKeyInner {
-          id: iri!(format!("{}#main-key", feed_url)),
+          id: iri!(format!("{feed_url}#main-key")),
           owner: iri!(path_to_url(&uri!(render_feed(&self.name)))),
           public_key_pem: self.public_key.to_owned(),
         },
@@ -664,14 +670,14 @@ impl Feed {
       .set_followers(iri!(self.followers_url()));
 
     if self.is_admin() {
-      svc.set_summary(format!("Admin account for {}", instance_domain));
+      svc.set_summary(format!("Admin account for {instance_domain}"));
 
       let mut icon = Image::new();
-      icon.set_url(iri!(format!("https://{}/assets/icon.png", instance_domain)));
+      icon.set_url(iri!(format!("https://{instance_domain}/assets/icon.png")));
       svc.set_icon(icon.into_any_base()?);
 
       let mut image = Image::new();
-      image.set_url(iri!(format!("https://{}/assets/image.png", instance_domain)));
+      image.set_url(iri!(format!("https://{instance_domain}/assets/image.png")));
       svc.set_image(image.into_any_base()?);
 
     } else {
@@ -691,7 +697,7 @@ impl Feed {
         svc.set_icon(icon.into_any_base()?);
       } else {
         let mut icon = Image::new();
-        icon.set_url(iri!(format!("https://{}/assets/icon.png", instance_domain)));
+        icon.set_url(iri!(format!("https://{instance_domain}/assets/icon.png")));
         svc.set_icon(icon.into_any_base()?);
       }
   
@@ -744,9 +750,9 @@ impl Feed {
     // reconstruct original follow activity
     let (_actor, _object, original_follow) = activity.clone().into_parts();
 
-    let mut follow = Follow::new(actor.clone(), self.ap_url());
+    let mut follow = Follow::new(actor, self.ap_url());
 
-    let inbox = format!("{}/inbox", actor);
+    let inbox = format!("{actor}/inbox");
     let follow_id: &IriString = original_follow.id_unchecked().ok_or(FeedError)?;
     follow.set_id(follow_id.clone());
 
@@ -765,7 +771,7 @@ impl Feed {
   ///
   pub async fn incoming_message(&self, pool: &PgPool, actor_url: &str, activity: &AcceptedActivity) -> Result<(), AnyError> {
 
-    println!("ACTOR: {:}", actor_url);
+    println!("ACTOR: {actor_url:}");
 
     // THIS GETS THE CONTENT OF THE STATUS and is clearly
     // a bit of a hack, but it's hard to get the content of the
@@ -794,7 +800,7 @@ impl Feed {
     }
 
     // grab the actor information for the sender
-    let dest_actor = Actor::find_or_fetch(&actor_url.to_string(), pool).await;
+    let dest_actor = Actor::find_or_fetch(actor_url, pool).await;
     match dest_actor {
       Ok(dest_actor) => {
         if dest_actor.is_none() {
@@ -806,7 +812,7 @@ impl Feed {
         // generate a login message for this user
         let message = self.generate_login_message(activity, &dest_actor, pool).await?;
         let msg = serde_json::to_string(&message).unwrap();
-        println!("{}", msg);
+        println!("{msg}");
     
         let my_url = self.ap_url();
 
@@ -814,12 +820,12 @@ impl Feed {
         let result = deliver_to_inbox(&Url::parse(&dest_actor.inbox_url)?, &my_url, &self.private_key, &msg).await;
     
         match result {
-          Ok(result) => println!("sent! {:?}", result),
-          Err(why) => println!("failure! {:?}", why)
+          Ok(result) => println!("sent! {result:?}"),
+          Err(why) => println!("failure! {why:?}")
         }    
       },
       Err(why) => {
-        println!("couldnt find actor: {:?}", why);
+        println!("couldnt find actor: {why:?}");
       }
     }
 
@@ -861,7 +867,7 @@ impl Feed {
     let tera = match Tera::new("templates/email/*.*") {
       Ok(t) => t,
       Err(e) => {
-        println!("Parsing error(s): {}", e);
+        println!("Parsing error(s): {e}");
         ::std::process::exit(1);
       }
     };
@@ -870,7 +876,6 @@ impl Feed {
     template_context.insert("link", &auth_url);
     
     let body = tera.render("send-login-status.text.tera", &template_context).unwrap();
-    println!("{:}", body);
 
     reply
       .set_sensitive(true)
@@ -878,7 +883,7 @@ impl Feed {
       .set_in_reply_to(iri!(source_id))
       .set_content(body)
       .set_url(iri!(my_url))
-      .set_id(iri!(format!("{}/{}", my_url, result)))
+      .set_id(iri!(format!("{my_url}/{result}")))
       .set_to(iri!(dest_actor.url))
       .set_tag(mention.into_any_base()?);
 
@@ -915,17 +920,17 @@ impl Feed {
   ///
   pub async fn handle_activity(&self, pool: &PgPool, activity: &AcceptedActivity)  -> Result<(), AnyError> {
     let s = serde_json::to_string(&activity).unwrap();
-    println!("{:}", s);
+    println!("{s:}");
 
     let (actor, _object, act) = activity.clone().into_parts();
 
     let actor_id = actor.as_single_id().unwrap().to_string();
     
     match act.kind() {
-      Some(AcceptedTypes::Follow) => self.follow(pool, &actor_id, &activity).await,
+      Some(AcceptedTypes::Follow) => self.follow(pool, &actor_id, activity).await,
       Some(AcceptedTypes::Undo) => self.unfollow(pool, &actor_id).await,
       Some(AcceptedTypes::Delete) => self.unfollow(pool, &actor_id).await,
-      Some(AcceptedTypes::Create) => self.incoming_message(pool, &actor_id, &activity).await,
+      Some(AcceptedTypes::Create) => self.incoming_message(pool, &actor_id, activity).await,
       // we don't need to handle this but if we receive it, just move on
       Some(AcceptedTypes::Accept) => Ok(()),
       None => Ok(())
@@ -956,13 +961,13 @@ impl Feed {
     let mut feed_mention = Mention::new();
     feed_mention
       .set_href(iri!(&self.permalink_url()))
-      .set_name(self.address().to_string());
+      .set_name(self.address());
   
 
     let tera = match Tera::new("templates/email/*.*") {
       Ok(t) => t,
       Err(e) => {
-        println!("Parsing error(s): {}", e);
+        println!("Parsing error(s): {e}");
         ::std::process::exit(1);
       }
     };
@@ -978,7 +983,7 @@ impl Feed {
       .set_attributed_to(iri!(my_url))
       .set_content(body)
       .set_url(iri!(my_url))
-      .set_id(iri!(format!("{}/{}", my_url, random_id)))
+      .set_id(iri!(format!("{my_url}/{random_id}")))
       .set_to(iri!(&actor.url))
       .add_tag(mention.into_any_base()?)
       .add_tag(feed_mention.into_any_base()?);
@@ -1026,7 +1031,7 @@ impl Feed {
   ///
   pub async fn followers(&self, pool: &PgPool)  -> Result<ApObject<OrderedCollection>, AnyError> {
     let count = self.follower_count(pool).await?;
-    let total_pages = ((count / PER_PAGE as i32) + 1 ) as i32;
+    let total_pages = (count / PER_PAGE) + 1;
 
     let mut collection: ApObject<OrderedCollection> = ApObject::new(OrderedCollection::new());
 
@@ -1054,7 +1059,7 @@ impl Feed {
   ///
   pub async fn followers_paged(&self, page: i32, pool: &PgPool)  -> Result<ApObject<OrderedCollectionPage>, AnyError> {
     let count = self.follower_count(pool).await?;
-    let total_pages:i32 = ((count / PER_PAGE) + 1 ) as i32;
+    let total_pages:i32 = (count / PER_PAGE) + 1;
     let mut collection: ApObject<OrderedCollectionPage> = ApObject::new(OrderedCollectionPage::new());
 
     collection
@@ -1089,7 +1094,7 @@ impl Feed {
       Ok(result) => {
         let v: Vec<String> = result
           .into_iter()
-          .filter_map(|follower| Some(follower.actor))
+          .map(|follower| follower.actor)
           .collect();
               
         // The first, next, prev, last, and current properties are used to 
@@ -1109,7 +1114,7 @@ impl Feed {
   ///
   pub async fn outbox(&self, pool: &PgPool)  -> Result<ApObject<OrderedCollection>, AnyError> {
     let count = self.entries_count(pool).await?;
-    let total_pages = ((count / PER_PAGE as i32) + 1 ) as i32;
+    let total_pages = (count / PER_PAGE) + 1;
 
     let mut collection: ApObject<OrderedCollection> = ApObject::new(OrderedCollection::new());
 
@@ -1137,7 +1142,7 @@ impl Feed {
   ///
   pub async fn outbox_paged(&self, page: i32, pool: &PgPool)  -> Result<ApObject<OrderedCollectionPage>, AnyError>{
     let count = self.entries_count(pool).await?;
-    let total_pages = ((count / PER_PAGE as i32) + 1 ) as i32;
+    let total_pages = (count / PER_PAGE) + 1;
     let mut collection: ApObject<OrderedCollectionPage> = ApObject::new(OrderedCollectionPage::new());
 
     collection
@@ -1172,7 +1177,7 @@ impl Feed {
     match result {
       Ok(result) => {
         for item in result {
-          let output = item.to_activity_pub(&self, &pool).await.unwrap();
+          let output = item.to_activity_pub(self, pool).await.unwrap();
           collection.add_item(output.into_any_base()?);    
         }
 
@@ -1197,9 +1202,9 @@ mod test {
   use crate::models::enclosure::Enclosure;
   use crate::models::Actor;
 
-  use crate::utils::utils::*;
   use crate::utils::test_helpers::{fake_user, fake_feed, real_feed, real_user, real_item, real_actor};
-
+  use crate::utils::path_to_url;
+  
   use crate::routes::feeds::*;
   use crate::routes::ap::outbox::*;
 

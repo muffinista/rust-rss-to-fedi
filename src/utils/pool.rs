@@ -7,13 +7,6 @@ use sqlx::{Pool, Postgres};
 const POOL_SIZE: u32 = 5;
 const WORKER_POOL_SIZE: u32 = 3;
 
-///
-/// convert path to absolute URL
-///
-pub fn path_to_url(frag: &rocket::http::uri::Origin) -> String {
-  let host = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
-  format!("https://{}{}", host, frag).to_string()
-}
 
 pub fn web_pool_size() -> u32 {
   match env::var_os("DATABASE_POOL_SIZE") {

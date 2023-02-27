@@ -9,7 +9,7 @@ use scraper::{Html, Selector};
 pub fn is_valid_feed(data:&String) -> bool {
   let result = parser::parse(data.as_bytes());
   
-  if !result.is_ok() {
+  if result.is_err() {
     return false;
   }
   
@@ -52,12 +52,12 @@ pub async fn url_to_feed_url(url:&String) -> Result<Option<String>, AnyError>{
   match contents {
     Ok(contents) => {
       // if it's a valid feed, we're good
-      if is_valid_feed(&contents) {
+      if is_valid_feed(contents) {
         return Ok(Some(url.clone()))
       }
 
       // otherwise, parse and look for a link to a feed
-      let document = Html::parse_document(&contents);
+      let document = Html::parse_document(contents);
 
       // <link rel="alternate" type="application/rss+xml"
       // title="muffinlabs feed"
@@ -68,7 +68,7 @@ pub async fn url_to_feed_url(url:&String) -> Result<Option<String>, AnyError>{
       let link = document.select(&selector).next();
       match link {
         Some(link) => Ok(Some(link.value().attr("href").unwrap().to_string())),
-        None => Ok(None) //Err(anyhow!("Nothing found"))
+        None => Ok(None)
       }
     },
     Err(err) => Err(anyhow!(err.to_string()))

@@ -6,7 +6,7 @@ use fang::AsyncRunnable;
 use fang::FangError;
 
 use crate::models::Feed;
-use crate::models::utils::worker_db_pool;
+use crate::utils::pool::worker_db_pool;
 
 
 #[derive(Serialize, Deserialize)]
@@ -35,12 +35,12 @@ impl AsyncRunnable for RefreshFeed {
         match result {
           Ok(_result) => { println!("Done refreshing feeds"); },
           Err(why) => {
-            println!("{:}", why);
+            println!("Something went wrong: {why:}");
           }
         }
       },
       Err(why) => {
-        println!("{:}", why);
+        println!("Feed missing? {why:}");
       }
     }
     

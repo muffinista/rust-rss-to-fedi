@@ -1,8 +1,11 @@
 use sqlx::postgres::PgPool;
 
-use rocket::routes;
-use rocket::{Rocket, Build};
-use rocket::fs::{FileServer, relative};
+use rocket::{
+  routes,
+  Rocket,
+  Build,
+  fs::{FileServer, relative}
+};
 use rocket_dyn_templates::Template;
 
 use crate::utils::admin::create_admin_feed;
@@ -16,7 +19,7 @@ pub async fn build_server(pool: PgPool) -> Rocket<Build> {
   // create an admin feed to handle interactions with server
   let result = create_admin_feed(&pool).await;
   match result {
-    Ok(result) => println!("{:?}", result),
+    Ok(result) => println!("{result:?}"),
     Err(why) => panic!("{}", why)
   };
   

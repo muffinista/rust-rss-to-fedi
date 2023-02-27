@@ -28,7 +28,7 @@ impl Setting {
   }
 
   pub async fn value_or(name: &String, default: &String, pool: &PgPool) -> Result<String, sqlx::Error> {
-    let result = Setting::find(&name, pool).await;
+    let result = Setting::find(name, pool).await;
 
     match result {
       Ok(result) => {

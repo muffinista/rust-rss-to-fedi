@@ -11,7 +11,7 @@ use webfinger::*;
 
 use crate::models::feed::Feed;
 use crate::routes::feeds::*;
-use crate::utils::utils::path_to_url;
+use crate::utils::urls::path_to_url;
 
 
 ///
@@ -41,6 +41,7 @@ pub async fn lookup_webfinger(resource: &str, db: &State<PgPool>) -> Result<Stri
 
   if feed_exists.is_ok() && feed_exists.unwrap() {
     let href = path_to_url(&uri!(render_feed(&userstr)));
+
     Ok(serde_json::to_string(&Webfinger {
       subject: format!("acct:{}@{}", userstr.clone(), instance_domain),
       aliases: vec![userstr.clone()],
@@ -54,7 +55,7 @@ pub async fn lookup_webfinger(resource: &str, db: &State<PgPool>) -> Result<Stri
         Link {
           rel: "self".to_string(),
           mime_type: Some("application/activity+json".to_string()),
-          href: Some(href.clone()),
+          href: Some(href),
           template: None,
         }
       ],

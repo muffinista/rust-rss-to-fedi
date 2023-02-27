@@ -20,7 +20,7 @@ pub struct LoginForm {
 
 #[get("/user/auth/<login_token>")]
 pub async fn attempt_login(db: &State<PgPool>, cookies: &CookieJar<'_>, login_token: &str) -> Result<Redirect, Status> {
-  let user = User::find_by_login(&login_token.to_string(), &db).await;
+  let user = User::find_by_login(&login_token.to_string(), db).await;
   
   match user {
     Ok(user) => {
@@ -29,36 +29,33 @@ pub async fn attempt_login(db: &State<PgPool>, cookies: &CookieJar<'_>, login_to
         let token = user.apply_access_token(db).await;
         match token {
           Ok(token) => {
-            println!("Apply token: {:}", token);
+            println!("Apply token: {token:}");
             let mut cookie = Cookie::new("access_token", token.to_string());
             cookie.set_same_site(SameSite::Lax);
             cookie.make_permanent();
 
             cookies.add_private(cookie);
 
-            match user.reset_login_token(&db).await {
-              Ok(result) => { println!("Reset login token {:}", result) },
-              Err(why) => { println!("reset login error: {}", why) }
+            match user.reset_login_token(db).await {
+              Ok(result) => { println!("Reset login token {result:}") },
+              Err(why) => { println!("reset login error: {why}") }
             }
 
             let dest = uri!(crate::routes::index::index_logged_in(Some(1)));
             Ok(Redirect::to(dest))
           },
           Err(why) => {
-            println!("{}", why);
-            // Err(Status::NotFound)
+            println!("{why}");
             Ok(Redirect::to("/"))
           }
         }
       }
       else {
-        // Err(Status::NotFound)
         Ok(Redirect::to("/"))
       } 
     },
     Err(why) => {
-      print!("{}", why);
-      // Err(Status::NotFound)
+      print!("{why}");
       Ok(Redirect::to("/"))
     }
   }
@@ -71,7 +68,7 @@ pub async fn do_logout(cookies: &CookieJar<'_>) -> Result<Redirect, Status> {
 
 #[post("/login", data = "<form>")]
 pub async fn do_login(db: &State<PgPool>, form: Form<LoginForm>) -> Result<Redirect, Status> {
-  let user = User::find_or_create_by_email(&form.email, &**db).await;
+  let user = User::find_or_create_by_email(&form.email, db).await;
   
   match user {
     Ok(_user) => {
@@ -79,7 +76,7 @@ pub async fn do_login(db: &State<PgPool>, form: Form<LoginForm>) -> Result<Redir
       Ok(Redirect::to(dest))
     },
     Err(why) => {
-      print!("{}", why);
+      print!("{why}");
       Err(Status::NotFound)
     }
   }

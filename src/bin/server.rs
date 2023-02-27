@@ -3,7 +3,7 @@
 use std::env;
 
 use rustypub::server::build_server;
-use rustypub::models::utils::web_db_pool;
+use rustypub::utils::pool::web_db_pool;
 
 #[rocket::main]
 pub async fn main() -> Result<(), rocket::Error> {
