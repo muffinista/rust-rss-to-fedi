@@ -94,7 +94,6 @@ pub async fn deliver_to_inbox(inbox: &Url, key_id: &str, private_key: &str, json
 
   let response = client.execute(request).await;
   match response {
-    // @todo check response code/etc
     Ok(response) => {
       if response.status().is_success() {
         Ok(())

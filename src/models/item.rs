@@ -234,7 +234,6 @@ impl Item {
     note
       .set_attributed_to(iri!(feed_url))
       .set_content(self.to_html())
-      // @todo direct url to item
       .set_url(iri!(feed_url))
       .set_id(iri!(item_url))
       .set_published(ts);

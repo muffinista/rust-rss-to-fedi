@@ -79,3 +79,4 @@ cargo run --bin worker
 There's a `docker-compose.sample.yml` file in the code that you can
 use to get an idea of how to run the service with Docker if that's
 something you want to do.
+

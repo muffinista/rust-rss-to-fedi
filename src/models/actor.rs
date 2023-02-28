@@ -52,6 +52,9 @@ impl Actor {
     let mut clean_url = Url::parse(url).unwrap();
     clean_url.set_fragment(None);
 
+    //
+    // check if actor is on blocklist. if so, we won't do anything
+    //
     let domain = clean_url.host().unwrap();
     let on_blocklist = BlockedDomain::exists(&domain.to_string(), pool).await?;
     if on_blocklist {
@@ -62,12 +65,9 @@ impl Actor {
 
     let exists = Actor::exists_by_url(&lookup_url, pool).await?;
     if ! exists {
-      // @todo handle failure
       let result = Actor::fetch(&lookup_url, pool).await;
       match result {
-        Ok(_result) => {
-          // println!("fetched and created {:}", lookup_url);
-        }
+        Ok(_result) => {}
         Err(why) => {
           return Err(why)
         }

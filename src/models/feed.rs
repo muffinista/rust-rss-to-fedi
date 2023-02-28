@@ -152,16 +152,10 @@ impl Feed {
     .await
   }
 
-  ///
-  /// Return all the feeds for the admin section
-  /// @todo add pagination
-  ///
-  pub async fn all(pool: &PgPool) -> Result<Vec<Feed>, sqlx::Error> {
-    sqlx::query_as!(Feed, "SELECT * FROM feeds ORDER BY id DESC")
-    .fetch_all(pool)
-    .await
-  }
 
+  ///
+  /// Return a page of feeds
+  ///
   pub async fn paged(page: i32, pool: &PgPool) -> Result<Vec<Feed>, sqlx::Error> {
     let offset:i64 = ((page - 1) * PER_PAGE) as i64;
 
@@ -170,6 +164,9 @@ impl Feed {
       .await
   }
 
+  ///
+  /// Return a page of feeds for a given user
+  ///
   pub async fn paged_for_user(user: &User, page: i32, pool: &PgPool) -> Result<Vec<Feed>, sqlx::Error> {
     let offset:i64 = ((page - 1) * PER_PAGE) as i64;
 
@@ -473,7 +470,6 @@ impl Feed {
       let exists = Item::exists_by_guid(&entry.id, self, pool).await.unwrap();
 
       // only create new items
-      // @todo update changed items
       if ! exists {
         let item = Item::create_from_entry(entry, self, pool).await;
         match item {
@@ -718,7 +714,6 @@ impl Feed {
 
   ///
   /// add follower to feed
-  /// @todo probably move this into follower.rs
   ///
   pub async fn add_follower(&self, pool: &PgPool, actor: &str) -> Result<(), AnyError> {
     let now = Utc::now();
@@ -1082,8 +1077,6 @@ impl Feed {
     if page == 0 || page > total_pages {
       return Ok(collection)
     }
-
-    // @todo handle page <= 0 and page > count
     
     let offset:i64 = ((page - 1) * PER_PAGE) as i64;
     let result = sqlx::query_as!(Follower, "SELECT * FROM followers WHERE feed_id = $1 LIMIT $2 OFFSET $3", self.id, PER_PAGE as i64, offset )
@@ -1096,10 +1089,6 @@ impl Feed {
           .into_iter()
           .map(|follower| follower.actor)
           .collect();
-              
-        // The first, next, prev, last, and current properties are used to 
-        // reference other CollectionPage instances that contain additional 
-        // subsets of items from the parent collection. 
         
         collection.set_many_items(v);
         
@@ -1165,8 +1154,6 @@ impl Feed {
     if page == 0 || page > total_pages {
       return Ok(collection)
     }
-
-    // @todo handle page <= 0 and page > count
     
     let offset = (page - 1) * PER_PAGE;
     let result = sqlx::query_as!(Item, "SELECT * FROM items WHERE feed_id = $1 LIMIT $2 OFFSET $3",
@@ -1204,7 +1191,7 @@ mod test {
 
   use crate::utils::test_helpers::{fake_user, fake_feed, real_feed, real_user, real_item, real_actor};
   use crate::utils::path_to_url;
-  
+
   use crate::routes::feeds::*;
   use crate::routes::ap::outbox::*;
 
