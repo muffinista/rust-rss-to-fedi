@@ -12,6 +12,10 @@ body > header, body > footer {
   padding-bottom: 10px;
 }
 
+button {
+  padding: 1.0em 2.0em;
+}
+
 nav {
   display: flex;
   justify-content: space-between;
@@ -54,18 +58,24 @@ main {
 .form-row {
   display: flex;
   justify-content: flex-end;
-  padding: .5em;
+  padding-top: .5em;
+  padding-right: .5em;
 }
 
 .form-row > label {
   padding: .5em 1em .5em 0;
   flex: 1;
+  font-weight: bold;
 }
 
 .form-row > .input {
   display: flex;
   flex-direction: column;
   flex: 4;
+}
+
+.help {
+  font-size: 90%;
 }
 
 main > header.feed {
@@ -103,4 +113,46 @@ section > ul {
 dialog {
   position: fixed;
   top: 40%;
+}
+
+
+/* Maximum width */
+@media (max-width: 50rem) {
+  header > img {
+    display: none;
+  }
+
+  .form-row {
+    display: block;
+  }
+  .form-row > label {
+    padding-top: 0;
+  }
+  
+  .form-row > .input {
+    display: flex;
+    flex-direction: column;
+    flex: 4;
+  }
+
+  .copy-block {
+    display: flex;
+  }
+  .copy-block > textarea {
+    max-width: calc(100vw - 75px);
+  }
+  .copy-block > * {
+    padding-left: 5px;
+    padding-right: 5px;
+  }
+  .copy-block > a {
+    display: inline-block;
+    width: 20px;
+    cursor: pointer;
+  }
+  .copy-block > small.hidden {
+    display: none;
+    visibility: hidden;
+  }
+    
 }

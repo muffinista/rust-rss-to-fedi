@@ -24,7 +24,7 @@
       {% block content %}{% endblock content %}
     </main>
     <footer>
-      <p>A project of <a href="https://botsin.space/@muffinista">https://botsin.space/@muffinista</a>, contact him if you need help or have questions.</p>
+      <p>A project of <a href="https://botsin.space/@muffinista">https://botsin.space/@muffinista</a></p>
     </footer>
     <script src="/assets/script.js"></script>
   </body>

@@ -2,9 +2,12 @@
 {% block title %}Index{% endblock title %}
 
 {% block content %}
-
   {% if logged_in %}
-    {% include "feeds" %}
+    <section class="feeds">
+      <h1>Your feeds</h1>
+      {% include "feeds" %}
+    </section>
+  
     {% include "add-feed" %}
   {% else %}
     {% include "help" %}

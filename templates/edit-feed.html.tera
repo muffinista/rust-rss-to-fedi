@@ -14,7 +14,7 @@
       <legend>Search Engine Indexing</legend>
       <div>
         <label for="listed-true"><input type="radio" id="listed-true" name="listed" value="true" {% if feed.listed %}checked{% endif %}/> Allow search engines to index this account</label><br />
-        <label for="listed-false"><input type="radio" id="listed-false" name="listed" value="false" {% if not feed.listed %}checked{% endif %} /> Do not search engines to index this account</label>
+        <label for="listed-false"><input type="radio" id="listed-false" name="listed" value="false" {% if not feed.listed %}checked{% endif %} /> Do not allow search engines to index this account</label>
       </div>
     </fieldset>
 

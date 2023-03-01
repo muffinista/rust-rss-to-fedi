@@ -1,16 +1,19 @@
-<section class="feeds">
-  <h1>Your feeds</h1>
-  <ul>
-    {% for feed in feeds %}
-      <li><a href="/feed/{{feed.name}}">{{feed.name}}</a></li>
-    {% endfor %}
-  </ul>
+<ul class="feed-list">
+  {% for feed in feeds %}
+    <li>
+      <a href="/feed/{{feed.name}}">{{feed.name}}{% if feed.description %}: {{feed.description}}{% endif %}</a>
+    </li>
+  {% endfor %}
+</ul>
 
+{% if page %}
+<div class="pagination">
   {% if page > 1 %}
-  <a href="/?page={{page-1}}">prev</a>
+    <a href="/?page={{page-1}}">prev</a>
   {% endif %}
 
   {% if page < total_pages %}
-  <a href="/?page={{page+1}}">next</a>
+    <a href="/?page={{page+1}}">next</a>
   {% endif %}
-</section>
+</div>
+{% endif %}

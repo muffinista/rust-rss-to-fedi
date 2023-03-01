@@ -53,17 +53,15 @@ function copy(target) {
   target.querySelector(".copy-target").select();
   document.execCommand("copy");
 
-  let zinger = target.querySelector("small");
-  zinger.classList.remove("hidden");
-  setTimeout(() => {
-    zinger.classList.add("hidden")
-  }, 2000);
+  // let zinger = target.querySelector("small");
+  // zinger.classList.remove("hidden");
+  // setTimeout(() => {
+  //   zinger.classList.add("hidden")
+  // }, 2000);
 }
 
 document.querySelectorAll(".copy-block").forEach((el) => {
   let adminAddress = el.querySelector(".copy-target");
- 
-  console.log(adminAddress);
   if (adminAddress) {
     adminAddress.addEventListener("click", (event) => {
       copy(el);

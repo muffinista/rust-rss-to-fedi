@@ -34,8 +34,8 @@
 
       {% if not is_admin %}
       <b>Feed URL:</b> <a href="{{feed.url | safe}}">{{feed.url | safe}}</a><br />
-      <b>website:</b> <a href="{{feed.site_url | safe}}">{{feed.site_url | safe}}</a><br />
-      <b>refreshed at:</b> {{feed.refreshed_at}}<br />
+      <b>Website:</b> <a href="{{feed.site_url | safe}}">{{feed.site_url | safe}}</a><br />
+      <b>Refreshed at:</b> {{feed.refreshed_at}}<br />
       {% endif %}
     </div>
   </header>
