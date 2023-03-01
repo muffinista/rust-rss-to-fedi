@@ -76,7 +76,7 @@ pub async fn add_feed(user: User, db: &State<PgPool>, form: Form<FeedForm>) -> R
         Err(why) => println!("something went wrong with notification: {why:?}")
       }
 
-      let dest = format!("{}/?added=1", uri!(show_feed(feed.name, Some(1))));
+      let dest = uri!(show_feed(feed.name, Some(1)));
       Ok(Flash::success(Redirect::to(dest), "Feed created!"))
     },
     Err(why) => {
