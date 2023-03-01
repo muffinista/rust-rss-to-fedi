@@ -104,7 +104,7 @@ impl Item {
   }
 
   pub async fn for_feed(feed: &Feed, limit: i64, pool: &PgPool) -> Result<Vec<Item>, sqlx::Error> {
-    sqlx::query_as!(Item, "SELECT * FROM items WHERE feed_id = $1 ORDER by id DESC LIMIT $2", feed.id, limit)
+    sqlx::query_as!(Item, "SELECT * FROM items WHERE feed_id = $1 ORDER by created_at DESC, id ASC LIMIT $2", feed.id, limit)
     .fetch_all(pool)
     .await
   }
@@ -138,6 +138,13 @@ impl Item {
     
     let now = Utc::now();
 
+    let published_at = if entry.published.is_some() {
+      entry.published.unwrap()
+    } else {
+      now
+    };
+
+
     let item_id = sqlx::query!("INSERT INTO items 
                                 (feed_id, guid, title, content, url, created_at, updated_at)
                                 VALUES($1, $2, $3, $4, $5, $6, $7)
@@ -147,7 +154,7 @@ impl Item {
                                title,
                                body,
                                item_url,
-                               now,
+                               published_at,
                                now
     )
       .fetch_one(pool)
