@@ -2,11 +2,6 @@
   <h1>Feed settings</h1>
   <p>You can tweak the settings for how this account behaves when posting statuses to the Fediverse.</p>
 
-  {% if flash %}
-  <div class="flash-{{ flash.kind }}">{{ flash.message }}</div>
-  {% endif %}
-
-
   <form method="POST" action="/feed/{{feed.name}}" class="update-feed">
     <input type="hidden" name="_method" value="put" />
 
@@ -33,7 +28,7 @@
         <label for="content_warning">Content Warning:</label>
         <div class="input">
           <input type="text" name="content_warning"  value="{{ feed.content_warning }}" />
-          <div class="help">If specified, any post from this account will use the specified content warning.</div>
+          <div class="help">If specified, any post from this account will be hidden behind the content warning.</div>
         </div>
       </div>
     </fieldset>

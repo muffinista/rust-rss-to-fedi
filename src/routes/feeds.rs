@@ -58,7 +58,6 @@ pub async fn add_feed(user: User, db: &State<PgPool>, form: Form<FeedForm>) -> R
     return Ok(Flash::error(Redirect::to("/"), "Sorry, something went wrong!"));
   }
 
-
   let feed = Feed::create(&user, &form.url, &form.name, db).await;
   let mut queue = create_queue();
   
@@ -77,7 +76,7 @@ pub async fn add_feed(user: User, db: &State<PgPool>, form: Form<FeedForm>) -> R
         Err(why) => println!("something went wrong with notification: {why:?}")
       }
 
-      let dest = uri!(show_feed(feed.name));
+      let dest = format!("{}/?added=1", uri!(show_feed(feed.name, Some(1))));
       Ok(Flash::success(Redirect::to(dest), "Feed created!"))
     },
     Err(why) => {
@@ -101,7 +100,7 @@ pub async fn update_feed(user: User, username: &str, db: &State<PgPool>, form: F
           feed.status_publicity = form.status_publicity.clone();
 
           let result = feed.save(db).await;
-          let dest = uri!(show_feed(&feed.name));
+          let dest = uri!(show_feed(&feed.name, None::<i32>));
 
           match result {
             Ok(_result) => Ok(Flash::success(Redirect::to(dest), "Feed updated!")),
@@ -183,8 +182,8 @@ pub async fn render_feed(username: &str, db: &State<PgPool>) -> Result<String, S
   }
 }
 
-#[get("/feed/<username>", format = "text/html", rank = 2)]
-pub async fn show_feed(user: Option<User>, username: &str, flash: Option<FlashMessage<'_>>, db: &State<PgPool>) -> Result<Template, Status> {
+#[get("/feed/<username>?<added>", format = "text/html", rank = 2)]
+pub async fn show_feed(user: Option<User>, username: &str, flash: Option<FlashMessage<'_>>, added: Option<i32>, db: &State<PgPool>) -> Result<Template, Status> {
   let feed_lookup = Feed::find_by_name(&username.to_string(), db).await;
 
   match feed_lookup {
@@ -213,6 +212,7 @@ pub async fn show_feed(user: Option<User>, username: &str, flash: Option<FlashMe
                 feed: feed,
                 items: items,
                 follow_url: follow_url,
+                added: added.is_some(),
                 instance_domain: env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set")
               }))    
             },

@@ -49,7 +49,6 @@ body > footer {
 }
 
 main {
-  padding-left: 1.0em;
   min-height: 85vh;
   max-width: 50em;
   line-height: 1.5em;
@@ -84,6 +83,26 @@ main > header.feed {
 
 main > header.feed > * {
   margin-right: 10px;
+}
+
+main > * {
+  padding-left: 0.5em;
+  padding-right: 0.5em;
+}
+
+main > .feed-welcome {
+  padding-left: 0;
+  padding-right: 0;
+  background: lightgreen;
+  display: flex;
+  flex-direction: column;
+}
+
+main > .feed-welcome > * {
+  padding: 1.0em;
+}
+main > .feed-welcome > a {
+  text-align: right;
 }
 
 section > ul {

@@ -616,7 +616,7 @@ impl Feed {
   /// Return URL to use in HTML output for this feed
   ///
   pub fn permalink_url(&self) -> String {
-    path_to_url(&uri!(show_feed(&self.name)))
+    path_to_url(&uri!(show_feed(&self.name, None::<i32>)))
   }
 
   ///

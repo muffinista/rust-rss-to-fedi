@@ -6,6 +6,13 @@
 {% endblock meta %}
 
 {% block content %}
+{% if added %}
+  <section class="feed-welcome">
+    <p>Welcome to your new account! You can update some settings in the form below. If you follow @{{feed.name}}@{{instance_domain}}, you'll get any new posts when this feed updates.</p>
+    <a href="{{ follow_url }}">Got it, thanks!</a>
+  </section>
+{% endif %}
+
   <header class="feed">
     {% if feed.image_url %}
     <img src="{{feed.image_url}}" width="200" />
