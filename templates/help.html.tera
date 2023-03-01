@@ -1,9 +1,11 @@
 <h1>{{ instance_domain }}!</h1>
 <p>
-  This is a tool you can use to get RSS feeds into the fediverse.
+  This is a tool you can use to get RSS feeds into the fediverse. You can use it to create an account which will post a new entry any time there's a new entry in the feed.
 </p>
 
-<p>To get started you can copy and paste this message into your Fediverse client. This will send a message to <b>@admin@{{ instance_domain }}</b>. You'll get a response with a URL that you can use to login. Then you can setup an account that will post the RSS feed, as well as manage any accounts you've setup previously.</p>
+<p>To get started you'll need to authenticate yourself. You can do that by sending a message with the word 'help' to <b>@admin@{{ instance_domain }}</b>. You'll receive a reply with a URL that you can use to log in to this website. Then you can create an account that will post the RSS feed, as well as manage any accounts you've setup previously.</p>
+
+<p>If you like, you can copy the message below:</p>
 
 <div class="copy-block">
   <textarea class="copy-target" type="text">@admin@{{ instance_domain }} Help!</textarea>
@@ -11,4 +13,4 @@
   <small class="hidden">Text copied!</small>
 </div>
 
-<p>Please note! This is beta code and might break! Who knows what might happen!</p>
+<p>Please note! This service is beta code and might break! Who knows what might happen!</p>
