@@ -93,6 +93,7 @@ main > * {
 main > .feed-welcome {
   padding-left: 0;
   padding-right: 0;
+  margin-bottom: 1.0em;
   background: lightgreen;
   display: flex;
   flex-direction: column;
