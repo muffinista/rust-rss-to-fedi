@@ -19,6 +19,7 @@ pub struct User {
   pub login_token: String,
   pub access_token: Option<String>,
   pub username: Option<String>,
+  pub admin: bool,
 
   pub created_at: chrono::DateTime::<Utc>,
   pub updated_at: chrono::DateTime::<Utc>
@@ -202,7 +203,7 @@ impl User {
   }
 
   pub fn is_admin(&self) -> bool {
-    self.id == 1
+    self.admin
   }
 
   ///
@@ -266,8 +267,6 @@ impl User {
 
     Ok(())
   }
-  
-
 }
 
    

@@ -105,6 +105,11 @@
           "name": "username",
           "ordinal": 7,
           "type_info": "Varchar"
+        },
+        {
+          "name": "admin",
+          "ordinal": 8,
+          "type_info": "Bool"
         }
       ],
       "nullable": [
@@ -115,7 +120,8 @@
         true,
         false,
         false,
-        true
+        true,
+        false
       ],
       "parameters": {
         "Left": [
@@ -952,6 +958,11 @@
           "name": "username",
           "ordinal": 7,
           "type_info": "Varchar"
+        },
+        {
+          "name": "admin",
+          "ordinal": 8,
+          "type_info": "Bool"
         }
       ],
       "nullable": [
@@ -962,7 +973,8 @@
         true,
         false,
         false,
-        true
+        true,
+        false
       ],
       "parameters": {
         "Left": []
@@ -1232,6 +1244,11 @@
           "name": "username",
           "ordinal": 7,
           "type_info": "Varchar"
+        },
+        {
+          "name": "admin",
+          "ordinal": 8,
+          "type_info": "Bool"
         }
       ],
       "nullable": [
@@ -1242,7 +1259,8 @@
         true,
         false,
         false,
-        true
+        true,
+        false
       ],
       "parameters": {
         "Left": [
@@ -1381,6 +1399,11 @@
           "name": "username",
           "ordinal": 7,
           "type_info": "Varchar"
+        },
+        {
+          "name": "admin",
+          "ordinal": 8,
+          "type_info": "Bool"
         }
       ],
       "nullable": [
@@ -1391,7 +1414,8 @@
         true,
         false,
         false,
-        true
+        true,
+        false
       ],
       "parameters": {
         "Left": [
@@ -1969,6 +1993,11 @@
           "name": "username",
           "ordinal": 7,
           "type_info": "Varchar"
+        },
+        {
+          "name": "admin",
+          "ordinal": 8,
+          "type_info": "Bool"
         }
       ],
       "nullable": [
@@ -1979,7 +2008,8 @@
         true,
         false,
         false,
-        true
+        true,
+        false
       ],
       "parameters": {
         "Left": [
@@ -2398,6 +2428,11 @@
           "name": "username",
           "ordinal": 7,
           "type_info": "Varchar"
+        },
+        {
+          "name": "admin",
+          "ordinal": 8,
+          "type_info": "Bool"
         }
       ],
       "nullable": [
@@ -2408,7 +2443,8 @@
         true,
         false,
         false,
-        true
+        true,
+        false
       ],
       "parameters": {
         "Left": [

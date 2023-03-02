@@ -140,7 +140,7 @@ mod test {
   use rocket::{Rocket, Build};
   use sqlx::postgres::PgPool;
   
-  use crate::utils::test_helpers::{build_test_server, real_user};
+  use crate::utils::test_helpers::{build_test_server, real_user, real_admin_user};
 
 
   #[sqlx::test]
@@ -155,8 +155,23 @@ mod test {
   }
 
   #[sqlx::test]
-  async fn index_admin_logged_in(pool: PgPool) {
+  async fn index_admin_non_admin_logged_in(pool: PgPool) {
     let user = real_user(&pool).await.unwrap();
+
+    let server:Rocket<Build> = build_test_server(pool).await;
+    let client = Client::tracked(server).await.unwrap();
+
+    crate::utils::test_helpers::login_user(&client, &user).await;   
+
+    let req = client.get(uri!(super::index_admin(Some(1))));
+    let response = req.dispatch().await;
+
+    assert_eq!(response.status(), Status::NotFound);
+  }
+
+  #[sqlx::test]
+  async fn index_admin_logged_in(pool: PgPool) {
+    let user = real_admin_user(&pool).await.unwrap();
 
     let server: Rocket<Build> = build_test_server(pool).await;
     let client = Client::tracked(server).await.unwrap();

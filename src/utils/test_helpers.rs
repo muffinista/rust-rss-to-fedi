@@ -29,6 +29,7 @@ pub async fn login_user(client: &rocket::local::asynchronous::Client, user: &Use
 pub fn fake_user() -> User {
   User { 
     id: 1, 
+    admin: false,
     email: Some("foo@bar.com".to_string()), 
     actor_url: Some("http://foobar.com".to_string()), 
     login_token: "lt".to_string(), 
@@ -44,6 +45,18 @@ pub async fn real_user(pool: &PgPool) -> sqlx::Result<User> {
   
   Ok(user)
 }
+
+pub async fn real_admin_user(pool: &PgPool) -> sqlx::Result<User> {
+  let user:User = User::find_or_create_by_actor_url(&"https:://muffin.pizza/users/test".to_string(), &pool).await?;
+
+  sqlx::query!("UPDATE users SET admin = true WHERE id = $1", user.id)
+    .execute(pool)
+    .await?;
+    
+  Ok(user)
+}
+
+
 
 pub async fn real_actor(pool: &PgPool) -> sqlx::Result<Actor> {
   Actor::create(
