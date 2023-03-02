@@ -22,7 +22,7 @@ use activitystreams::link::LinkExt;
 use fang::AsyncRunnable;
 use fang::AsyncQueueable;
 
-use crate::tasks::DeliverItem;
+use crate::tasks::{DeliverMessage};
 
 use anyhow::Error as AnyError;
 
@@ -349,19 +349,53 @@ impl Item {
       mention
         .set_href(iri!(dest_url))
         .set_name("en");
-  
+
+      targeted.set_tag(mention.into_any_base()?);
+          
+      let msg = serde_json::to_string(&targeted).unwrap();
+      println!("{msg}");
+
+      let task = DeliverMessage { feed_id: feed.id, actor_url: dest_url, message: msg };
+      let _result = queue
+        .insert_task(&task as &dyn AsyncRunnable)
+        .await
+        .unwrap();
+
+        Ok(())
+
     } else {
       let followers = feed.followers_list(pool).await?;
       for follower in followers { 
-        let task = DeliverItem { feed_id: feed.id, item_id: self.id, follower_id: follower.id };
-        let _result = queue
-          .insert_task(&task as &dyn AsyncRunnable)
-          .await
-          .unwrap();
-      };  
-    }
+        let inbox = follower.find_inbox(pool).await;
+        match inbox {
+          Ok(inbox) => {
+            if inbox.is_some() {
+              let inbox = inbox.unwrap();
 
-    Ok(())
+              let mut targeted = message.clone();
+              targeted.set_many_tos(vec![iri!(inbox)]);
+                
+              let msg = serde_json::to_string(&targeted).unwrap();
+              println!("{msg}");
+      
+      
+              let task = DeliverMessage { feed_id: feed.id, actor_url: inbox, message: msg };
+              let _result = queue
+                .insert_task(&task as &dyn AsyncRunnable)
+                .await
+                .unwrap();      
+            }
+          },
+          Err(why) => {
+            println!("lookup failure! {why:?}");
+            // @todo retry! mark as undeliverable? delete user?
+            // panic!("oops!");
+            // Err(why)
+          }
+        }      
+      }
+      Ok(())
+    }
   }
 
   pub async fn deliver_to(&self, follower: &Follower, feed: &Feed, pool: &PgPool) -> Result<(), AnyError> {
