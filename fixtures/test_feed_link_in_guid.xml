@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+        <title><![CDATA[PBS NewsHour - Full Show]]></title>
+        <link>https://www.pbs.org/newshour/video</link>
+        <atom:link href="https://www.pbs.org/newshour/feeds/rss/podcasts/show" rel="self" type="application/atom+xml" />
+        <language>en-US</language>
+        <copyright>2023 NewsHour Productions LLC. All Rights Reserved.</copyright>
+        <description><![CDATA[Listen]]></description>
+        <lastBuildDate>Thu, 02 Mar 2023 09:18:58 -0500</lastBuildDate>
+        <item>
+            <title><![CDATA[March 1, 2023 - PBS NewsHour full episode]]></title>
+            <description><![CDATA[Wednesday on the NewsHour, an intelligence report refutes one possible cause of the mysterious Havana Syndrome that sickened American diplomats. Chicago voters oust Mayor Lori Lightfoot in an election where crime was a top issue. Plus, scientists researching the aftermath of wildfires add to the evidence that climate change is accelerating the risk of disease spreading from animals to humans. PBS NewsHour is supported by - https://www.pbs.org/newshour/about/funders]]></description>
+            <pubDate>Wed, 01 Mar 2023 21:44:26 -0500</pubDate>
+            <guid>https://www.pbs.org/newshour/show/march-1-2023-pbs-newshour-full-episode</guid>
+            <itunes:author>PBS NewsHour</itunes:author>
+            <itunes:summary><![CDATA[Wednesday on the NewsHour, an intelligence report refutes one possible cause of the mysterious Havana Syndrome that sickened American diplomats. Chicago voters oust Mayor Lori Lightfoot in an election where crime was a top issue. Plus, scientists researching the aftermath of wildfires add to the evidence that climate change is accelerating the risk of disease spreading from animals to humans. PBS NewsHour is supported by - https://www.pbs.org/newshour/about/funders]]></itunes:summary>
+            <itunes:subtitle><![CDATA[Wednesday on the NewsHour, an intelligence report refutes one possible cause of the mysterious Havana Syndrome that sickened American diplomats. Chicago voters oust Mayor Lori Lightfoot in an election where crime was a top issue. Plus, scientists res...]]></itunes:subtitle>
+            <itunes:duration>53:24</itunes:duration>
+            <itunes:explicit>no</itunes:explicit>
+            <enclosure length="76909562" type="audio/mpeg" url="https://flex2.acast.com/s/pbs-newshour-full-show/u/d3i6fh83elv35t.cloudfront.net/static/2023/03/Fullshow01.mp3" />
+        </item>
+  </channel>
+</rss>

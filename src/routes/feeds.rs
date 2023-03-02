@@ -284,7 +284,7 @@ mod test {
     let server: Rocket<Build> = build_test_server(pool).await;
     let client = Client::tracked(server).await.unwrap();
 
-    let req = client.get(uri!(super::show_feed(&feed.name))).header(Header::new("Accept", "text/html"));
+    let req = client.get(uri!(super::show_feed(&feed.name, None::<i32>))).header(Header::new("Accept", "text/html"));
     let response = req.dispatch().await;
 
     assert_eq!(response.status(), Status::Ok);

@@ -1313,7 +1313,6 @@ mod test {
     let feed:Feed = real_feed(&pool).await?;
 
     assert_eq!(feed.entries_count(&pool).await.unwrap(), 0);
-    
 
     let path = "fixtures/test_feed_to_entries.xml";
     let data = parser::parse(fs::read_to_string(path).unwrap().as_bytes()).unwrap();

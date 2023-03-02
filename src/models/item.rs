@@ -132,6 +132,8 @@ impl Item {
 
     let item_url = if !entry.links.is_empty() {
       Some(&entry.links[0].href)
+    } else if entry.id.starts_with("http") {
+      Some(&entry.id)
     } else {
       None
     };
@@ -600,4 +602,45 @@ mod test {
 
     Ok(())
   }
+
+
+  #[sqlx::test]
+  async fn test_create_from_entry(pool: PgPool) -> Result<(), String> {
+    use std::fs;
+    use feed_rs::parser;
+
+    let feed: Feed = real_feed(&pool).await.unwrap();
+
+    let path = "fixtures/test_feed_to_entries.xml";
+    let data = parser::parse(fs::read_to_string(path).unwrap().as_bytes()).unwrap();
+
+    let item:Item = Item::create_from_entry(&data.entries[0], &feed, &pool).await.unwrap();
+
+    assert_eq!("http://muffinlabs.com/2022/09/10/how-i-maintain-botsin-space/", item.guid);
+    assert_eq!("How I maintain botsin.space", item.title.unwrap());
+    assert!(item.content.unwrap().contains("been meaning to write up some notes"));
+    assert_eq!("http://muffinlabs.com/2022/09/10/how-i-maintain-botsin-space/", item.url.unwrap());
+
+    Ok(())
+  }
+
+  #[sqlx::test]
+  async fn test_create_from_entry_link_in_guid(pool: PgPool) -> Result<(), String> {
+    use std::fs;
+    use feed_rs::parser;
+
+    let feed: Feed = real_feed(&pool).await.unwrap();
+
+    let path = "fixtures/test_feed_link_in_guid.xml";
+    let data = parser::parse(fs::read_to_string(path).unwrap().as_bytes()).unwrap();
+
+    let item:Item = Item::create_from_entry(&data.entries[0], &feed, &pool).await.unwrap();
+
+    assert_eq!("https://www.pbs.org/newshour/show/march-1-2023-pbs-newshour-full-episode", item.guid);
+    assert_eq!("https://www.pbs.org/newshour/show/march-1-2023-pbs-newshour-full-episode", item.url.unwrap());
+
+    Ok(())
+  }
 }
+
+
