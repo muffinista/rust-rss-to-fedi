@@ -29,27 +29,38 @@ static BASE_USER_AGENT: &str = concat!(
 );
 
 
-// ///
-// /// query webfinger endpoint for actor and try and find data url
-// ///
-// pub async fn find_actor_url(actor: &str) -> Result<Option<Url>, WebfingerError> {
-//   // println!("query webfinger for {}", actor);
-//   let webfinger = resolve(format!("acct:{}", actor), true).await;
-
-//   match webfinger {
-//     Ok(webfinger) => Ok(parse_webfinger(webfinger)),
-//     Err(why) => Err(why)
-//   }
-// }
-
-pub async fn fetch_object(url: &str) -> Result<Option<String>, reqwest::Error> {
+///
+/// fetch an http object. Sign request with key if provided
+///
+pub async fn fetch_object(url: &str, key_id: Option<&str>, private_key: Option<&str>) -> Result<Option<String>, anyhow::Error> {
   let client = reqwest::Client::new();
-  let response = client
-    .get(url)
-    .header("Accept", "application/activity+json")
-    .header("User-Agent", user_agent())
-    .send()
-    .await;
+  let config = Config::new().mastodon_compat();
+
+  let response = if key_id.is_some() && private_key.is_some() {
+    let key_id = key_id.unwrap();
+    let private_key = private_key.unwrap();
+  
+    let request = client
+      .get(url)
+      .header("Accept", "application/activity+json")
+      .header("User-Agent", user_agent())
+      .signature(&config, key_id, move |signing_string| {
+        let private_key = PKey::private_key_from_pem(private_key.as_bytes())?;
+        let mut signer = Signer::new(MessageDigest::sha256(), &private_key)?;
+        signer.update(signing_string.as_bytes())?;
+        
+        Ok(general_purpose::STANDARD.encode(signer.sign_to_vec()?)) as Result<_, anyhow::Error>
+      })?;
+  
+    client.execute(request).await
+  } else {
+    client
+      .get(url)
+      .header("Accept", "application/activity+json")
+      .header("User-Agent", user_agent())
+      .send()
+      .await
+  };
 
   match response {
     Ok(response) => {
@@ -64,10 +75,9 @@ pub async fn fetch_object(url: &str) -> Result<Option<String>, reqwest::Error> {
   
       Ok(Some(body))  
     },
-    Err(err) => Err(err)
+    Err(err) => Err(err.into())
   }
 }
-
 
 ///
 /// deliver a payload to an inbox

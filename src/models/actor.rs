@@ -16,6 +16,7 @@ use openssl::{
 };
 
 use crate::models::BlockedDomain;
+use crate::models::Feed;
 
 ///
 /// Model for an ActivityPub actor. This could be a remote user who also has
@@ -106,7 +107,15 @@ impl Actor {
   ///
   pub async fn fetch(url: &String, pool: &PgPool) -> Result<(), AnyError> {
     println!("FETCH ACTOR: {url:}");
-    let resp = crate::services::mailer::fetch_object(url).await;
+    let admin_feed = Feed::for_admin(pool).await?;
+
+
+    let resp = if admin_feed.is_some() {
+      let admin_feed = admin_feed.unwrap();
+      crate::services::mailer::fetch_object(url, Some(&admin_feed.ap_url()), Some(&admin_feed.private_key)).await
+    } else {
+      crate::services::mailer::fetch_object(url, None, None).await
+    };
 
     match resp {
       Ok(resp) => {
