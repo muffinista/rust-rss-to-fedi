@@ -135,6 +135,12 @@ dialog {
   top: 40%;
 }
 
+/* iOS is fun */
+input, button {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
 
 /* Maximum width */
 @media (max-width: 50rem) {
@@ -174,5 +180,5 @@ dialog {
     display: none;
     visibility: hidden;
   }
-    
+   
 }
