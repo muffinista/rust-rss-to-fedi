@@ -136,10 +136,8 @@ dialog {
 }
 
 /* iOS is fun */
-input, button {
+button {
   -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
 }
 
 /* Maximum width */
