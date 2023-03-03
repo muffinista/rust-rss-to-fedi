@@ -150,7 +150,8 @@ impl<'r> FromRequest<'r> for SignatureValidity {
           return Outcome::Success(SignatureValidity::Outdated);
         }
       },
-      Err(_why) => {
+      Err(why) => {
+        println!("fetch failure? {:?}", why);
         Outcome::Success(SignatureValidity::Invalid)
       }        
     }
