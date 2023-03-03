@@ -3,7 +3,7 @@ use sqlx::postgres::PgPool;
 
 use chrono::Utc;
 
-use crate::models::item::Item;
+use crate::models::Item;
 
 
 ///
@@ -30,6 +30,12 @@ impl PartialEq for Enclosure {
 }
 
 impl Enclosure {
+  pub async fn find(id: i32, pool: &PgPool) -> Result<Enclosure, sqlx::Error> {
+    sqlx::query_as!(Enclosure, "SELECT * FROM enclosures WHERE id = $1", id)
+    .fetch_one(pool)
+    .await
+  }
+
   ///
   /// Query the db to get all the enclosures for the given item
   ///
@@ -37,6 +43,19 @@ impl Enclosure {
     sqlx::query_as!(Enclosure, "SELECT * FROM enclosures WHERE item_id = $1 ORDER by id", item.id)
     .fetch_all(pool)
     .await
+  }
+
+  pub async fn find_by_feed_and_item_and_id(username: &str, item_id: i32, id: i32, pool: &PgPool) -> Result<Option<Enclosure>, sqlx::Error> {
+    sqlx::query_as!(Enclosure, "SELECT enclosures.* FROM enclosures
+      INNER JOIN items ON enclosures.item_id = items.id
+      INNER JOIN feeds ON items.feed_id = feeds.id
+      WHERE feeds.name = $1 AND items.id = $2 AND enclosures.id = $3", username, item_id, id)
+    .fetch_optional(pool)
+    .await
+  }
+
+  pub fn filename(&self) -> String {
+    format!("{:}", self.id)   
   }
 }
 

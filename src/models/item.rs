@@ -2,8 +2,12 @@ use sqlx::postgres::PgPool;
 use serde::{Serialize};
 use feed_rs::model::Entry;
 
-use crate::models::enclosure::Enclosure;
-use crate::models::feed::Feed;
+use crate::models::Enclosure;
+use crate::models::Feed;
+
+use crate::routes::enclosures::*;
+
+use crate::utils::path_to_url;
 
 use activitystreams::activity::*;
 use activitystreams::object::ApObject;
@@ -37,8 +41,11 @@ use sanitize_html::sanitize_str;
 use sanitize_html::rules::predefined::RELAXED;
 
 use chrono::Utc;
+use rocket::uri;
+
 
 use activitystreams::mime::Mime;
+
 
 
 ///
@@ -280,8 +287,10 @@ impl Item {
     let enclosures = Enclosure::for_item(self, pool).await?;
     for enclosure in enclosures {
       let mut attachment = Document::new();
-      let enclosure_url = enclosure.url.clone();
 
+      let filename = enclosure.filename();
+      let enclosure_url = path_to_url(&uri!(show_enclosure(&feed.name, self.id, filename)));
+      
       attachment.set_url(iri!(&enclosure_url));
 
       if enclosure.content_type.is_some() {
@@ -514,9 +523,9 @@ mod test {
       Ok(result) => {
         let s = serde_json::to_string(&result).unwrap();
 
-        // println!("{:}", s);
+        println!("{:}", s);
         
-        assert!(s.contains("media.com/attachment.mp3"));
+        assert!(s.contains("/enclosures/"));
         assert!(s.contains("audio/mpeg"));
 
         Ok(())

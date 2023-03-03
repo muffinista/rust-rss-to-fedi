@@ -5,6 +5,7 @@ use crate::models::feed::Feed;
 use crate::models::follower::Follower;
 use crate::models::item::Item;
 use crate::models::Actor;
+use crate::models::Enclosure;
 use crate::utils::keys::generate_key;
 
 use crate::server::build_server;
@@ -176,6 +177,24 @@ pub async fn real_item_with_enclosure(feed: &Feed, pool: &PgPool) -> sqlx::Resul
     .await?;
 
   Ok(item)
+}
 
+
+pub async fn real_enclosure(item: &Item, pool: &PgPool) -> sqlx::Result<Enclosure> {
+  let now = Utc::now();
+  let url = "http://media.com/attachment.mp3";
+  let content_type = "audio/mpeg";
+  let size = 123456;
+
+  let enclosure_id = sqlx::query!("INSERT INTO enclosures 
+    (item_id, url, content_type, size, created_at, updated_at)
+    VALUES($1, $2, $3, $4, $5, $6)
+    RETURNING id",
+      item.id, url, content_type, size, now, now)
+    .fetch_one(pool)
+    .await?
+    .id;
+
+  Enclosure::find(enclosure_id, &pool).await
 }
 

@@ -1595,6 +1595,76 @@
     },
     "query": "INSERT INTO users (actor_url, login_token, created_at, updated_at)\n      VALUES($1, $2, $3, $4)\n      RETURNING id"
   },
+  "a4e47a475da7f29cfbd3a1a43c119bbbcfbbe81c579ad8032e82739ae426e05e": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "item_id",
+          "ordinal": 1,
+          "type_info": "Int4"
+        },
+        {
+          "name": "url",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "content_type",
+          "ordinal": 3,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "size",
+          "ordinal": 4,
+          "type_info": "Int4"
+        },
+        {
+          "name": "created_at",
+          "ordinal": 5,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "ordinal": 6,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "description",
+          "ordinal": 7,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "credits",
+          "ordinal": 8,
+          "type_info": "Varchar"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        true,
+        false,
+        false,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Int4",
+          "Int4"
+        ]
+      }
+    },
+    "query": "SELECT enclosures.* FROM enclosures\n      INNER JOIN items ON enclosures.item_id = items.id\n      INNER JOIN feeds ON items.feed_id = feeds.id\n      WHERE feeds.name = $1 AND items.id = $2 AND enclosures.id = $3"
+  },
   "a7a9429c3ffb36ccf5df4149b1e59bbc82cd1044c99ace434042f6138e08bfec": {
     "describe": {
       "columns": [],
@@ -2018,6 +2088,74 @@
       }
     },
     "query": "SELECT * FROM users WHERE access_token = $1"
+  },
+  "c874c9d9c6edd05147f141cd709cd6b336fc1e1aac351af49969f4573e732bdf": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "item_id",
+          "ordinal": 1,
+          "type_info": "Int4"
+        },
+        {
+          "name": "url",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "content_type",
+          "ordinal": 3,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "size",
+          "ordinal": 4,
+          "type_info": "Int4"
+        },
+        {
+          "name": "created_at",
+          "ordinal": 5,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "ordinal": 6,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "description",
+          "ordinal": 7,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "credits",
+          "ordinal": 8,
+          "type_info": "Varchar"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        true,
+        false,
+        false,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      }
+    },
+    "query": "SELECT * FROM enclosures WHERE id = $1"
   },
   "da788272bbd9045f75d93e24cd646a6ef7b4714d03ad1bc7a7c0c1562e70926c": {
     "describe": {

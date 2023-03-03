@@ -5,3 +5,4 @@ pub mod items;
 pub mod index;
 pub mod login;
 pub mod webfinger;
+pub mod enclosures;

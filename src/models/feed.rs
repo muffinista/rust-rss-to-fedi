@@ -718,6 +718,7 @@ impl Feed {
   pub async fn add_follower(&self, pool: &PgPool, actor: &str) -> Result<(), AnyError> {
     let now = Utc::now();
 
+    
     let result = sqlx::query!("INSERT INTO followers 
         (feed_id, actor, created_at, updated_at) 
         VALUES($1, $2, $3, $4)
