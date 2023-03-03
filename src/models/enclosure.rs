@@ -62,8 +62,8 @@ impl Enclosure {
 #[cfg(test)]
 mod test {
   use sqlx::postgres::PgPool;
-  use crate::models::feed::Feed;
-  use crate::models::item::Item;
+  use crate::models::Feed;
+  use crate::models::Item;
   use crate::models::Enclosure;
   use crate::utils::test_helpers::{real_item, real_feed, real_item_with_enclosure};
 

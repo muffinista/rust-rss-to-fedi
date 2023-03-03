@@ -5,7 +5,7 @@ use rocket::State;
 
 use sqlx::postgres::PgPool;
 
-use crate::models::feed::Feed;
+use crate::models::Feed;
 
 
 ///  The outbox is discovered through the outbox property of an actor's profile.

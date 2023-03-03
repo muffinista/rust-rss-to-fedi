@@ -273,7 +273,7 @@ impl User {
 #[cfg(test)]
 mod test {
   use sqlx::postgres::PgPool;
-  use crate::models::user::User;
+  use crate::models::User;
 
   #[sqlx::test]
   async fn test_find_or_create_by_email(pool: PgPool) -> sqlx::Result<()> {

@@ -47,8 +47,8 @@ mod test {
   use rocket::uri;
   use rocket::{Rocket, Build};
 
-  use crate::models::feed::Feed;
-  use crate::models::item::Item;
+  use crate::models::Feed;
+  use crate::models::Item;
   use crate::models::Enclosure;
   use crate::utils::test_helpers::{build_test_server, real_feed, real_item, real_enclosure};
 

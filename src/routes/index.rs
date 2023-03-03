@@ -6,8 +6,8 @@ use rocket::State;
 
 use sqlx::postgres::PgPool;
 
-use crate::models::user::User;
-use crate::models::feed::Feed;
+use crate::models::User;
+use crate::models::Feed;
 use crate::models::Setting;
 
 use crate::PER_PAGE;

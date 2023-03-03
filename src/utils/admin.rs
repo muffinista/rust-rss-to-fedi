@@ -1,8 +1,8 @@
 use std::env;
 
 use sqlx::postgres::PgPool;
-use crate::models::user::User;
-use crate::models::feed::Feed;
+use crate::models::User;
+use crate::models::Feed;
 
 pub async fn create_admin_feed(pool: &PgPool) -> Result<(), sqlx::Error> {
   let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");

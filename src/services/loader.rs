@@ -5,7 +5,7 @@ use anyhow::Error as AnyError;
 
 use fang::asynk::async_queue::AsyncQueueable;
 
-use crate::models::feed::Feed;
+use crate::models::Feed;
 
 pub async fn update_stale_feeds(pool: &PgPool, queue: &mut dyn AsyncQueueable) -> Result<(), AnyError> {
   let feeds = Feed::stale(pool, 600, 5).await;

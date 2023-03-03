@@ -5,8 +5,8 @@ use rocket::State;
 
 use sqlx::postgres::PgPool;
 
-use crate::models::feed::Feed;
-use crate::models::item::Item;
+use crate::models::Feed;
+use crate::models::Item;
 
 
 #[get("/feed/<username>/items/<id>", format = "text/html", rank = 1)]
@@ -84,8 +84,8 @@ mod test {
   use rocket::uri;
   use rocket::{Rocket, Build};
 
-  use crate::models::feed::Feed;
-  use crate::models::item::Item;
+  use crate::models::Feed;
+  use crate::models::Item;
   use crate::utils::test_helpers::{build_test_server, real_item, real_feed};
 
   use sqlx::postgres::PgPool;

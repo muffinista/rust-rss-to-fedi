@@ -1,9 +1,9 @@
 use sqlx::postgres::PgPool;
 
-use crate::models::user::User;
-use crate::models::feed::Feed;
-use crate::models::follower::Follower;
-use crate::models::item::Item;
+use crate::models::User;
+use crate::models::Feed;
+use crate::models::Follower;
+use crate::models::Item;
 use crate::models::Actor;
 use crate::models::Enclosure;
 use crate::utils::keys::generate_key;

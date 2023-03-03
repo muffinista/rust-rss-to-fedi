@@ -9,7 +9,7 @@ use sqlx::postgres::PgPool;
 
 use webfinger::*;
 
-use crate::models::feed::Feed;
+use crate::models::Feed;
 use crate::routes::feeds::*;
 use crate::utils::urls::path_to_url;
 

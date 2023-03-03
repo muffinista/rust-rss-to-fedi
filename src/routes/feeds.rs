@@ -16,9 +16,9 @@ use std::env;
 
 use sqlx::postgres::PgPool;
 
-use crate::models::user::User;
-use crate::models::feed::Feed;
-use crate::models::item::Item;
+use crate::models::User;
+use crate::models::Feed;
+use crate::models::Item;
 use crate::models::Setting;
 
 use crate::services::url_to_feed::url_to_feed_url;

@@ -718,7 +718,7 @@ impl Feed {
   pub async fn add_follower(&self, pool: &PgPool, actor: &str) -> Result<(), AnyError> {
     let now = Utc::now();
 
-    
+
     let result = sqlx::query!("INSERT INTO followers 
         (feed_id, actor, created_at, updated_at) 
         VALUES($1, $2, $3, $4)
@@ -1184,10 +1184,11 @@ mod test {
   use feed_rs::parser;
   use chrono::Utc;
 
-  use crate::models::feed::Feed;
+  use crate::models::Feed;
+  use crate::models::feed::AnyError;
   use crate::models::feed::AcceptedActivity;
-  use crate::models::item::Item;
-  use crate::models::enclosure::Enclosure;
+  use crate::models::Item;
+  use crate::models::Enclosure;
   use crate::models::Actor;
 
   use crate::utils::test_helpers::{fake_user, fake_feed, real_feed, real_user, real_item, real_actor};
@@ -1196,7 +1197,6 @@ mod test {
   use crate::routes::feeds::*;
   use crate::routes::ap::outbox::*;
 
-  use crate::models::feed::AnyError;
 
   use mockito::mock;
 

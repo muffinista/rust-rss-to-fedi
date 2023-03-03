@@ -6,7 +6,7 @@ use sqlx::postgres::PgPool;
 
 use crate::models::Actor;
 
-use crate::models::feed::Feed;
+use crate::models::Feed;
 use crate::models::feed::AcceptedActivity;
 
 use rocket::serde::json::Json;

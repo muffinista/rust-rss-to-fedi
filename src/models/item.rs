@@ -419,8 +419,8 @@ impl Item {
 mod test {
   use std::env;
   use sqlx::postgres::PgPool;
-  use crate::models::feed::Feed;
-  use crate::models::item::Item;
+  use crate::models::Feed;
+  use crate::models::Item;
   use crate::models::Actor;
   use crate::utils::test_helpers::{real_item, real_feed, fake_item, real_item_with_enclosure};
 
