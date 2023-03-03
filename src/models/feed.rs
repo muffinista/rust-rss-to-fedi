@@ -786,12 +786,12 @@ impl Feed {
       return Ok(())
     }
 
+    let clean_message = message.unwrap().to_lowercase();
+    let matches: Vec<_> = clean_message.match_indices("help").collect();
 
-    // let message = message.unwrap().as_single_xsd_string().unwrap().to_lowercase();
-    // println!("MESSAGE: {:}", message);
-
-    if !message.unwrap().to_lowercase().contains("help") {
-      println!("User didn't ask for help");
+    // check for the word 'help' in the beginning of the message
+    if matches.is_empty() || matches.first().unwrap().0 > 35 {
+      println!("User didn't ask for help in the beginning of the message");
       return Ok(());      
     }
 
