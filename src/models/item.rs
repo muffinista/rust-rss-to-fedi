@@ -4,9 +4,6 @@ use feed_rs::model::Entry;
 
 use crate::models::enclosure::Enclosure;
 use crate::models::feed::Feed;
-use crate::models::Follower;
-
-use crate::services::mailer::*;
 
 use activitystreams::activity::*;
 use activitystreams::object::ApObject;
@@ -39,7 +36,6 @@ use rocket_dyn_templates::tera::Context;
 use sanitize_html::sanitize_str;
 use sanitize_html::rules::predefined::RELAXED;
 
-use url::Url;
 use chrono::Utc;
 
 use activitystreams::mime::Mime;
@@ -233,6 +229,9 @@ impl Item {
   }
 
   
+  ///
+  /// generate an AP version of this item
+  ///
   pub async fn to_activity_pub(&self, feed: &Feed, pool: &PgPool) -> Result<ApObject<Create>, AnyError> {    
     let mut note: ApObject<Note> = ApObject::new(Note::new());
 
@@ -311,6 +310,10 @@ impl Item {
     Ok(action)
   }
 
+  ///
+  /// delete this item
+  /// @todo -- add deletion notifications
+  ///
   pub async fn delete(feed: &Feed, id: i32, pool: &PgPool) -> Result<Item, sqlx::Error> {
     let old_item = Item::find(id, pool).await;
     
@@ -322,6 +325,9 @@ impl Item {
   }
 
 
+  ///
+  /// deliver this item to any followers of the parent feed
+  ///
   pub async fn deliver(&self, feed: &Feed, pool: &PgPool, queue: &mut dyn AsyncQueueable) -> Result<(), AnyError> {
     let message = self.to_activity_pub(feed, pool).await.unwrap();
     let item_publicity = match &feed.status_publicity {
@@ -397,51 +403,6 @@ impl Item {
       Ok(())
     }
   }
-
-  pub async fn deliver_to(&self, follower: &Follower, feed: &Feed, pool: &PgPool) -> Result<(), AnyError> {
-    let inbox = follower.find_inbox(pool).await;
-    match inbox {
-      Ok(inbox) => {
-        if inbox.is_none() {
-          println!("inbox not found");
-          return Ok(());
-        }
-
-        let inbox = inbox.unwrap();
-        let message = self.to_activity_pub(feed, pool).await.unwrap();
-
-        println!("INBOX: {inbox}");
-        // generate and send
-        let mut targeted = message.clone();
-        targeted.set_many_tos(vec![iri!(inbox)]);
-          
-        let msg = serde_json::to_string(&targeted).unwrap();
-        println!("{msg}");
-
-        let result = deliver_to_inbox(&Url::parse(&inbox)?, &feed.ap_url(), &feed.private_key, &msg).await;
-
-        match result {
-          Ok(result) => {
-            println!("sent! {result:?}");
-            Ok(())
-          },
-          Err(why) => {
-            println!("delivery failure! {why:?}");
-            Err(why)
-          }
-        }
-
-      },
-      Err(why) => {
-        println!("lookup failure! {why:?}");
-        // @todo retry! mark as undeliverable? delete user?
-        // panic!("oops!");
-        Err(why)
-      }
-    }
-
-  }
-
 }
 
 

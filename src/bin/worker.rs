@@ -8,8 +8,6 @@ use fang::asynk::async_worker_pool::AsyncWorkerPool;
 use fang::AsyncRunnable;
 use fang::NoTls;
 
-// use rustypub::tasks::DeliverItem;
-// use rustypub::tasks::RefreshFeed;
 use rustypub::tasks::UpdateStaleFeeds;
 
 use std::time::Duration;
