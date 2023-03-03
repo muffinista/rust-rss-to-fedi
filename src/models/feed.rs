@@ -38,6 +38,10 @@ use md5::{Md5, Digest};
 
 use fang::AsyncQueueable;
 
+use sanitize_html::sanitize_str;
+use sanitize_html::rules::predefined::DEFAULT;
+
+
 use crate::models::Actor;
 use crate::models::User;
 use crate::models::Item;
@@ -786,7 +790,8 @@ impl Feed {
       return Ok(())
     }
 
-    let clean_message = message.unwrap().to_lowercase();
+    let clean_message = sanitize_str(&DEFAULT, message.unwrap()).unwrap().to_lowercase();
+
     println!("MESSAGE: {:}", clean_message);
     let matches: Vec<_> = clean_message.match_indices("help").collect();
 
