@@ -20,6 +20,8 @@ use activitystreams::object::ObjectExt;
 use activitystreams::link::Mention;
 use activitystreams::link::LinkExt;
 
+use crate::activitystreams::Hashtag;
+
 use fang::AsyncRunnable;
 use fang::AsyncQueueable;
 
@@ -258,6 +260,9 @@ impl Item {
       None => "unlisted"
     };
 
+    //
+    // set destination according to desired publicity level
+    //
     match item_publicity {
       "public" => { note.set_cc(iri!("https://www.w3.org/ns/activitystreams#Public")) },
 
@@ -280,6 +285,17 @@ impl Item {
       let summary = feed.content_warning.as_ref().unwrap();
       note.set_summary(summary.to_string());
     }
+
+    if feed.hashtag.is_some() {
+      let mut hashtag = Hashtag::new();
+
+      hashtag
+        .set_name(feed.hashtag.clone().unwrap());
+  
+      note.add_tag(hashtag.into_any_base()?);  
+    }
+
+
 
     //
     // add any enclosures
@@ -304,7 +320,7 @@ impl Item {
 
       note.add_attachment(attachment.into_any_base()?);
     }
-
+    
     let mut action: ApObject<Create> = ApObject::new(
       Create::new(
         iri!(feed_url),
@@ -365,7 +381,7 @@ impl Item {
         .set_href(iri!(dest_url))
         .set_name("en");
 
-      targeted.set_tag(mention.into_any_base()?);
+      targeted.add_tag(mention.into_any_base()?);
           
       let msg = serde_json::to_string(&targeted).unwrap();
       println!("{msg}");
@@ -506,6 +522,25 @@ mod test {
         
         assert!(s.contains("Hello!"));
         assert!(s.contains("<p>Hey!</p>"));
+
+        Ok(())
+      },
+      Err(why) => Err(why.to_string())
+    }
+  }
+
+  #[sqlx::test]
+  async fn test_to_activity_pub_with_hashtag(pool: PgPool) -> Result<(), String> {
+    let mut feed: Feed = real_feed(&pool).await.unwrap();
+    let item: Item = fake_item();
+
+    feed.hashtag = Some("hashy".to_string());
+    let result = item.to_activity_pub(&feed, &pool).await;
+    match result {
+      Ok(result) => {
+        let s = serde_json::to_string(&result).unwrap();
+        println!("{:}", s);
+        assert!(s.contains("hashy"));
 
         Ok(())
       },
