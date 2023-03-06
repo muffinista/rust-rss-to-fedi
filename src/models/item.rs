@@ -286,6 +286,9 @@ impl Item {
       note.set_summary(summary.to_string());
     }
 
+    //
+    // add hashtag
+    //
     if feed.hashtag.is_some() {
       let mut hashtag = Hashtag::new();
 

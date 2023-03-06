@@ -39,7 +39,8 @@ pub struct FeedForm {
 pub struct FeedUpdateForm {
   listed: bool,
   status_publicity: Option<String>,
-  content_warning: Option<String>
+  content_warning: Option<String>,
+  hashtag: Option<String>
 }
 
 #[derive(Serialize)]
@@ -97,6 +98,7 @@ pub async fn update_feed(user: User, username: &str, db: &State<PgPool>, form: F
           feed.listed = form.listed;
           feed.hashtag = None;
           feed.content_warning = form.content_warning.clone();
+          feed.hashtag = form.hashtag.clone();
           feed.status_publicity = form.status_publicity.clone();
 
           let result = feed.save(db).await;

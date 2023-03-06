@@ -31,6 +31,13 @@
           <div class="help">If specified, any post from this account will be hidden behind the content warning.</div>
         </div>
       </div>
+      <div class="form-row">
+        <label for="hashtag">Hashtag:</label>
+        <div class="input">
+          <input type="text" name="hashtag" value="{{ feed.hashtag }}" />
+          <div class="help">You can add a hashtag to any post made by this account.</div>
+        </div>
+      </div>
     </fieldset>
     <div class="form-row">
       <button class="check" type="submit">Save</button>
