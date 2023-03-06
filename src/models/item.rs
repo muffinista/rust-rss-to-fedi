@@ -289,11 +289,21 @@ impl Item {
     //
     // add hashtag
     //
-    if feed.hashtag.is_some() {
+    if feed.hashtag.is_some() && !feed.hashtag.clone().unwrap().is_empty() {
       let mut hashtag = Hashtag::new();
+      let guts = feed.hashtag.clone().unwrap();
 
+      let output = if guts.contains("#") {
+        guts
+      } else {
+        format!("#{guts:}")
+      };
+
+      let url_tag = feed.hashtag.clone().unwrap();
+      let hashtag_url = format!("https://mastodon.social/tags/{url_tag:}");
       hashtag
-        .set_name(feed.hashtag.clone().unwrap());
+        .set_href(iri!(hashtag_url))
+        .set_name(output.clone());
   
       note.add_tag(hashtag.into_any_base()?);  
     }
@@ -543,7 +553,7 @@ mod test {
       Ok(result) => {
         let s = serde_json::to_string(&result).unwrap();
         println!("{:}", s);
-        assert!(s.contains("hashy"));
+        assert!(s.contains("#hashy"));
 
         Ok(())
       },
