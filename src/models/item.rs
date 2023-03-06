@@ -343,6 +343,7 @@ impl Item {
 
     action
       .set_context(context())
+      .add_context(iri!("as:Hashtag"))
       .add_context(security());
 
     Ok(action)
