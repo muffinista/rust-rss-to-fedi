@@ -145,7 +145,7 @@ impl Actor {
       },
       Err(why) => {
         println!("fetch failed: {why:?}");
-        return Err(why.into());
+        return Err(why);
       }
     }
 

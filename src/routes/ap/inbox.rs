@@ -151,7 +151,7 @@ impl<'r> FromRequest<'r> for SignatureValidity {
         }
       },
       Err(why) => {
-        println!("fetch failure? {:?}", why);
+        println!("fetch failure? {why:?}");
         Outcome::Success(SignatureValidity::Invalid)
       }        
     }

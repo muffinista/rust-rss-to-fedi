@@ -40,20 +40,18 @@ impl AsyncRunnable for DeliverMessage {
         let result = deliver_to_inbox(dest_url, &feed.ap_url(), &feed.private_key, &self.message).await;
 
         match result {
-          Ok(result) => {
-            println!("sent! {result:?}");
+          Ok(_result) => {
+            Ok(())
           },
           Err(why) => {
-            println!("delivery failure! {why:?}");
+            Err(FangError { description: why.to_string() })
           }
         }    
       },
       Err(why) => {
-        println!("Something went wrong: {why:}");
+        Err(FangError { description: why.to_string() })
       }   
     }
-
-    Ok(())
   }
 
   // the maximum number of retries. Set it to 0 to make it not retriable
@@ -65,5 +63,39 @@ impl AsyncRunnable for DeliverMessage {
   // backoff mode for retries
   fn backoff(&self, attempt: u32) -> u32 {
     u32::pow(2, attempt)
+  }
+}
+
+
+
+#[cfg(test)]
+mod test {
+  use fang::asynk::async_queue::AsyncQueue;
+  use fang::AsyncRunnable;
+  use fang::NoTls;
+
+  use sqlx::postgres::PgPool;
+  use std::env;
+
+  use crate::tasks::DeliverMessage;
+
+
+  #[sqlx::test]
+  async fn test_deliver_message_run(_pool: PgPool) {
+    let db_uri = env::var("DATABASE_URL").expect("DATABASE_URL is not set");
+
+    let msg = DeliverMessage {
+      feed_id: 1i32,
+      actor_url: "https://muffin.pizza/".to_string(),
+      message: "".to_string()   
+    };
+
+    let mut queue:AsyncQueue<NoTls> = AsyncQueue::builder()
+      .uri(db_uri)
+      .max_pool_size(1u32)
+      .build();
+
+    let result = msg.run(&mut queue).await;
+    assert!(result.is_err());
   }
 }

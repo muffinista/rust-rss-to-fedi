@@ -33,18 +33,21 @@ impl AsyncRunnable for RefreshFeed {
       Ok(mut feed) => {
         let result = feed.refresh(&pool, queue).await;
         match result {
-          Ok(_result) => { println!("Done refreshing feeds"); },
+          Ok(_result) => { 
+            println!("Done refreshing feeds");
+            Ok(()) 
+          },
           Err(why) => {
             println!("Something went wrong: {why:}");
+            Err(FangError { description: why.to_string() })
           }
         }
       },
       Err(why) => {
         println!("Feed missing? {why:}");
+        Err(FangError { description: why.to_string() })
       }
     }
-    
-    Ok(())
   }
 
   // the maximum number of retries. Set it to 0 to make it not retriable

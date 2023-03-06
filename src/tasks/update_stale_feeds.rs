@@ -35,13 +35,13 @@ impl AsyncRunnable for UpdateStaleFeeds {
     match result {
       Ok(_result) => {
         println!("It worked!");
+        Ok(())
       },
       Err(why) => {
         println!("Something went wrong: {why:}");
+        Err(FangError { description: why.to_string() })
       }
     }
-        
-    Ok(())
   }
 
   // If `uniq` is set to true and the task is already in the storage, it won't be inserted again

@@ -792,7 +792,7 @@ impl Feed {
 
     let clean_message = sanitize_str(&DEFAULT, message.unwrap()).unwrap().to_lowercase();
 
-    println!("MESSAGE: {:}", clean_message);
+    // println!("MESSAGE: {clean_message:}");
     let matches: Vec<_> = clean_message.match_indices("help").collect();
 
     // check for the word 'help' in the beginning of the message
