@@ -84,7 +84,7 @@ impl User {
   /// Find user by access token
   ///
   pub async fn find_by_access(token: &String, pool: &PgPool) -> Result<Option<User>, sqlx::Error> {
-    println!("Find user: {token:}");
+    log::info!("Find user: {token:}");
     sqlx::query_as!(User, "SELECT * FROM users WHERE access_token = $1", token)
       .fetch_optional(pool)
       .await
@@ -109,7 +109,7 @@ impl User {
   ///
   pub async fn apply_access_token(&self, pool: &PgPool) -> Result<String, sqlx::Error> {
     let token = User::generate_access_token();
-    println!("generate token: {token:}");
+    log::info!("generate token: {token:}");
 
     let query_check = sqlx::query!(
       "UPDATE users SET access_token = $1 WHERE id = $2", token, self.id)
@@ -245,7 +245,7 @@ impl User {
 
         let message = feed.link_to_feed_message(&dest_actor).await?;
         let msg = serde_json::to_string(&message).unwrap();
-        println!("{msg}");
+        log::info!("{msg}");
     
         let feed_ap_url = feed.ap_url();
     
@@ -256,12 +256,12 @@ impl User {
           &msg).await;
     
         match result {
-          Ok(result) => println!("sent! {result:?}"),
-          Err(why) => println!("failure! {why:?}")
+          Ok(result) => log::info!("sent! {result:?}"),
+          Err(why) => log::info!("failure! {why:?}")
         }    
       },
       Err(why) => {
-        println!("couldnt find actor: {why:?}");
+        log::info!("couldnt find actor: {why:?}");
       }
     }
 

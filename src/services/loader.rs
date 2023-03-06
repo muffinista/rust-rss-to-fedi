@@ -12,7 +12,7 @@ pub async fn update_stale_feeds(pool: &PgPool, queue: &mut dyn AsyncQueueable) -
   match feeds {
     Ok(feeds) => {
       for mut feed in feeds {
-        println!("{:}", feed.url);
+        log::info!("update_stale_feed {:}", feed.url);
         feed.refresh(pool, queue).await?
       };
 

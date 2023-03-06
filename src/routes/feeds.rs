@@ -73,15 +73,15 @@ pub async fn add_feed(user: User, db: &State<PgPool>, form: Form<FeedForm>) -> R
 
       let notify = user.send_link_to_feed(&feed, db).await;
       match notify {
-        Ok(_notify) => println!("user notified!"),
-        Err(why) => println!("something went wrong with notification: {why:?}")
+        Ok(_notify) => log::info!("user notified!"),
+        Err(why) => log::info!("something went wrong with notification: {why:?}")
       }
 
       let dest = uri!(show_feed(feed.name, Some(1)));
       Ok(Flash::success(Redirect::to(dest), "Feed created!"))
     },
     Err(why) => {
-      print!("{why}");
+      log::info!("{why}");
       Ok(Flash::error(Redirect::to("/"), "Sorry, something went wrong!"))
     }
   }

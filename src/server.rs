@@ -19,7 +19,7 @@ pub async fn build_server(pool: PgPool) -> Rocket<Build> {
   // create an admin feed to handle interactions with server
   let result = create_admin_feed(&pool).await;
   match result {
-    Ok(result) => println!("{result:?}"),
+    Ok(result) => log::info!("create_admin_feed {result:?}"),
     Err(why) => panic!("{}", why)
   };
   

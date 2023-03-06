@@ -221,7 +221,7 @@ impl Item {
     let tera = match Tera::new("templates/ap/*.*") {
       Ok(t) => t,
       Err(e) => {
-        println!("Parsing error(s): {e}");
+        log::info!("Parsing error(s): {e}");
         ::std::process::exit(1);
       }
     };
@@ -369,7 +369,7 @@ impl Item {
       let user = feed.user(pool).await?;
 
       if user.actor_url.is_none() {
-        println!("Refusing to send because owner doesn't have an address");
+        log::info!("Refusing to send because owner doesn't have an address");
         return Ok(());
       }
 
@@ -387,7 +387,7 @@ impl Item {
       targeted.add_tag(mention.into_any_base()?);
           
       let msg = serde_json::to_string(&targeted).unwrap();
-      println!("{msg}");
+      log::info!("{msg}");
 
       let task = DeliverMessage { feed_id: feed.id, actor_url: dest_url, message: msg };
       let _result = queue
@@ -410,7 +410,7 @@ impl Item {
               targeted.set_many_tos(vec![iri!(inbox)]);
                 
               let msg = serde_json::to_string(&targeted).unwrap();
-              println!("{msg}");
+              log::info!("{msg}");
       
       
               let task = DeliverMessage { feed_id: feed.id, actor_url: inbox, message: msg };
@@ -421,7 +421,7 @@ impl Item {
             }
           },
           Err(why) => {
-            println!("lookup failure! {why:?}");
+            log::info!("lookup failure! {why:?}");
             // @todo retry! mark as undeliverable? delete user?
             // panic!("oops!");
             // Err(why)

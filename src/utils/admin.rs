@@ -17,7 +17,7 @@ pub async fn create_admin_feed(pool: &PgPool) -> Result<(), sqlx::Error> {
       if check.is_some() {
         Ok(())
       } else {
-        println!("Creating admin user/feed");
+        log::info!("Creating admin user/feed");
 
         let name = "admin";
         let url = "fake";

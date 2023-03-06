@@ -44,11 +44,13 @@ impl AsyncRunnable for DeliverMessage {
             Ok(())
           },
           Err(why) => {
+            log::info!("DeliverMessage: delivery failed: {why:}");
             Err(FangError { description: why.to_string() })
           }
         }    
       },
       Err(why) => {
+        log::info!("DeliverMessage failed: {why:}");
         Err(FangError { description: why.to_string() })
       }   
     }

@@ -106,7 +106,7 @@ impl Actor {
   /// Fetch the remote actor data and store it
   ///
   pub async fn fetch(url: &String, pool: &PgPool) -> Result<(), AnyError> {
-    println!("FETCH ACTOR: {url:}");
+    log::info!("FETCH ACTOR: {url:}");
     let admin_feed = Feed::for_admin(pool).await?;
 
 
@@ -144,7 +144,7 @@ impl Actor {
         }
       },
       Err(why) => {
-        println!("fetch failed: {why:?}");
+        log::info!("fetch failed: {why:?}");
         return Err(why);
       }
     }

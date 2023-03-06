@@ -34,20 +34,6 @@ pub async fn url_to_feed_url(url:&String) -> Result<Option<String>, AnyError>{
     return Err(anyhow!(err.to_string()))
   }
 
-  // Response: HTTP/1.1 200 OK
-  // Headers: {
-  //     "date": "Tue, 29 Nov 2022 00:48:07 GMT",
-  //     "content-type": "application/xml",
-  //     "content-length": "68753",
-  //     "connection": "keep-alive",
-  //     "last-modified": "Tue, 08 Nov 2022 13:54:18 GMT",
-  //     "etag": "\"10c91-5ecf5e04f7680\"",
-  //     "accept-ranges": "bytes",
-  //     "strict-transport-security": "max-age=15724800; includeSubDomains",
-  // }
-  // eprintln!("Response: {:?} {}", res.version(), res.status());
-  // eprintln!("Headers: {:#?}\n", res.headers());
-
   let contents = &res.unwrap().text().await;
   match contents {
     Ok(contents) => {

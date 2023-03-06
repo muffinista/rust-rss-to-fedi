@@ -501,16 +501,17 @@ impl Feed {
         if !items.is_empty() {
           let count = self.follower_count(pool).await?;
           if count > 0 {
-            println!("delivering {} items to {} users", items.len(), count);
+            log::info!("delivering {} items to {} users", items.len(), count);
             for item in items {
               item.deliver(self, pool, queue).await?;
             }  
           } else {
-            println!("skipping delivery of {} items because no followers :(", items.len());
+            log::info!("skipping delivery of {} items because no followers :(", items.len());
           }  
-        } else {
-          println!("Nothing new so nothing to deliver");
         }
+        //  else {
+        //   println!("Nothing new so nothing to deliver");
+        // }
 
         self.mark_fresh(pool).await?;
 
@@ -771,7 +772,7 @@ impl Feed {
   ///
   pub async fn incoming_message(&self, pool: &PgPool, actor_url: &str, activity: &AcceptedActivity) -> Result<(), AnyError> {
 
-    println!("ACTOR: {actor_url:}");
+    log::info!("ACTOR: {actor_url:}");
 
     // THIS GETS THE CONTENT OF THE STATUS and is clearly
     // a bit of a hack, but it's hard to get the content of the
@@ -797,7 +798,7 @@ impl Feed {
 
     // check for the word 'help' in the beginning of the message
     if matches.is_empty() || matches.first().unwrap().0 > 35 {
-      println!("User didn't ask for help in the beginning of the message");
+      log::info!("User didn't ask for help in the beginning of the message");
       return Ok(());      
     }
 
@@ -814,7 +815,7 @@ impl Feed {
         // generate a login message for this user
         let message = self.generate_login_message(activity, &dest_actor, pool).await?;
         let msg = serde_json::to_string(&message).unwrap();
-        println!("{msg}");
+        log::info!("{msg}");
     
         let my_url = self.ap_url();
 
@@ -822,12 +823,12 @@ impl Feed {
         let result = deliver_to_inbox(&Url::parse(&dest_actor.inbox_url)?, &my_url, &self.private_key, &msg).await;
     
         match result {
-          Ok(result) => println!("sent! {result:?}"),
-          Err(why) => println!("failure! {why:?}")
+          Ok(result) => log::info!("sent! {result:?}"),
+          Err(why) => log::info!("failure! {why:?}")
         }    
       },
       Err(why) => {
-        println!("couldnt find actor: {why:?}");
+        log::info!("couldnt find actor: {why:?}");
       }
     }
 
@@ -922,7 +923,7 @@ impl Feed {
   ///
   pub async fn handle_activity(&self, pool: &PgPool, activity: &AcceptedActivity)  -> Result<(), AnyError> {
     let s = serde_json::to_string(&activity).unwrap();
-    println!("{s:}");
+    log::info!("{s:}");
 
     let (actor, _object, act) = activity.clone().into_parts();
 

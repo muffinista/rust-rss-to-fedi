@@ -51,7 +51,7 @@ impl<'r> FromRequest<'r> for SignatureValidity {
     let pool = request.rocket().state::<PgPool>().unwrap();
     let sig_header = request.headers().get_one("Signature");
     if sig_header.is_none() {
-      println!("no header!");
+      log::info!("no header!");
       return Outcome::Success(SignatureValidity::Absent);
     }
     let sig_header = sig_header.unwrap();
@@ -73,7 +73,7 @@ impl<'r> FromRequest<'r> for SignatureValidity {
 
     if signature.is_none() || headers.is_none() {
       // missing part of the header
-      println!("missing signature/header!");
+      log::info!("missing signature/header!");
       return Outcome::Success(SignatureValidity::Invalid);
     }
 
@@ -100,7 +100,7 @@ impl<'r> FromRequest<'r> for SignatureValidity {
     match sender {
       Ok(sender) => {
         if sender.is_none() {
-          println!("unable to find sender!");
+          log::info!("unable to find sender!");
           return Outcome::Success(SignatureValidity::Invalid);
         }
 
@@ -111,7 +111,7 @@ impl<'r> FromRequest<'r> for SignatureValidity {
           .verify_signature(&signature_verification_payload, &general_purpose::STANDARD.decode(signature).unwrap_or_default())
           .unwrap_or(false)
         {
-          println!("unable to verify signature!");
+          log::info!("unable to verify signature!");
           return Outcome::Success(SignatureValidity::Invalid);
         }
 
@@ -151,7 +151,7 @@ impl<'r> FromRequest<'r> for SignatureValidity {
         }
       },
       Err(why) => {
-        println!("fetch failure? {why:?}");
+        log::info!("fetch failure? {why:?}");
         Outcome::Success(SignatureValidity::Invalid)
       }        
     }
@@ -171,9 +171,9 @@ impl<'r> FromRequest<'r> for SignatureValidity {
 #[post("/feed/<username>/inbox", data="<activity>")]
 pub async fn user_inbox(digest: Option<SignatureValidity>, username: &str, activity: Json<AcceptedActivity>, db: &State<PgPool>) -> Result<(), Status> {
   if env::var("DISABLE_SIGNATURE_CHECKS").is_ok() {
-    println!("Skipping signature check because DISABLE_SIGNATURE_CHECKS is set");
+    log::info!("Skipping signature check because DISABLE_SIGNATURE_CHECKS is set");
   } else if digest.is_none() || !digest.unwrap().is_secure() {
-    println!("digest failure {digest:?}");
+    log::info!("digest failure {digest:?}");
     return Err(Status::NotFound)
   }
   let feed_lookup = Feed::find_by_name(&username.to_string(), db).await;

@@ -8,6 +8,7 @@ use fang::Scheduled;
 
 use crate::utils::pool::worker_db_pool;
 
+
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "fang::serde")]
 pub struct UpdateStaleFeeds {}
@@ -34,11 +35,11 @@ impl AsyncRunnable for UpdateStaleFeeds {
     let result = crate::services::loader::update_stale_feeds(&pool, queue).await;
     match result {
       Ok(_result) => {
-        println!("It worked!");
+        log::info!("UpdateStaleFeeds: It worked!");
         Ok(())
       },
       Err(why) => {
-        println!("Something went wrong: {why:}");
+        log::info!("UpdateStaleFeeds: Something went wrong: {why:}");
         Err(FangError { description: why.to_string() })
       }
     }

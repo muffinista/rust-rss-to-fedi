@@ -15,6 +15,8 @@ pub async fn main() -> Result<(), rocket::Error> {
     }));
   }
 
+  env_logger::init();
+
   let _domain_name = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
   let pool = web_db_pool().await;
 

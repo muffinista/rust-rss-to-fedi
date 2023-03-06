@@ -18,7 +18,7 @@ fn user_to_outcome(user: Result<Option<User>, sqlx::Error>) -> request::Outcome<
       }
     },
     Err(why) => {
-      println!("ERR: {why:?}");
+      log::info!("ERR: {why:?}");
       Outcome::Forward(())
     }
   }
@@ -41,12 +41,12 @@ impl<'r> FromRequest<'r> for User {
     match cookie {
       Some(cookie) => {
         let access_token = cookie.value();
-        // println!("access token: {:}", access_token);
+        // log::info!("access token: {:}", access_token);
         let user = User::find_by_access(&access_token.to_string(), pool).await;
         user_to_outcome(user)
       },
       None => {
-        println!("No cookie to check");
+        log::info!("No cookie to check");
         return Outcome::Forward(())
       }
     }

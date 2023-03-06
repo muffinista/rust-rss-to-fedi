@@ -29,7 +29,7 @@ pub async fn attempt_login(db: &State<PgPool>, cookies: &CookieJar<'_>, login_to
         let token = user.apply_access_token(db).await;
         match token {
           Ok(token) => {
-            println!("Apply token: {token:}");
+            log::info!("Apply token: {token:}");
             let mut cookie = Cookie::new("access_token", token.to_string());
             cookie.set_same_site(SameSite::Lax);
             cookie.make_permanent();
@@ -37,15 +37,15 @@ pub async fn attempt_login(db: &State<PgPool>, cookies: &CookieJar<'_>, login_to
             cookies.add_private(cookie);
 
             match user.reset_login_token(db).await {
-              Ok(result) => { println!("Reset login token {result:}") },
-              Err(why) => { println!("reset login error: {why}") }
+              Ok(result) => { log::info!("Reset login token {result:}") },
+              Err(why) => { log::info!("reset login error: {why}") }
             }
 
             let dest = uri!(crate::routes::index::index_logged_in(Some(1)));
             Ok(Redirect::to(dest))
           },
           Err(why) => {
-            println!("{why}");
+            log::info!("{why}");
             Ok(Redirect::to("/"))
           }
         }
@@ -55,7 +55,7 @@ pub async fn attempt_login(db: &State<PgPool>, cookies: &CookieJar<'_>, login_to
       } 
     },
     Err(why) => {
-      print!("{why}");
+      log::info!("{why}");
       Ok(Redirect::to("/"))
     }
   }
