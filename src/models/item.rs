@@ -404,7 +404,7 @@ impl Item {
           let mut mention = Mention::new();
     
           mention
-            .set_href(iri!(dest_url.to_string()))
+            .set_href(iri!(&dest_actor.url.to_string()))
             .set_name("en");
     
           targeted.add_tag(mention.into_any_base()?);
