@@ -436,9 +436,7 @@ impl Item {
           },
           Err(why) => {
             log::info!("lookup failure! {why:?}");
-            // @todo retry! mark as undeliverable? delete user?
-            // panic!("oops!");
-            // Err(why)
+            return Err(why);
           }
         }      
       }
