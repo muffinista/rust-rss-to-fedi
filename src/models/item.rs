@@ -306,7 +306,7 @@ impl Item {
       let url_tag = feed.hashtag.clone().unwrap();
       let hashtag_url = format!("https://mastodon.social/tags/{url_tag:}");
       hashtag
-        .set_href(iri!(hashtag_url))
+        // .set_href(iri!(hashtag_url))
         .set_name(output.clone());
   
       note.add_tag(hashtag.into_any_base()?);  
@@ -396,7 +396,7 @@ impl Item {
           }
 
           let dest_actor = dest_actor.unwrap();
-          let dest_url = dest_actor.url;
+          let dest_url = dest_actor.inbox_url;
     
           let mut targeted = message.clone();
           targeted.set_to(iri!(dest_url));
