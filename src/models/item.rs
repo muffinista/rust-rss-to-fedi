@@ -227,21 +227,20 @@ impl Item {
     };
 
 
-    // tack on hashtag
-    let guts = if self.content.is_some() && hashtag.is_some() {
-      Some(format!("{:}\n\n#{:}", self.content.clone().unwrap(), hashtag.unwrap()))
-    } else {
-      self.content.clone()
-    };
-
     let mut context = Context::new();
     context.insert("title", &self.title);
-    context.insert("body", &guts);
+    context.insert("body", &self.content);
 
     if self.url.is_some() {
       context.insert("link", &self.url.as_ref().unwrap());
     }
-    
+
+    // tack on hashtag
+    if hashtag.is_some() && !hashtag.clone().unwrap().is_empty() {
+      let hashtag = format!("#{:}", hashtag.unwrap());
+      context.insert("hashtag", &hashtag);
+    };
+   
     tera.render("feed-item.html.tera", &context).unwrap()
   }
 

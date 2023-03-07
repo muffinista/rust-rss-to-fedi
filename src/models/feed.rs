@@ -305,7 +305,7 @@ impl Feed {
   pub async fn save(&self, pool: &PgPool) -> Result<&Feed, sqlx::Error> {
     let now = Utc::now();
 
-    let clean_hashtag = if self.hashtag.is_some() {
+    let clean_hashtag = if self.hashtag.is_some() && !self.hashtag.clone().unwrap().is_empty() {
       Some(self.hashtag.clone().unwrap().replace("#", "").replace(" ", ""))
     } else {
       None

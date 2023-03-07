@@ -2,3 +2,5 @@
 {% else %}{{ title }}
 {% endif %}
 <p>{{ body }}</p>
+
+{% if hashtag %}{{ hashtag }}{% endif %}
