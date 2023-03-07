@@ -1,9 +1,17 @@
 #!/usr/bin/env bash
 
+if [ -z "$DATABASE_URL" ]; then
+  echo "Please set DATABASE_URL!"
+  exit
+fi
+
+
 rustup component add llvm-tools-preview
 export RUSTFLAGS="-Cinstrument-coverage"
 export LLVM_PROFILE_FILE="profile/rustypub-%p-%m.profraw"
-DOMAIN_NAME=foo.com DATABASE_URL=sqlite:data/data.sqlite3 cargo test
+
+scripts/test
+
 grcov profile/ -s . --binary-path ./target/debug/ -t html --branch --ignore-not-existing -o ./target/debug/coverage/
 
 
