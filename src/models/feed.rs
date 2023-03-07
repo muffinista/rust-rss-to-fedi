@@ -305,6 +305,12 @@ impl Feed {
   pub async fn save(&self, pool: &PgPool) -> Result<&Feed, sqlx::Error> {
     let now = Utc::now();
 
+    let clean_hashtag = if self.hashtag.is_some() {
+      Some(self.hashtag.clone().unwrap().replace("#", "").replace(" ", ""))
+    } else {
+      None
+    };
+
     sqlx::query!("UPDATE feeds
       SET url = $1,
           name = $2,
@@ -334,7 +340,7 @@ impl Feed {
       self.site_url,
       self.error,
       now,
-      self.hashtag,
+      clean_hashtag,
       self.content_warning,
       self.status_publicity,
       self.admin,
@@ -1233,6 +1239,23 @@ mod test {
   }
 
   #[sqlx::test]
+  async fn test_save_hashtag(pool: PgPool) -> sqlx::Result<()> {
+   
+    let mut feed:Feed = real_feed(&pool).await?;
+    
+    let hashtag = Some("#hello there".to_string());
+    feed.hashtag = hashtag.clone();
+
+    feed.save(&pool).await?;
+
+    let updated_feed = Feed::find(feed.id, &pool).await?;
+
+    assert_eq!(updated_feed.hashtag.clone().unwrap(), "hellothere".to_string());
+
+    Ok(())
+  }
+
+  #[sqlx::test]
   async fn test_find(pool: PgPool) -> sqlx::Result<()> {
     let feed:Feed = real_feed(&pool).await?;
     let feed2 = Feed::find(feed.id, &pool).await?;
@@ -1516,9 +1539,6 @@ mod test {
     println!("{}", s);
 
     assert!(s.contains(r#"sensitive":true"#));
-
-
-    // println!("{:?}", message);
 
     Ok(())
   }

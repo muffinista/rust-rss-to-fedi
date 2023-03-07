@@ -217,7 +217,7 @@ impl Item {
   /// generate an HTML-ish version of this item suitable
   /// for adding to an AP message
   ///
-  pub fn to_html(&self) -> String {
+  pub fn to_html(&self, hashtag: Option<String>) -> String {
     let tera = match Tera::new("templates/ap/*.*") {
       Ok(t) => t,
       Err(e) => {
@@ -226,9 +226,17 @@ impl Item {
       }
     };
 
+
+    // tack on hashtag
+    let guts = if self.content.is_some() && hashtag.is_some() {
+      Some(format!("{:}\n\n#{:}", self.content.clone().unwrap(), hashtag.unwrap()))
+    } else {
+      self.content.clone()
+    };
+
     let mut context = Context::new();
     context.insert("title", &self.title);
-    context.insert("body", &self.content);
+    context.insert("body", &guts);
 
     if self.url.is_some() {
       context.insert("link", &self.url.as_ref().unwrap());
@@ -250,7 +258,7 @@ impl Item {
 
     note
       .set_attributed_to(iri!(feed_url))
-      .set_content(self.to_html())
+      .set_content(self.to_html(feed.hashtag.clone()))
       .set_url(iri!(feed_url))
       .set_id(iri!(item_url))
       .set_published(ts);
@@ -293,11 +301,7 @@ impl Item {
       let mut hashtag = Hashtag::new();
       let guts = feed.hashtag.clone().unwrap();
 
-      let output = if guts.contains("#") {
-        guts
-      } else {
-        format!("#{guts:}")
-      };
+      let output = format!("#{guts:}");
 
       let url_tag = feed.hashtag.clone().unwrap();
       let hashtag_url = format!("https://mastodon.social/tags/{url_tag:}");
