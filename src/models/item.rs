@@ -399,10 +399,10 @@ impl Item {
           let dest_url = dest_actor.inbox_url;
     
           let mut targeted = message.clone();
-          targeted.set_to(iri!(dest_url));
+          targeted.set_to(iri!(dest_actor.url));
     
           let mut mention = Mention::new();
-    
+
           mention
             .set_href(iri!(&dest_actor.url.to_string()))
             .set_name("en");
