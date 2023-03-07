@@ -3,4 +3,4 @@
 {% endif %}
 <p>{{ body }}</p>
 
-{% if hashtag %}{{ hashtag }}{% endif %}
+{% if hashtag %}<a href="{{ hashtag_link }}">{{ hashtag }}</a>{% endif %}

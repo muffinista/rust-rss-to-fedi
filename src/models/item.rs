@@ -46,6 +46,7 @@ use sanitize_html::rules::predefined::RELAXED;
 use chrono::Utc;
 use rocket::uri;
 
+use std::env;
 
 use activitystreams::mime::Mime;
 
@@ -67,6 +68,7 @@ pub struct Item {
   pub updated_at: chrono::DateTime::<Utc>
 }
 
+// NOTE: mastodon is going to allow: del, pre, blockquote, code, b, strong, u, i, em, ul, ol, li
 fn sanitize_string(input: &str) -> String {
   // relaxed or basic makes sense here probably
   // https://docs.rs/sanitize_html/latest/sanitize_html/rules/predefined/index.html
@@ -238,8 +240,13 @@ impl Item {
 
     // tack on hashtag
     if hashtag.is_some() && !hashtag.clone().unwrap().is_empty() {
-      let hashtag = format!("#{:}", hashtag.unwrap());
-      context.insert("hashtag", &hashtag);
+      let hashtag = hashtag.unwrap();
+      let formatted_hashtag = format!("#{:}", hashtag);
+      let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
+      let hashtag_url = format!("https://{instance_domain:}/tags/{hashtag:}");
+
+      context.insert("hashtag", &formatted_hashtag);
+      context.insert("hashtag_link", &hashtag_url);
     };
    
     tera.render("feed-item.html.tera", &context).unwrap()
@@ -306,7 +313,7 @@ impl Item {
       let url_tag = feed.hashtag.clone().unwrap();
       let hashtag_url = format!("https://mastodon.social/tags/{url_tag:}");
       hashtag
-        // .set_href(iri!(hashtag_url))
+        .set_href(iri!(hashtag_url))
         .set_name(output.clone());
   
       note.add_tag(hashtag.into_any_base()?);  
