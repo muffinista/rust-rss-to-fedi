@@ -41,10 +41,11 @@ impl AsyncRunnable for DeliverMessage {
 
         match result {
           Ok(_result) => {
+            log::info!("DeliverMessage: delivery to {dest_url:} succeeded!");
             Ok(())
           },
           Err(why) => {
-            log::info!("DeliverMessage: delivery failed: {why:}");
+            log::info!("DeliverMessage: delivery to {dest_url:} failed: {why:}");
             Err(FangError { description: why.to_string() })
           }
         }    

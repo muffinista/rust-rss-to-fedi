@@ -156,6 +156,12 @@ impl Feed {
     .await
   }
 
+  pub async fn for_item(item_id: i32, pool: &PgPool) -> Result<Feed, sqlx::Error> {
+    sqlx::query_as!(Feed, "SELECT feeds.* FROM feeds INNER JOIN items ON items.feed_id = feeds.id WHERE items.id = $1", item_id)
+    .fetch_one(pool)
+    .await
+  }
+
 
   ///
   /// Return a page of feeds
