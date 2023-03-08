@@ -22,6 +22,9 @@ use anyhow::{anyhow};
 
 use std::env;
 
+
+use serde::Serialize;
+
 static BASE_USER_AGENT: &str = concat!(
   env!("CARGO_PKG_NAME"),
   "/",
@@ -82,23 +85,26 @@ pub async fn fetch_object(url: &str, key_id: Option<&str>, private_key: Option<&
 ///
 /// deliver a payload to an inbox
 ///
-pub async fn deliver_to_inbox(inbox: &Url, key_id: &str, private_key: &str, json: &str) -> Result<(), anyhow::Error> {
+pub async fn deliver_to_inbox<T: Serialize + ?Sized>(inbox: &Url, key_id: &str, private_key: &str, json: &T) -> Result<(), anyhow::Error> {
   let client = http_client();
   let heads = generate_request_headers(inbox);
+  let payload = serde_json::to_vec(json).unwrap();
+  // let printable_payload = String::from_utf8(payload).unwrap();
 
   log::info!("deliver to {inbox:}");
-  log::info!("message {json:}");
+  // log::info!("message {printable_payload:}");
 
   let request_builder = client
     .post(inbox.to_string())
     .headers(heads)
-    .body(json.to_string());
+    .json(json);
   
+
   let request = sign_request(
     request_builder,
     format!("{key_id}#main-key"),
     private_key.to_string(),
-    json.to_string()
+    payload
   )
     .await?;
 
@@ -143,7 +149,7 @@ pub async fn sign_request(
   request_builder: RequestBuilder,
   key_id: String,
   private_key: String,
-  payload: String
+  payload: Vec<u8>
 ) -> Result<Request, anyhow::Error> {
 
   // https://docs.rs/http-signature-normalization-reqwest/0.7.1/http_signature_normalization_reqwest/struct.Config.html#method.mastodon_compat

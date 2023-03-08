@@ -774,8 +774,8 @@ impl Feed {
     accept.set_context(context());
 
     // deliver to the user
-    let msg = serde_json::to_string(&accept).unwrap();
-    deliver_to_inbox(&Url::parse(&inbox)?, &self.ap_url(), &self.private_key, &msg).await
+    // let msg = serde_json::to_string(&accept).unwrap();
+    deliver_to_inbox(&Url::parse(&inbox)?, &self.ap_url(), &self.private_key, &accept).await
   }
 
   ///
@@ -832,7 +832,7 @@ impl Feed {
         let my_url = self.ap_url();
 
         // send the message!
-        let result = deliver_to_inbox(&Url::parse(&dest_actor.inbox_url)?, &my_url, &self.private_key, &msg).await;
+        let result = deliver_to_inbox(&Url::parse(&dest_actor.inbox_url)?, &my_url, &self.private_key, &message).await;
     
         match result {
           Ok(result) => log::info!("sent! {result:?}"),

@@ -253,7 +253,7 @@ impl User {
           &Url::parse(&dest_actor.inbox_url)?,
           &feed_ap_url,
           &feed.private_key,
-          &msg).await;
+          &message).await;
     
         match result {
           Ok(result) => log::info!("sent! {result:?}"),

@@ -11,7 +11,7 @@ use crate::services::mailer::*;
 use crate::models::Feed;
 
 use crate::utils::pool::worker_db_pool;
-
+use serde_json::{Value};
 
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "fang::serde")]
@@ -37,7 +37,12 @@ impl AsyncRunnable for DeliverMessage {
     match feed {
       Ok(feed) => {
         let dest_url = &Url::parse(&self.actor_url).unwrap();
-        let result = deliver_to_inbox(dest_url, &feed.ap_url(), &feed.private_key, &self.message).await;
+
+        // we've gotten a JSON object. We'll deserialize it so we can send something that
+        // is serializable to reqwest, since right now we can't manage deserializable objects
+        // with fang
+        let message_object:Value = serde_json::from_str(&self.message).unwrap();
+        let result = deliver_to_inbox(dest_url, &feed.ap_url(), &feed.private_key, &message_object).await;
 
         match result {
           Ok(_result) => {
@@ -90,7 +95,7 @@ mod test {
     let msg = DeliverMessage {
       feed_id: 1i32,
       actor_url: "https://muffin.pizza/".to_string(),
-      message: "".to_string()   
+      message: "{}".to_string()   
     };
 
     let mut queue:AsyncQueue<NoTls> = AsyncQueue::builder()
