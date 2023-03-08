@@ -205,19 +205,19 @@ mod test {
   use rocket::{Rocket, Build};
 
   use sqlx::postgres::PgPool;
+  use serde_json::json;
 
   use crate::utils::test_helpers::{build_test_server, real_feed};
   
   #[sqlx::test]
   async fn test_user_inbox(pool: PgPool) -> sqlx::Result<()> {
     let feed = real_feed(&pool).await.unwrap();
-    let actor = "https://activitypub.pizza/users/colin".to_string();
-    let json = format!(r#"{{"actor":"{}","object":"{}/feed","type":"Follow"}}"#, actor, actor).to_string();
+    let json = json!({"actor":"https://feedsin.space/feed/nytus","object":{"id":"https://feedsin.space/feed/nytus/items/1283","type":"Note","content":"content goes here","attributedTo":"https://feedsin.space/feed/nytus","published":"2023-03-07T17:54:08Z","url":"https://feedsin.space/feed/nytus","attachment":[{"summary":"Joseph Zucchero in 2008. His restaurant Mr. Beef was used as the filming location for the popular FX television series “The Bear.”","type":"Document","url":"https://feedsin.space/feed/nytus/items/1283/enclosures/576"}],"tag":[{"href":"https://mastodon.social/tags/news","name":"#news","type":"Hashtag"}],"to":"https://feedsin.space/feed/nytus/followers","summary":""},"@context":["https://www.w3.org/ns/activitystreams","as:Hashtag","https://w3id.org/security/v1"],"type":"Create"});
 
     let server:Rocket<Build> = build_test_server(pool).await;
     let client = Client::tracked(server).await.unwrap();
 
-    let req = client.post(uri!(super::user_inbox(&feed.name))).body(json);
+    let req = client.post(uri!(super::user_inbox(&feed.name))).json(&json);
 
     let response = req.dispatch().await;
 
