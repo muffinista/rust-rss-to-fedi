@@ -17,7 +17,6 @@ use anyhow::Error as AnyError;
 use activitystreams::iri;
 use activitystreams::object::ObjectExt;
 
-/// Simple program to greet a person
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
@@ -82,10 +81,10 @@ async fn main() -> Result<(), AnyError> {
     
       match result {
         Ok(_result) => {
-          println!("DeliverMessage: delivery to {inbox:} succeeded!");
+          println!("delivery to {inbox:} succeeded!");
         },
         Err(why) => {
-          println!("DeliverMessage: delivery to {inbox:} failed: {why:}");
+          println!("delivery to {inbox:} failed: {why:}");
         }
       }
     

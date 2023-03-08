@@ -102,6 +102,8 @@ pub async fn deliver_to_inbox(inbox: &Url, key_id: &str, private_key: &str, json
   )
     .await?;
 
+  log::info!("{:?}", request);
+
   let response = client.execute(request).await;
   match response {
     Ok(response) => {
