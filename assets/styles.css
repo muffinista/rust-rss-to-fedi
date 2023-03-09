@@ -179,7 +179,11 @@ button:focus {
 }
 
 button:active {
-    transform: scale(0.99);
+  transform: scale(0.99);
+}
+
+.feed-list li {
+  margin-bottom: 1.0em;
 }
 
 /* Maximum width */

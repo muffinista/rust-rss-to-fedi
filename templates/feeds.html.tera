@@ -1,7 +1,8 @@
 <ul class="feed-list">
   {% for feed in feeds %}
     <li>
-      <a href="/feed/{{feed.name}}">{{feed.name}}{% if feed.description %}: {{feed.description | truncate(length=100)}}{% endif %}</a>
+      <a href="/feed/{{feed.name}}"><b>{{feed.name}}</b></a><br />
+      {% if feed.description %}<span>{{feed.description | truncate(length=100)}}</span>{% endif %}
     </li>
   {% endfor %}
 </ul>
