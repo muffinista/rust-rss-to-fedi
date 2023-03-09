@@ -241,11 +241,11 @@ impl Item {
     // tack on hashtag
     if hashtag.is_some() && !hashtag.clone().unwrap().is_empty() {
       let hashtag = hashtag.unwrap();
-      let formatted_hashtag = format!("#{:}", hashtag);
+      // let formatted_hashtag = format!("#{:}", hashtag);
       let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
       let hashtag_url = format!("https://{instance_domain:}/tags/{hashtag:}");
 
-      context.insert("hashtag", &formatted_hashtag);
+      context.insert("hashtag", &hashtag);
       context.insert("hashtag_link", &hashtag_url);
     };
    
@@ -544,6 +544,18 @@ mod test {
     let _item2: Item = real_item(&feed, &pool).await?;
     let result2 = Item::for_feed(&feed, 10, &pool).await?;
     assert_eq!(result2.len(), 2);
+
+    Ok(())
+  }
+
+  #[sqlx::test]
+  async fn test_to_html() -> Result<(), String> {
+    let item: Item = fake_item();
+
+    let result = item.to_html(Some("hashytime".to_string()));
+    assert!(result.contains("Hello!"));
+    assert!(result.contains("<p>Hey!</p>"));
+    assert!(result.contains("hashytime"));
 
     Ok(())
   }

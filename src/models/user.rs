@@ -52,14 +52,14 @@ impl User {
   }
 
 
-  ///
-  /// Find user by email
-  ///
-  pub async fn find_by_email(email: &String, pool: &PgPool) -> Result<Option<User>, sqlx::Error> {
-    sqlx::query_as!(User, "SELECT * FROM users WHERE email = $1", email)
-    .fetch_optional(pool)
-    .await
-  }
+  // ///
+  // /// Find user by email
+  // ///
+  // pub async fn find_by_email(email: &String, pool: &PgPool) -> Result<Option<User>, sqlx::Error> {
+  //   sqlx::query_as!(User, "SELECT * FROM users WHERE email = $1", email)
+  //   .fetch_optional(pool)
+  //   .await
+  // }
   
   ///
   /// Find user by email
@@ -308,28 +308,6 @@ mod test {
     let bad_token = format!("dfdfs{}fdsdf", access_token);
     let no_user = User::find_by_access(&bad_token, &pool).await;
     assert_eq!(false, no_user.unwrap().is_some());
-    
-    Ok(())
-  }
-
-  #[sqlx::test]
-  async fn test_find_by_email(pool: PgPool) -> sqlx::Result<()> {
-    let email:String = "foo@bar.com".to_string();
-    let user = User::find_or_create_by_email(&email, &pool).await?;
-    let created_email = user.email.as_ref().unwrap();
-
-    let user_find = User::find_by_email(&created_email, &pool).await?.unwrap();
-    
-    assert_eq!(user, user_find);
-    
-    Ok(())
-  }
-
-  #[sqlx::test]
-  async fn test_find_by_email_doesnt_exist(pool: PgPool) -> sqlx::Result<()> {
-    let lookup:String = ("bar@baz.com").to_string();
-    let user = User::find_by_email(&lookup, &pool).await;
-    assert_eq!(false, user.unwrap().is_some());
     
     Ok(())
   }
