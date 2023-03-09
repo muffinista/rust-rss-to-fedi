@@ -651,7 +651,18 @@ impl Feed {
     format!("@{}@{}", self.name, instance_domain)
   }
 
-  
+  pub fn description_with_footer(&self) -> String {
+    let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
+    let footer = format!("Powered by @admin@{instance_domain:}");
+
+    if self.description.is_some() {
+      format!("{:}\n\n{footer:}", self.description.clone().unwrap())
+    } else {
+      footer
+    }
+  }
+
+
   ///
   /// Generate valid ActivityPub data for this feed
   ///
@@ -694,11 +705,12 @@ impl Feed {
       svc.set_image(image.into_any_base()?);
 
     } else {
-      if self.description.is_some() {
-        svc.set_summary(self.description.clone().unwrap());
-      } else if self.title.is_some() {
-        svc.set_summary(self.title.clone().unwrap());
-      }
+      // if self.description.is_some() {
+      //   svc.set_summary(self.description.clone().unwrap());
+      // } else if self.title.is_some() {
+      //   svc.set_summary(self.title.clone().unwrap());
+      // }
+      svc.set_summary(self.description_with_footer());
   
       if self.icon_url.is_some() {
         let mut icon = Image::new();
