@@ -386,7 +386,7 @@ impl Item {
     };
 
     // handle special case of sending DMs to feed owner
-    // TODO unify both parts of this if statement
+    // @TODO unify both parts of this if statement
     if item_publicity == "direct" {
       let user = feed.user(pool).await?;
 
