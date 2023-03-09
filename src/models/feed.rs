@@ -705,11 +705,6 @@ impl Feed {
       svc.set_image(image.into_any_base()?);
 
     } else {
-      // if self.description.is_some() {
-      //   svc.set_summary(self.description.clone().unwrap());
-      // } else if self.title.is_some() {
-      //   svc.set_summary(self.title.clone().unwrap());
-      // }
       svc.set_summary(self.description_with_footer());
   
       if self.icon_url.is_some() {
@@ -786,7 +781,6 @@ impl Feed {
     accept.set_context(context());
 
     // deliver to the user
-    // let msg = serde_json::to_string(&accept).unwrap();
     deliver_to_inbox(&Url::parse(&inbox)?, &self.ap_url(), &self.private_key, &accept).await
   }
 
