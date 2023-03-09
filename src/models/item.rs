@@ -211,6 +211,7 @@ impl Item {
       } // for
     } // for
   
+    feed.update_last_post_at(published_at, pool).await?;
 
     Item::find(item_id, pool).await
   }

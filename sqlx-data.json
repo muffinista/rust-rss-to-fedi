@@ -102,6 +102,11 @@
           "name": "status_publicity",
           "ordinal": 19,
           "type_info": "Varchar"
+        },
+        {
+          "name": "last_post_at",
+          "ordinal": 20,
+          "type_info": "Timestamptz"
         }
       ],
       "nullable": [
@@ -124,6 +129,7 @@
         false,
         true,
         true,
+        true,
         true
       ],
       "parameters": {
@@ -133,6 +139,19 @@
       }
     },
     "query": "SELECT feeds.* FROM feeds INNER JOIN items ON items.feed_id = feeds.id WHERE items.id = $1"
+  },
+  "118a91258eacfa452c873f2f089028afab2ef46afa0556de0a47cf2298191be6": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Timestamptz",
+          "Int4"
+        ]
+      }
+    },
+    "query": "UPDATE feeds SET last_post_at = $1 WHERE id = $2 AND last_post_at < $1"
   },
   "127d18d1e252038d0e8382bc6c03ff37ebbe97719d24d26f262513f0ac988ff9": {
     "describe": {
@@ -442,6 +461,11 @@
           "name": "status_publicity",
           "ordinal": 19,
           "type_info": "Varchar"
+        },
+        {
+          "name": "last_post_at",
+          "ordinal": 20,
+          "type_info": "Timestamptz"
         }
       ],
       "nullable": [
@@ -462,6 +486,7 @@
         false,
         false,
         false,
+        true,
         true,
         true,
         true
@@ -776,6 +801,11 @@
           "name": "status_publicity",
           "ordinal": 19,
           "type_info": "Varchar"
+        },
+        {
+          "name": "last_post_at",
+          "ordinal": 20,
+          "type_info": "Timestamptz"
         }
       ],
       "nullable": [
@@ -796,6 +826,7 @@
         false,
         false,
         false,
+        true,
         true,
         true,
         true
@@ -912,6 +943,11 @@
           "name": "status_publicity",
           "ordinal": 19,
           "type_info": "Varchar"
+        },
+        {
+          "name": "last_post_at",
+          "ordinal": 20,
+          "type_info": "Timestamptz"
         }
       ],
       "nullable": [
@@ -932,6 +968,7 @@
         false,
         false,
         false,
+        true,
         true,
         true,
         true
@@ -1304,6 +1341,11 @@
           "name": "status_publicity",
           "ordinal": 19,
           "type_info": "Varchar"
+        },
+        {
+          "name": "last_post_at",
+          "ordinal": 20,
+          "type_info": "Timestamptz"
         }
       ],
       "nullable": [
@@ -1324,6 +1366,7 @@
         false,
         false,
         false,
+        true,
         true,
         true,
         true
@@ -1674,6 +1717,11 @@
           "name": "status_publicity",
           "ordinal": 19,
           "type_info": "Varchar"
+        },
+        {
+          "name": "last_post_at",
+          "ordinal": 20,
+          "type_info": "Timestamptz"
         }
       ],
       "nullable": [
@@ -1694,6 +1742,7 @@
         false,
         false,
         false,
+        true,
         true,
         true,
         true
@@ -1914,6 +1963,11 @@
           "name": "status_publicity",
           "ordinal": 19,
           "type_info": "Varchar"
+        },
+        {
+          "name": "last_post_at",
+          "ordinal": 20,
+          "type_info": "Timestamptz"
         }
       ],
       "nullable": [
@@ -1934,6 +1988,7 @@
         false,
         false,
         false,
+        true,
         true,
         true,
         true
@@ -2393,6 +2448,11 @@
           "name": "status_publicity",
           "ordinal": 19,
           "type_info": "Varchar"
+        },
+        {
+          "name": "last_post_at",
+          "ordinal": 20,
+          "type_info": "Timestamptz"
         }
       ],
       "nullable": [
@@ -2413,6 +2473,7 @@
         false,
         false,
         false,
+        true,
         true,
         true,
         true
@@ -2892,6 +2953,11 @@
           "name": "status_publicity",
           "ordinal": 19,
           "type_info": "Varchar"
+        },
+        {
+          "name": "last_post_at",
+          "ordinal": 20,
+          "type_info": "Timestamptz"
         }
       ],
       "nullable": [
@@ -2912,6 +2978,7 @@
         false,
         false,
         false,
+        true,
         true,
         true,
         true

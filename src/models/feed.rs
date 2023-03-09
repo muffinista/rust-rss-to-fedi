@@ -108,6 +108,7 @@ pub struct Feed {
   pub created_at: chrono::DateTime::<Utc>,
   pub updated_at: chrono::DateTime::<Utc>,
   pub refreshed_at: chrono::DateTime::<Utc>,
+  pub last_post_at: Option<chrono::DateTime::<Utc>>,
 
   pub error: Option<String>
 }
@@ -496,6 +497,17 @@ impl Feed {
     }
     Ok(result)
   }
+
+  pub async fn update_last_post_at(&self, published_at: chrono::DateTime::<Utc>, pool: &PgPool) -> Result<(), sqlx::Error> {
+    sqlx::query!(
+      "UPDATE feeds SET last_post_at = $1 WHERE id = $2 AND last_post_at < $1",
+      published_at,
+      self.id
+    ).execute(pool).await?;
+
+    Ok(())
+  }
+
 
   ///
   /// grab new data for this feed, and deliver any new entries to followers

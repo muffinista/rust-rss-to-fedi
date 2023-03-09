@@ -109,6 +109,7 @@ pub fn fake_feed() -> Feed {
     created_at: Utc::now(),
     updated_at: Utc::now(),
     refreshed_at: Utc::now(),
+    last_post_at: None,
     error: None
   }
 }
