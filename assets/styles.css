@@ -6,6 +6,10 @@ body {
   min-height: 100vh;
 }
 
+input, textarea {
+  font-size: 16px;
+}
+
 body > header, body > footer {
   background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAkAAAAJCAYAAADgkQYQAAAALklEQVQoU2NkIAIwEqGGgZAiYwYGhrOEFIEtIlsR2Apkt5JtEoaHYSZhWIGsEgB+QQMKUesOpwAAAABJRU5ErkJggg==) repeat;
   padding-top: 10px;
@@ -130,9 +134,17 @@ section > ul {
   visibility: hidden;
 }
 
+dialog::backdrop {
+  position: fixed;
+  top: 0px;
+  right: 0px;
+  bottom: 0px;
+  left: 0px;
+  background: rgba(0, 0, 0, 0.8);
+}
+
 dialog {
   position: fixed;
-  top: 40%;
 }
 
 /* iOS is fun */
