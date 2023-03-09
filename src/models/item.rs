@@ -311,7 +311,9 @@ impl Item {
       let output = format!("#{guts:}");
 
       let url_tag = feed.hashtag.clone().unwrap();
-      let hashtag_url = format!("https://mastodon.social/tags/{url_tag:}");
+      let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
+      let hashtag_url = format!("https://{instance_domain:}/tags/{url_tag:}");
+
       hashtag
         .set_href(iri!(hashtag_url))
         .set_name(output.clone());
@@ -323,6 +325,7 @@ impl Item {
 
     //
     // add any enclosures
+    // @todo think about excluding huge enclosures
     //
     let enclosures = Enclosure::for_item(self, pool).await?;
     for enclosure in enclosures {
