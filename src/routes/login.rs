@@ -36,10 +36,10 @@ pub async fn attempt_login(db: &State<PgPool>, cookies: &CookieJar<'_>, login_to
 
             cookies.add_private(cookie);
 
-            match user.reset_login_token(db).await {
-              Ok(result) => { log::info!("Reset login token {result:}") },
-              Err(why) => { log::info!("reset login error: {why}") }
-            }
+            // match user.reset_login_token(db).await {
+            //   Ok(result) => { log::info!("Reset login token {result:}") },
+            //   Err(why) => { log::info!("reset login error: {why}") }
+            // }
 
             let dest = uri!(crate::routes::index::index_logged_in(Some(1)));
             Ok(Redirect::to(dest))
