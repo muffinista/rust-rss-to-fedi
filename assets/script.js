@@ -11,7 +11,11 @@ window.addEventListener("load", (event) => {
         name, url
       }
 
-      if (!name.match(/^[a-z0-9]/i) ) {
+      messageDest.innerHTML = "";
+
+      const isValid = RegExp("^[a-z0-9_]+([a-z0-9_\.-]+[a-z0-9_]+)?$").test(name);
+      console.log(name, isValid);
+      if (!isValid) {
         messageDest.innerHTML = "Sorry, please limit the username to letters and digits";
         return;
       }
