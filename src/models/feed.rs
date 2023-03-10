@@ -846,7 +846,7 @@ impl Feed {
         let dest_actor = dest_actor.unwrap();
 
         // generate a login message for this user
-        let message = self.generate_login_message(activity, &dest_actor, pool).await?;
+        let message = self.generate_login_message(Some(activity), &dest_actor, pool).await?;
         let msg = serde_json::to_string(&message).unwrap();
         log::info!("{msg}");
     
@@ -871,20 +871,30 @@ impl Feed {
   ///
   /// generate a login message to send to the user
   ///
-  pub async fn generate_login_message(&self, activity: &AcceptedActivity, dest_actor: &Actor, pool: &PgPool) -> Result<ApObject<Create>, AnyError> {
-    let (_, object, _) = activity.clone().into_parts();
+  pub async fn generate_login_message(&self, activity: Option<&AcceptedActivity>, dest_actor: &Actor, pool: &PgPool) -> Result<ApObject<Create>, AnyError> {
 
     let mut reply: SensitiveNote = SensitiveNote::new();
 
     let my_url = self.ap_url();
-    let source_id = object.as_single_id().unwrap().to_string();
 
-    // generate a hash of the incoming actor id. we'll tack
-    // this on the end of the ID for the reply to make it
-    // vaguely unique to the conversation
+    let source_id;
+    let uniq_hash;
     let mut hasher = Md5::new();
-    hasher.update(&source_id);
-    let result = format!("{:X}", hasher.finalize());
+
+    if activity.is_some() {
+      let (_, object, _) = activity.unwrap().clone().into_parts();
+      let source_value = object.as_single_id().unwrap().to_string();
+  
+      // generate a hash of the incoming actor id. we'll tack
+      // this on the end of the ID for the reply to make it
+      // vaguely unique to the conversation
+      hasher.update(&source_value);
+      uniq_hash = format!("{:X}", hasher.finalize());        
+      source_id = Some(source_value);
+    } else {
+      uniq_hash = format!("{:X}", hasher.finalize());  
+      source_id = None;
+    }
 
 
     // lookup the user in the db. if they don't exist, add them
@@ -916,12 +926,16 @@ impl Feed {
     reply
       .set_sensitive(true)
       .set_attributed_to(iri!(my_url))
-      .set_in_reply_to(iri!(source_id))
       .set_content(body)
       .set_url(iri!(my_url))
-      .set_id(iri!(format!("{my_url}/{result}")))
+      .set_id(iri!(format!("{my_url}/{uniq_hash}")))
       .set_to(iri!(dest_actor.url))
       .set_tag(mention.into_any_base()?);
+
+    if source_id.is_some() {
+      reply.set_in_reply_to(iri!(source_id.expect("")));
+    }
+
 
     let mut action: ApObject<Create> = ApObject::new(
       Create::new(
@@ -1560,7 +1574,22 @@ mod test {
     let feed:Feed = real_feed(&pool).await.unwrap();
     let dest_actor:Actor = real_actor(&pool).await.unwrap();
 
-    let message = feed.generate_login_message(&act, &dest_actor, &pool).await.unwrap();
+    let message = feed.generate_login_message(Some(&act), &dest_actor, &pool).await.unwrap();
+
+    let s = serde_json::to_string(&message).unwrap();
+    println!("{}", s);
+
+    assert!(s.contains(r#"sensitive":true"#));
+
+    Ok(())
+  }
+
+  #[sqlx::test]
+  async fn test_generate_login_message_no_activity(pool: PgPool) -> Result<(), String> {
+    let feed:Feed = real_feed(&pool).await.unwrap();
+    let dest_actor:Actor = real_actor(&pool).await.unwrap();
+
+    let message = feed.generate_login_message(None, &dest_actor, &pool).await.unwrap();
 
     let s = serde_json::to_string(&message).unwrap();
     println!("{}", s);
