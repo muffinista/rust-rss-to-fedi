@@ -6,14 +6,14 @@
       <div class="form-row">
         <label for="url">Feed URL:</label>
         <div class="input">
-          <input type="text" name="url" required />
+          <input type="url" name="url" required />
           <div class="help">The URL of the feed you are adding. If you don't know the URL, you can paste the URL of any website, and we'll search for a feed there.</div>
         </div>
       </div>
       <div class="form-row">
         <label for="name">Name:</label>
         <div class="input">
-          <input type="text" name="name" required />
+          <input type="text" name="name" pattern="[a-zA-Z0-9]" required />
           <div class="help">The username you want to use. The feed will be available on the fediverse at @username@{{ instance_domain }}</div>
         </div>
       </div>
