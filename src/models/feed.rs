@@ -809,6 +809,9 @@ impl Feed {
     // note to not end up in an unparsed bit of modelling anyway 
     // @todo figure out the polite way to do this
     let s = serde_json::to_string(&activity.object()?).unwrap();
+    log::info!("MESSAGE: {s:}");
+
+
     let note: ApObject<Note> = serde_json::from_str(&s).unwrap();
     let content = note.content().unwrap();
     let message = content.as_single_xsd_string();

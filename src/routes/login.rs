@@ -33,7 +33,6 @@ pub async fn attempt_login(db: &State<PgPool>, cookies: &CookieJar<'_>, login_to
             let mut cookie = Cookie::new("access_token", token.to_string());
             cookie.set_same_site(SameSite::Lax);
             cookie.make_permanent();
-
             cookies.add_private(cookie);
 
             // match user.reset_login_token(db).await {
