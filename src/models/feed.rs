@@ -830,7 +830,7 @@ impl Feed {
     let matches: Vec<_> = clean_message.match_indices("help").collect();
 
     // check for the word 'help' in the beginning of the message
-    if matches.is_empty() || matches.first().unwrap().0 > 35 {
+    if matches.is_empty() || matches.first().unwrap().0 > 100 {
       log::info!("User didn't ask for help in the beginning of the message");
       return Ok(());      
     }
