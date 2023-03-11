@@ -229,7 +229,7 @@ impl Feed {
   ///
   pub async fn stale(pool: &PgPool, age:i64, limit: i64) -> Result<Vec<Feed>, sqlx::Error> {
     let age = Utc::now() - Duration::seconds(age);
-    sqlx::query_as!(Feed, "SELECT * FROM feeds WHERE admin = false AND refreshed_at < $1 LIMIT $2", age, limit)
+    sqlx::query_as!(Feed, "SELECT * FROM feeds WHERE admin = false AND refreshed_at < $1 ORDER BY refreshed_at LIMIT $2", age, limit)
     .fetch_all(pool)
     .await
   }
@@ -541,7 +541,12 @@ impl Feed {
 
         Ok(())
       },
-      Err(why) => Err(anyhow!(why.to_string()))
+      Err(why) => {
+        // we mark as fresh even though this failed so we don't get stuck on bad feeds
+        // @todo mark as erroring
+        self.mark_fresh(pool).await?;
+        Err(anyhow!(why.to_string()))
+      }
     }
   }
 
