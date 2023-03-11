@@ -7,13 +7,18 @@ window.addEventListener("load", (event) => {
       const messageDest = document.querySelector(".add-feed-results");
       const name = document.querySelector(".add-feed input[name='name']").value;
       const url = document.querySelector(".add-feed input[name='url']").value;
+
+      if ( name === "" || url === "" ) {
+        return;
+      }
+
       const payload = {
         name, url
       }
 
       messageDest.innerHTML = "";
 
-      const isValid = RegExp("^[a-z0-9_]+([a-z0-9_\.-]+[a-z0-9_]+)?$").test(name);
+      const isValid = RegExp("^[a-z0-9_]+([a-z0-9_\.-]+[a-z0-9_]+)?$").test(name.toLowerCase());
       console.log(name, isValid);
       if (!isValid) {
         messageDest.innerHTML = "Sorry, please limit the username to letters and digits";
