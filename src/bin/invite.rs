@@ -68,7 +68,7 @@ async fn main() -> Result<(), AnyError> {
       let message = feed.generate_login_message(None, &dest_actor, &pool).await?;
 
       let msg = serde_json::to_string(&message).unwrap();
-      log::info!("{msg}");
+      println!("{msg}");
     
       let my_url = feed.ap_url();
     
@@ -76,8 +76,8 @@ async fn main() -> Result<(), AnyError> {
       let result = deliver_to_inbox(&Url::parse(&inbox)?, &my_url, &feed.private_key, &message).await;
     
       match result {
-        Ok(result) => log::info!("sent! {result:?}"),
-        Err(why) => log::info!("failure! {why:?}")
+        Ok(result) => println!("sent! {result:?}"),
+        Err(why) => println!("failure! {why:?}")
       }    
     },
     Err(why) => {
