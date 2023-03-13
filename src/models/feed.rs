@@ -523,19 +523,11 @@ impl Feed {
     match items {
       Ok(items) => {
         if !items.is_empty() {
-          let count = self.follower_count(pool).await?;
-          if count > 0 {
-            log::info!("delivering {} items to {} users", items.len(), count);
-            for item in items {
-              item.deliver(self, pool, queue).await?;
-            }  
-          } else {
-            log::info!("skipping delivery of {} items because no followers :(", items.len());
+          log::info!("delivering {} items", items.len());
+          for item in items {
+            item.deliver(self, pool, queue).await?;
           }  
         }
-        //  else {
-        //   println!("Nothing new so nothing to deliver");
-        // }
 
         self.mark_fresh(pool).await?;
 
