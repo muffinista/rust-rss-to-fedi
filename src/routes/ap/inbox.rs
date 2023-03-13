@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use rocket::post;
 use rocket::http::Status;
 use rocket::State;
@@ -8,6 +10,7 @@ use crate::models::Actor;
 
 use crate::models::Feed;
 use crate::models::feed::AcceptedActivity;
+use crate::models::Message;
 
 use rocket::serde::json::Json;
 
@@ -21,18 +24,20 @@ use std::env;
 use base64::{Engine as _, engine::general_purpose};
 
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SignatureValidity {
-  Invalid,
-  ValidNoDigest,
-  Valid,
   Absent,
-  Outdated,
+  Invalid,
+  InvalidActor(String),
+  InvalidSignature(String),
+  ValidNoDigest(String),
+  Valid(String),
+  Outdated(String),
 }
 
 impl SignatureValidity {
   pub fn is_secure(self) -> bool {
-    self == SignatureValidity::Valid
+    matches!(self, SignatureValidity::Valid(_))
   }
 }
 
@@ -96,12 +101,13 @@ impl<'r> FromRequest<'r> for SignatureValidity {
         .collect::<Vec<_>>()
         .join("\n");
 
-    let sender = Actor::find_or_fetch(key_id.unwrap(), pool).await;
+    let key_id = key_id.expect("Missing key_id??");
+    let sender = Actor::find_or_fetch(key_id, pool).await;
     match sender {
       Ok(sender) => {
         if sender.is_none() {
           log::info!("unable to find sender!");
-          return Outcome::Success(SignatureValidity::Invalid);
+          return Outcome::Success(SignatureValidity::InvalidActor(String::from(key_id)));
         }
 
         let sender = sender.expect("Unable to load sender data!");
@@ -112,7 +118,7 @@ impl<'r> FromRequest<'r> for SignatureValidity {
           .unwrap_or(false)
         {
           log::info!("unable to verify signature!");
-          return Outcome::Success(SignatureValidity::Invalid);
+          return Outcome::Success(SignatureValidity::InvalidSignature(String::from(key_id)));
         }
 
         // @todo digest check
@@ -134,20 +140,20 @@ impl<'r> FromRequest<'r> for SignatureValidity {
 
         let date = request.headers().get_one("date");
         if date.is_none() {
-          return Outcome::Success(SignatureValidity::Outdated);
+          return Outcome::Success(SignatureValidity::Outdated(String::from(key_id)));
         }
 
         let date = NaiveDateTime::parse_from_str(date.unwrap(), "%a, %d %h %Y %T GMT");
         if date.is_err() {
-          return Outcome::Success(SignatureValidity::Outdated);
+          return Outcome::Success(SignatureValidity::Outdated(String::from(key_id)));
         }
         let diff = Utc::now().naive_utc() - date.unwrap();
         let future = Duration::hours(12);
         let past = Duration::hours(-12);
         if diff < future && diff > past {
-          return Outcome::Success(SignatureValidity::Valid);
+          return Outcome::Success(SignatureValidity::Valid(String::from(key_id)));
         } else {
-          return Outcome::Success(SignatureValidity::Outdated);
+          return Outcome::Success(SignatureValidity::Outdated(String::from(key_id)));
         }
       },
       Err(why) => {
@@ -170,15 +176,38 @@ impl<'r> FromRequest<'r> for SignatureValidity {
 ///
 #[post("/feed/<username>/inbox", data="<activity>")]
 pub async fn user_inbox(digest: Option<SignatureValidity>, username: &str, activity: Json<AcceptedActivity>, db: &State<PgPool>) -> Result<(), Status> {
+
+  // get the actor from headers and check if the signature is valid
+  let (actor, error) = if env::var("DISABLE_SIGNATURE_CHECKS").is_ok() {
+    (None, None)
+  } else {   
+    match digest.as_ref().unwrap() {
+      SignatureValidity::Absent => (None, Some(String::from("Absent"))),
+      SignatureValidity::Invalid => (None, Some(String::from("Invalid"))),
+      SignatureValidity::InvalidActor(value) => (Some(value), Some(String::from("InvalidActor"))),
+      SignatureValidity::InvalidSignature(value) => (Some(value), Some(String::from("InvalidSignature"))),
+      SignatureValidity::ValidNoDigest(value) => (Some(value), Some(String::from("ValidNoDigest"))),
+      SignatureValidity::Valid(value) => (Some(value), None),
+      SignatureValidity::Outdated(value) => (Some(value), Some(String::from("Outdated")))
+    }
+  };
+
+  let msg = serde_json::to_string(activity.deref()).unwrap();
+
   if env::var("DISABLE_SIGNATURE_CHECKS").is_ok() {
     log::info!("Skipping signature check because DISABLE_SIGNATURE_CHECKS is set");
-  } else if digest.is_none() || !digest.unwrap().is_secure() {
+  } else if digest.is_none() || !digest.clone().unwrap().is_secure() {
     log::info!("digest failure {digest:?}");
+
+    let _log_result = Message::log(&username.to_string(), &msg, actor.cloned(), error, false, db).await;
+
     return Err(Status::NotFound)
   }
+
+
   let feed_lookup = Feed::find_by_name(&username.to_string(), db).await;
 
-  match feed_lookup {
+  let result = match feed_lookup {
     Ok(feed_lookup) => {
       match feed_lookup {
         Some(feed) => {
@@ -193,7 +222,9 @@ pub async fn user_inbox(digest: Option<SignatureValidity>, username: &str, activ
     },
     Err(_why) => return Err(Status::NotFound)
   };
-  
+
+  let _log_result = Message::log(&username.to_string(), &msg, actor.cloned(), error, result == Status::Accepted, db).await;
+
   Ok(())
 }
 

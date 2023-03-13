@@ -47,8 +47,6 @@ async fn main() -> Result<(), AnyError> {
 
   let args = Args::parse();
 
-  println!("{:?}", args);
-
   let dest_url = args.dest_url;
   let item_id = args.item_id;
 

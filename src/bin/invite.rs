@@ -39,8 +39,6 @@ async fn main() -> Result<(), AnyError> {
 
   let args = Args::parse();
 
-  println!("{:?}", args);
-
   let dest_url = args.dest_url;
 
   let feed = Feed::for_admin(&pool).await?;
@@ -73,7 +71,7 @@ async fn main() -> Result<(), AnyError> {
       let my_url = feed.ap_url();
     
       // send the message!
-      let result = deliver_to_inbox(&Url::parse(&inbox)?, &my_url, &feed.private_key, &message).await;
+      let result = deliver_to_inbox(&Url::parse(inbox)?, &my_url, &feed.private_key, &message).await;
     
       match result {
         Ok(result) => println!("sent! {result:?}"),

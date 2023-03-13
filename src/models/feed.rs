@@ -313,7 +313,7 @@ impl Feed {
     let now = Utc::now();
 
     let clean_hashtag = if self.hashtag.is_some() && !self.hashtag.clone().unwrap().is_empty() {
-      Some(self.hashtag.clone().unwrap().replace("#", "").replace(" ", ""))
+      Some(self.hashtag.clone().unwrap().replace(['#', ' '], ""))
     } else {
       None
     };

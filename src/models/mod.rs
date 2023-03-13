@@ -6,6 +6,7 @@ pub mod enclosure;
 pub mod actor;
 pub mod blocked_domain;
 pub mod setting;
+pub mod message;
 
 pub use actor::Actor;
 pub use user::User;
@@ -15,3 +16,4 @@ pub use item::Item;
 pub use enclosure::Enclosure;
 pub use blocked_domain::BlockedDomain;
 pub use setting::Setting;
+pub use message::Message;
