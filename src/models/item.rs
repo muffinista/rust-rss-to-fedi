@@ -240,14 +240,15 @@ impl Item {
     }
 
     // tack on hashtag
-    if hashtag.is_some() && !hashtag.clone().unwrap().is_empty() {
-      let hashtag = hashtag.unwrap();
-      // let formatted_hashtag = format!("#{:}", hashtag);
-      let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
-      let hashtag_url = format!("https://{instance_domain:}/tags/{hashtag:}");
+    if let Some(ht) = hashtag  {
+      if ! ht.is_empty() {
+        // let formatted_hashtag = format!("#{:}", hashtag);
+        let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
+        let hashtag_url = format!("https://{instance_domain:}/tags/{ht:}");
 
-      context.insert("hashtag", &hashtag);
-      context.insert("hashtag_link", &hashtag_url);
+        context.insert("hashtag", &ht);
+        context.insert("hashtag_link", &hashtag_url);
+      }
     };
    
     tera.render("feed-item.html.tera", &context).unwrap()
@@ -317,7 +318,7 @@ impl Item {
 
       hashtag
         .set_href(iri!(hashtag_url))
-        .set_name(output.clone());
+        .set_name(output);
   
       note.add_tag(hashtag.into_any_base()?);  
     }
