@@ -182,7 +182,7 @@ button:active {
   transform: scale(0.99);
 }
 
-.feed-list li {
+.feed-list li, .item-list li {
   margin-bottom: 1.0em;
 }
 

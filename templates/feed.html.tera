@@ -54,13 +54,14 @@
   {% else %}
     <section class="feed">
       <h1>Entries</h1>
-      <ul>
+      <ul class="item-list">
         {% for item in items %}
         <li>
           <a href="{{ item.url | safe }}">{{ item.title }}</a>
+          <br /><span>Posted at: {{ item.created_at | date(format="%Y-%m-%d %H:%M") }}</span>
         </li>
         {% else %}
-        <li>No entries</li>
+          <li>No entries</li>
         {% endfor %}
       </ul>
     </section>
