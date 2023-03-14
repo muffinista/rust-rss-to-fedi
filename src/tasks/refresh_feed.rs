@@ -34,11 +34,11 @@ impl AsyncRunnable for RefreshFeed {
         let result = feed.refresh(&pool, queue).await;
         match result {
           Ok(_result) => { 
-            log::info!("RefreshFeed: Done refreshing feeds");
+            log::info!("RefreshFeed: Done refreshing feed {:}", feed.url);
             Ok(()) 
           },
           Err(why) => {
-            log::info!("RefreshFeed: Something went wrong: {why:}");
+            log::info!("RefreshFeed: Something went wrong: feed: {:} {why:}", feed.url);
             Err(FangError { description: why.to_string() })
           }
         }
