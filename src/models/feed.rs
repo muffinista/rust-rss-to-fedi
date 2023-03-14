@@ -119,18 +119,28 @@ impl PartialEq for Feed {
   }
 }
 
-pub struct FeedError;
+pub struct FeedError {
+  message: String
+}
 
 impl Error for FeedError {}
 impl fmt::Display for FeedError {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "Oh no, something bad went down")
+    write!(f, "Oh no, something bad went down: {:}", self.message)
   }
 }
 
 impl fmt::Debug for FeedError {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "FeedError {{ file: {}, line: {} }}", file!(), line!())
+    write!(f, "FeedError {:} {{ file: {}, line: {} }}", self.message, file!(), line!())
+  }
+}
+
+impl From<sqlx::Error> for FeedError {
+  fn from(error: sqlx::Error) -> Self {
+    FeedError {
+      message: error.to_string(),
+    }
   }
 }
 
@@ -568,13 +578,13 @@ impl Feed {
           Ok(entries) => Ok(entries),
           Err(why) => {
             self.mark_error(&why.to_string(), pool).await.unwrap();
-            Err(FeedError)
+            Err(FeedError { message: why.to_string() })
           }
         }
       },
       Err(why) => {
         self.mark_error(&why.to_string(), pool).await.unwrap();
-        Err(FeedError)
+        Err(FeedError { message: why.to_string() })
       }
     }   
   }
@@ -623,17 +633,16 @@ impl Feed {
         let update = self.save(pool).await;
         match update {
           Ok(_update) => {
-            // println!("updating feed entries");
             let result = self.feed_to_entries(data, pool).await;
             match result {
               Ok(result) => Ok(result),
-              Err(_why) => Err(FeedError)
+              Err(why) => Err(FeedError { message: why.to_string() })
             }    
           }
-          Err(_why) => Err(FeedError)
+          Err(why) => Err(FeedError { message: why.to_string() })
         }
       },
-      Err(_why) => Err(FeedError)
+      Err(why) => Err(FeedError { message: why.to_string() })
     }
   }
 
@@ -789,7 +798,7 @@ impl Feed {
     let mut follow = Follow::new(actor, self.ap_url());
 
     let inbox = format!("{actor}/inbox");
-    let follow_id: &IriString = original_follow.id_unchecked().ok_or(FeedError)?;
+    let follow_id: &IriString = original_follow.id_unchecked().unwrap();
     follow.set_id(follow_id.clone());
 
     // generate accept message for follow activity
