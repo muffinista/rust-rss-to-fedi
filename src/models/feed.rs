@@ -119,7 +119,6 @@ impl PartialEq for Feed {
   }
 }
 
-#[derive(Debug)]
 pub struct FeedError;
 
 impl Error for FeedError {}
@@ -128,6 +127,13 @@ impl fmt::Display for FeedError {
     write!(f, "Oh no, something bad went down")
   }
 }
+
+impl fmt::Debug for FeedError {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f, "FeedError {{ file: {}, line: {} }}", file!(), line!())
+  }
+}
+
 
 
 ///
@@ -481,7 +487,7 @@ impl Feed {
   ///
   /// check parsed feed data for any entries we should convert into new items
   ///
-  pub async fn feed_to_entries(&self, data: feed_rs::model::Feed, pool: &PgPool) -> Result<Vec<Item>, FeedError> {
+  pub async fn feed_to_entries(&self, data: feed_rs::model::Feed, pool: &PgPool) -> Result<Vec<Item>, sqlx::Error> {
     let mut result: Vec<Item> = Vec::new();
     for entry in data.entries.iter() {
       let exists = Item::exists_by_guid(&entry.id, self, pool).await.unwrap();
@@ -491,10 +497,11 @@ impl Feed {
         let item = Item::create_from_entry(entry, self, pool).await;
         match item {
           Ok(item) => result.push(item),
-          Err(_why) => return Err(FeedError)
+          Err(why) => return Err(why)
         };
       }
     }
+
     Ok(result)
   }
 
