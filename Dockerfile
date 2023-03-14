@@ -13,7 +13,7 @@ RUN mkdir -p src/bin && echo "fn main() {}" > src/bin/server.rs
 
 COPY Cargo.toml Cargo.lock .
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    cargo build
+    cargo build -r
 
 COPY Rocket.toml Rocket.toml
 COPY sqlx-data.json sqlx-data.json
@@ -24,6 +24,6 @@ COPY fixtures fixtures/
 COPY templates templates/
 
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    cargo build
+    cargo build -r
 
-CMD ["target/debug/server"]
+CMD ["target/release/server"]
