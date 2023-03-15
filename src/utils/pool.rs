@@ -7,9 +7,11 @@ use sqlx::{
   ConnectOptions,
   postgres::{PgPoolOptions, PgConnectOptions}
 };
+
 use std::time::Duration;
 use log::LevelFilter;
 use tokio::sync::OnceCell;
+
 const POOL_SIZE: u32 = 5;
 
 static DB_POOL: OnceCell<Pool<Postgres>> = OnceCell::const_new();
@@ -41,6 +43,5 @@ async fn init_db_pool() -> Pool<Postgres> {
 }
 
 pub async fn db_pool() -> Pool<Postgres> {
-  DB_POOL.get_or_init(&init_db_pool).await.clone()
+  DB_POOL.get_or_init(init_db_pool).await.clone()
 }
-

@@ -10,7 +10,6 @@ use rocket::serde::{Serialize, json::Json};
 
 use fang::AsyncRunnable;
 use fang::AsyncQueueable;
-use fang::NoTls;
 
 use std::env;
 
@@ -24,6 +23,7 @@ use crate::models::Setting;
 use crate::services::url_to_feed::url_to_feed_url;
 
 use crate::utils::queue::create_queue;
+
 
 use crate::tasks::RefreshFeed;
 
@@ -60,12 +60,12 @@ pub async fn add_feed(user: User, db: &State<PgPool>, form: Form<FeedForm>) -> R
   }
 
   let feed = Feed::create(&user, &form.url, &form.name, db).await;
-  let mut queue = create_queue();
   
   match feed {
     Ok(feed) => {
       let task = RefreshFeed { id: feed.id };
-      queue.connect(NoTls).await.unwrap();
+      let mut queue = create_queue().await;
+
       queue
         .insert_task(&task as &dyn AsyncRunnable)
         .await

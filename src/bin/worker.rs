@@ -1,6 +1,7 @@
 use tokio::time::sleep;
 
 use std::env;
+use std::str::FromStr;
 
 use fang::asynk::async_queue::AsyncQueue;
 use fang::asynk::async_queue::AsyncQueueable;
@@ -12,6 +13,9 @@ use rustypub::tasks::UpdateStaleFeeds;
 
 use std::time::Duration;
 
+use rustypub::utils::queue::create_queue;
+
+
 #[tokio::main]
 async fn main() {
   if env::var("SENTRY_DSN").is_ok() {
@@ -22,28 +26,29 @@ async fn main() {
     }));
   }
 
-  let db_uri = env::var("DATABASE_URL").expect("DATABASE_URL is not set");
-
   env_logger::init();
 
+  let worker_count = match env::var_os("WORKER_COUNT") {
+    Some(val) => {
+      u32::from_str(&val.into_string().expect("Something went wrong setting the worker count")).unwrap()
+    }
+    None => 10_u32
+  };
+
   log::info!("Starting...");
-  let max_pool_size: u32 = 3;
-  let mut queue = AsyncQueue::builder()
-      .uri(db_uri)
-      .max_pool_size(max_pool_size)
-      .build();
+  let mut queue = create_queue().await;
 
   queue.connect(NoTls).await.unwrap();
   log::info!("Queue connected...");
 
-  let mut pool: AsyncWorkerPool<AsyncQueue<NoTls>> = AsyncWorkerPool::builder()
-      .number_of_workers(10_u32)
+  let mut worker_pool: AsyncWorkerPool<AsyncQueue<NoTls>> = AsyncWorkerPool::builder()
+      .number_of_workers(worker_count)
       .queue(queue.clone())
       .build();
 
   log::info!("Pool created ...");
 
-  pool.start().await;
+  worker_pool.start().await;
   log::info!("Workers started ...");
 
   let task = UpdateStaleFeeds {};
