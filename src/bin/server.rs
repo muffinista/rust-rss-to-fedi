@@ -3,7 +3,7 @@
 use std::env;
 
 use rustypub::server::build_server;
-use rustypub::utils::pool::web_db_pool;
+use rustypub::utils::pool::db_pool;
 
 #[rocket::main]
 pub async fn main() -> Result<(), rocket::Error> {
@@ -18,7 +18,7 @@ pub async fn main() -> Result<(), rocket::Error> {
   env_logger::init();
 
   let _domain_name = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
-  let pool = web_db_pool().await;
+  let pool = db_pool().await;
 
   let server = build_server(pool)
     .await

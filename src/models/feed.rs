@@ -132,7 +132,11 @@ impl fmt::Display for FeedError {
 
 impl fmt::Debug for FeedError {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "FeedError {:} {{ file: {}, line: {} }}", self.message, file!(), line!())
+    // @todo does this work?
+    let current_file = file!();
+    let current_line = line!();
+
+    write!(f, "FeedError {:} {{ file: {current_file:}, line: {current_line:} }}", self.message)
   }
 }
 

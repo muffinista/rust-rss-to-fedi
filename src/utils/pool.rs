@@ -9,27 +9,17 @@ use sqlx::{
 };
 use std::time::Duration;
 use log::LevelFilter;
-
-
+use tokio::sync::OnceCell;
 const POOL_SIZE: u32 = 5;
-const WORKER_POOL_SIZE: u32 = 3;
 
+static DB_POOL: OnceCell<Pool<Postgres>> = OnceCell::const_new();
 
-pub fn web_pool_size() -> u32 {
-  match env::var_os("DATABASE_POOL_SIZE") {
+pub fn pool_size() -> u32 {
+  match env::var_os("POOL_SIZE") {
     Some(val) => {
       u32::from_str(&val.into_string().expect("Something went wrong setting the pool size")).unwrap()
     }
     None => POOL_SIZE
-  }
-}
-
-pub fn worker_pool_size() -> u32 {
-  match env::var_os("WORKER_POOL_SIZE") {
-    Some(val) => {
-      u32::from_str(&val.into_string().expect("Something went wrong setting the pool size")).unwrap()
-    }
-    None => WORKER_POOL_SIZE
   }
 }
 
@@ -42,18 +32,15 @@ fn connect_options() -> PgConnectOptions {
     .clone()
 }
 
-pub async fn web_db_pool() -> Pool<Postgres> {
+async fn init_db_pool() -> Pool<Postgres> {
   PgPoolOptions::new()
-    .max_connections(web_pool_size())
+    .max_connections(pool_size())
     .connect_with(connect_options())
     .await
     .expect("Failed to create pool")
 }
 
-pub async fn worker_db_pool() -> Pool<Postgres> {
-  PgPoolOptions::new()
-    .max_connections(worker_pool_size())
-    .connect_with(connect_options())
-    .await
-    .expect("Failed to create pool")
+pub async fn db_pool() -> Pool<Postgres> {
+  DB_POOL.get_or_init(&init_db_pool).await.clone()
 }
+

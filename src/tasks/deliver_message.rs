@@ -10,7 +10,7 @@ use url::Url;
 use crate::services::mailer::*;
 use crate::models::Feed;
 
-use crate::utils::pool::worker_db_pool;
+use crate::utils::pool::db_pool;
 use serde_json::{Value};
 
 #[derive(Serialize, Deserialize)]
@@ -32,7 +32,7 @@ impl DeliverMessage {
 #[typetag::serde]
 impl AsyncRunnable for DeliverMessage {
   async fn run(&self, _queue: &mut dyn AsyncQueueable) -> Result<(), FangError> {
-    let pool = worker_db_pool().await;
+    let pool = db_pool().await;
     let feed = Feed::find(self.feed_id, &pool).await;
     match feed {
       Ok(feed) => {

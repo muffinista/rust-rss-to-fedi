@@ -15,16 +15,12 @@ pub async fn update_stale_feeds(pool: &PgPool, queue: &mut dyn AsyncQueueable) -
   match feeds {
     Ok(feeds) => {
       for feed in feeds {
-        println!("update_stale_feed {:}", feed.url);
-
         let task = RefreshFeed { id: feed.id };
-        let result = queue
+        let _result = queue
           .insert_task(&task as &dyn AsyncRunnable)
           .await
           .unwrap();
   
-        println!("{:?}", result);
-
         // log::info!("update_stale_feed {:}", feed.url);
         // feed.refresh(pool, queue).await?
       };
