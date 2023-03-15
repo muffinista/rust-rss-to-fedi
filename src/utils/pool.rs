@@ -34,7 +34,7 @@ fn connect_options() -> PgConnectOptions {
     .clone()
 }
 
-async fn init_db_pool() -> Pool<Postgres> {
+pub async fn init_db_pool() -> Pool<Postgres> {
   PgPoolOptions::new()
     .max_connections(pool_size())
     .connect_with(connect_options())
