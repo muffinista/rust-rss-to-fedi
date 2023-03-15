@@ -6,8 +6,7 @@ use fang::AsyncRunnable;
 use fang::FangError;
 use fang::Scheduled;
 
-use crate::utils::pool::worker_db_pool;
-// use crate::tasks::RefreshFeed;
+use crate::utils::pool::db_pool;
 
 
 #[derive(Serialize, Deserialize)]
@@ -31,7 +30,7 @@ impl Default for UpdateStaleFeeds {
 #[typetag::serde]
 impl AsyncRunnable for UpdateStaleFeeds {
   async fn run(&self, queue: &mut dyn AsyncQueueable) -> Result<(), FangError> {
-    let pool = worker_db_pool().await;
+    let pool = db_pool().await;
 
     let result = crate::services::loader::update_stale_feeds(&pool, queue).await;
     match result {

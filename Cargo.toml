@@ -15,7 +15,6 @@ activitystreams-ext = "0.1.0-alpha.3"
 native-tls = { version = "~0.2.11", features = ["vendored"] }
 openssl = { version = "~0.10.42", features = ["vendored"] }
 openssl-sys = "~0.9.78"
-# liquid = "0.26.0" 
 dotenvy = "0.15"
 rocket = { version = "0.5.0-rc.2", features = ["json", "secrets"] }
 sqlx = { version = "~0.6.2", features = ["chrono", "macros", "migrate", "offline", "postgres", "sqlite", "runtime-tokio-rustls"] }
@@ -36,7 +35,6 @@ url = "2.3.1"
 sha2 = "0.10.6"
 base64 = "0.21.0"
 chrono = { version = "0.4.23", features = ["serde"] }
-#lettre = "0.10.1"
 scraper = "0.14.0"
 sanitize_html = "0.7.0"
 reqwest-retry = "0.2.1"

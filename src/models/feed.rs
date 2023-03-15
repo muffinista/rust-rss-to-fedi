@@ -132,7 +132,11 @@ impl fmt::Display for FeedError {
 
 impl fmt::Debug for FeedError {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "FeedError {:} {{ file: {}, line: {} }}", self.message, file!(), line!())
+    // @todo does this work?
+    let current_file = file!();
+    let current_line = line!();
+
+    write!(f, "FeedError {:} {{ file: {current_file:}, line: {current_line:} }}", self.message)
   }
 }
 
@@ -396,9 +400,20 @@ impl Feed {
   }
 
 
+  ///
+  /// Is this an admin feed?
+  ///
   pub fn is_admin(&self) -> bool {
     self.admin
   }
+
+  ///
+  /// Return the number of seconds since this feed was refreshed
+  ///
+  pub fn age(&self) -> i64 {
+    (Utc::now() - self.refreshed_at).num_seconds()
+  }
+
 
   pub async fn mark_admin(&self, pool: &PgPool) -> Result<(), sqlx::Error> {
     let result = sqlx::query!("UPDATE feeds SET admin = true WHERE id = $1", self.id)
@@ -553,7 +568,6 @@ impl Feed {
       Err(why) => {
         // we mark as fresh even though this failed so we don't get stuck on bad feeds
         // @todo mark as erroring
-        self.mark_fresh(pool).await?;
         Err(anyhow!(why.to_string()))
       }
     }

@@ -6,7 +6,7 @@ use fang::AsyncRunnable;
 use fang::FangError;
 
 use crate::models::Feed;
-use crate::utils::pool::worker_db_pool;
+use crate::utils::pool::db_pool;
 
 
 #[derive(Serialize, Deserialize)]
@@ -26,7 +26,7 @@ impl RefreshFeed {
 #[typetag::serde]
 impl AsyncRunnable for RefreshFeed {
   async fn run(&self, queue: &mut dyn AsyncQueueable) -> Result<(), FangError> {
-    let pool = worker_db_pool().await;
+    let pool = db_pool().await;
 
     let feed = Feed::find(self.id, &pool).await;
     match feed {

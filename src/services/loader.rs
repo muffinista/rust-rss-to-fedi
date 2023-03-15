@@ -15,18 +15,15 @@ pub async fn update_stale_feeds(pool: &PgPool, queue: &mut dyn AsyncQueueable) -
   match feeds {
     Ok(feeds) => {
       for feed in feeds {
-        println!("update_stale_feed {:}", feed.url);
+        log::info!("update_stale_feed {:} {:} {:}", feed.id, feed.age(), feed.url);
+
+        let _result = feed.mark_fresh(pool).await;
 
         let task = RefreshFeed { id: feed.id };
-        let result = queue
+        let _result = queue
           .insert_task(&task as &dyn AsyncRunnable)
           .await
           .unwrap();
-  
-        println!("{:?}", result);
-
-        // log::info!("update_stale_feed {:}", feed.url);
-        // feed.refresh(pool, queue).await?
       };
 
       Ok(())
@@ -36,56 +33,73 @@ pub async fn update_stale_feeds(pool: &PgPool, queue: &mut dyn AsyncQueueable) -
 }
 
 
-// #[cfg(test)]
-// mod test {
-//   use fang::asynk::async_queue::AsyncQueue;
-//   use fang::AsyncRunnable;
-//   use fang::NoTls;
+#[cfg(test)]
+mod test {
+  use std::env;
+  use url::Url;
+  use fang::NoTls;
 
-//   use sqlx::postgres::PgPool;
-//   use std::env;
+  use sqlx::postgres::PgPool;
+  use sqlx::{
+    Postgres,
+    postgres::{PgPoolOptions, PgConnectOptions}
+  };
+  use sqlx::pool::PoolOptions;
 
-//   use crate::utils::test_helpers::real_feed;
-//   use crate::utils::queue::create_queue;
+  use fang::AsyncQueue;
 
-//   use crate::services::loader::update_stale_feeds;
+  use crate::utils::test_helpers::real_feed;
 
-//   #[sqlx::test]
-//   async fn test_update_stale_feeds(pool: PgPool) {
-//     let db_uri = env::var("DATABASE_URL").expect("DATABASE_URL is not set");
+  use crate::services::loader::update_stale_feeds;
 
-//     let mut queue = create_queue();
+  async fn active_task_count(pool: &PgPool) -> Result<i64, sqlx::Error> {
+    let result = sqlx::query!("SELECT COUNT(1) AS tally FROM fang_tasks")
+    .fetch_one(pool)
+    .await
+    .unwrap()
+    .tally
+    .unwrap();
 
-//     queue.connect(NoTls).await.unwrap();
-//     // queue
-//     //   .insert_task(&task as &dyn AsyncRunnable)
-//     //   .await
-//     //   .unwrap();
+    Ok(result)
+  }
 
+  #[sqlx::test]
+  async fn test_update_stale_feeds(_pool_opts:PoolOptions<Postgres>, opts: PgConnectOptions) -> Result<(), sqlx::Error> {
+    // grab the default db url from the environment, then update with the
+    // test db name so that fang and sqlx have the same db backend
+    let default_db_uri = env::var("DATABASE_URL").expect("DATABASE_URL is not set");
+    let mut parsed_uri = Url::parse(&default_db_uri).unwrap();
+    parsed_uri.set_path(opts.get_database().unwrap());
 
-//     let feed = real_feed(&pool).await.unwrap();
+    let pool = PgPoolOptions::new()
+      .max_connections(5u32)
+      .connect_with(opts)
+      .await
+      .expect("Failed to create pool");
 
-//     let pre_count = sqlx::query!("SELECT COUNT(1) AS tally FROM fang_tasks")
-//       .fetch_one(&pool)
-//       .await
-//       .unwrap()
-//       .tally
-//       .unwrap();
+    let max_pool_size: u32 = 3;
+  
+    let mut queue = AsyncQueue::builder()
+      .uri(parsed_uri)
+      .max_pool_size(max_pool_size)
+      .build();
+  
+    queue.connect(NoTls).await.unwrap();
 
-//     feed.mark_stale(&pool).await;
+    let feed = real_feed(&pool).await.unwrap();
 
-//     let result = update_stale_feeds(&pool, &mut queue).await;
+    let pre_count = active_task_count(&pool).await?;
 
-//     let post_count = sqlx::query!("SELECT COUNT(1) AS tally FROM fang_tasks")
-//       .fetch_one(&pool)
-//       .await
-//       .unwrap()
-//       .tally
-//       .unwrap();
+    let _result = feed.mark_stale(&pool).await;
+    let _result = update_stale_feeds(&pool, &mut queue).await;
 
-//     println!("!!!! {post_count:} - {pre_count:}");
-//     assert!(post_count - pre_count == 1);
+    let post_count = active_task_count(&pool).await?;
 
+    assert!(post_count - pre_count == 1);
 
-//   }
-// }
+    pool.close().await;
+
+    Ok(())
+
+  }
+}

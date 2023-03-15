@@ -476,16 +476,17 @@ impl Item {
 
 #[cfg(test)]
 mod test {
-  use std::env;
   use sqlx::postgres::PgPool;
+  use fang::NoTls;
+  
   use crate::models::Feed;
   use crate::models::Item;
   use crate::models::Actor;
   use crate::utils::test_helpers::{real_item, real_feed, fake_item, real_item_with_enclosure};
 
+  use crate::utils::queue::create_queue;
+
   use mockito::mock;
-  use fang::AsyncQueue;
-  use fang::NoTls;
 
   #[sqlx::test]
   async fn test_find(pool: PgPool) -> sqlx::Result<()> {
@@ -638,12 +639,8 @@ mod test {
   
   #[sqlx::test]
   async fn test_deliver(pool: PgPool) -> Result<(), String> {
-    let db_uri = env::var("DATABASE_URL").expect("DATABASE_URL is not set");
-
     let mut feed: Feed = real_feed(&pool).await.unwrap();
     let item: Item = fake_item();
-
-    // let dest_actor: Actor = real_actor(&pool).await.unwrap();
 
     let actor = format!("{}/users/colin", &mockito::server_url());
     let inbox = format!("{}/inbox", &actor);
@@ -672,15 +669,7 @@ mod test {
 
 
     let _follower = feed.add_follower(&pool, &actor).await;
-
-    let max_pool_size: u32 = 5;
-
-    let mut queue:AsyncQueue<NoTls> = AsyncQueue::builder()
-      // Postgres database url
-      .uri(&db_uri)
-      // Max number of connections that are allowed
-      .max_pool_size(max_pool_size)
-      .build();
+    let mut queue = create_queue().await;
 
     queue.connect(NoTls).await.unwrap();
 
