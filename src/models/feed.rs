@@ -110,7 +110,8 @@ pub struct Feed {
   pub refreshed_at: chrono::DateTime::<Utc>,
   pub last_post_at: Option<chrono::DateTime::<Utc>>,
 
-  pub error: Option<String>
+  pub error: Option<String>,
+  pub error_count: i32
 }
 
 impl PartialEq for Feed {
@@ -354,8 +355,9 @@ impl Feed {
           content_warning = $13,
           status_publicity = $14,
           admin = $15,
-          listed = $16
-      WHERE id = $17",
+          listed = $16,
+          error_count = $17
+      WHERE id = $18",
       self.url,
       self.name,
       self.private_key,
@@ -372,6 +374,7 @@ impl Feed {
       self.status_publicity,
       self.admin,
       self.listed,
+      self.error_count,
       self.id
     ).execute(pool)
       .await?;
@@ -407,6 +410,14 @@ impl Feed {
     self.admin
   }
 
+
+  ///
+  /// Is this feed throwing an error?
+  ///
+  pub fn has_error(&self) -> bool {
+    self.error_count > 0
+  }
+
   ///
   /// Return the number of seconds since this feed was refreshed
   ///
@@ -438,8 +449,19 @@ impl Feed {
     }
   }
 
-  pub async fn mark_error(&self, err:&String, pool: &PgPool) -> Result<(), sqlx::Error> {
-    let result = sqlx::query!("UPDATE feeds SET error = $1 WHERE id = $2", err, self.id)
+  pub async fn mark_error(&self, err: &String, pool: &PgPool) -> Result<(), sqlx::Error> {
+    let result = sqlx::query!("UPDATE feeds SET error = $1, error_count = error_count + 1 WHERE id = $2", Some(err), self.id)
+      .execute(pool)
+      .await;
+
+    match result {
+      Ok(_result) => Ok(()),
+      Err(why) => Err(why)
+    }
+  }
+
+  pub async fn mark_valid(&self, pool: &PgPool) -> Result<(), sqlx::Error> {
+    let result = sqlx::query!("UPDATE feeds SET error = NULL, error_count = 0 WHERE id = $1", self.id)
       .execute(pool)
       .await;
 
@@ -490,21 +512,7 @@ impl Feed {
   ///
   pub async fn load(&self) -> Result<String, reqwest::Error> {
     let res = reqwest::get(&self.url).await?;
-    
-    // Response: HTTP/1.1 200 OK
-    // Headers: {
-    //     "date": "Tue, 29 Nov 2022 00:48:07 GMT",
-    //     "content-type": "application/xml",
-    //     "content-length": "68753",
-    //     "connection": "keep-alive",
-    //     "last-modified": "Tue, 08 Nov 2022 13:54:18 GMT",
-    //     "etag": "\"10c91-5ecf5e04f7680\"",
-    //     "accept-ranges": "bytes",
-    //     "strict-transport-security": "max-age=15724800; includeSubDomains",
-    // }
-    // eprintln!("Response: {:?} {}", res.version(), res.status());
-    // eprintln!("Headers: {:#?}\n", res.headers());
-      
+
     res.text().await
   }
 
@@ -1405,6 +1413,53 @@ mod test {
     Ok(())
   }
  
+  #[sqlx::test]
+  async fn test_is_admin(pool: PgPool) -> sqlx::Result<()> {
+    let mut feed:Feed = real_feed(&pool).await?;
+
+    assert_eq!(feed.is_admin(), false);
+
+    feed.admin = true    ;
+    assert_eq!(feed.is_admin(), true);
+
+    Ok(())
+  }
+  
+  #[sqlx::test]
+  async fn test_errors(pool: PgPool) -> sqlx::Result<()> {
+    let mut feed:Feed = real_feed(&pool).await?;
+
+    assert_eq!(feed.has_error(), false);
+
+    let err = "Something went wrong".to_string();
+    feed.mark_error(&err, &pool).await?;
+
+    let feed = Feed::find(feed.id, &pool).await?;
+    assert_eq!(feed.has_error(), true);
+
+    Ok(())
+  }
+ 
+  #[sqlx::test]
+  async fn test_mark_valid(pool: PgPool) -> sqlx::Result<()> {
+    let feed:Feed = real_feed(&pool).await?;
+
+    let err = "Something went wrong".to_string();
+    feed.mark_error(&err, &pool).await?;
+
+    let feed = Feed::find(feed.id, &pool).await?;
+    assert_eq!(feed.has_error(), true);
+
+    feed.mark_valid(&pool).await?;
+
+    let feed = Feed::find(feed.id, &pool).await?;
+    assert_eq!(feed.has_error(), false);
+
+    assert_eq!(feed.error, None);
+    assert_eq!(feed.error_count, 0);
+
+    Ok(())
+  }
 
   #[sqlx::test]
   async fn test_feed_to_entries(pool: PgPool) -> sqlx::Result<()> {

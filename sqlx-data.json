@@ -107,6 +107,11 @@
           "name": "last_post_at",
           "ordinal": 20,
           "type_info": "Timestamptz"
+        },
+        {
+          "name": "error_count",
+          "ordinal": 21,
+          "type_info": "Int4"
         }
       ],
       "nullable": [
@@ -130,7 +135,8 @@
         true,
         true,
         true,
-        true
+        true,
+        false
       ],
       "parameters": {
         "Left": [
@@ -139,6 +145,35 @@
       }
     },
     "query": "SELECT feeds.* FROM feeds INNER JOIN items ON items.feed_id = feeds.id WHERE items.id = $1"
+  },
+  "040e413f315a2aa819703e517fec33670317f1ac06adb684c9017aa8bb34e457": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Timestamptz",
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Bool",
+          "Bool",
+          "Int4",
+          "Int4"
+        ]
+      }
+    },
+    "query": "UPDATE feeds\n      SET url = $1,\n          name = $2,\n          private_key = $3,\n          public_key = $4,\n          image_url = $5,\n          icon_url = $6,\n          title = $7,\n          description = $8,\n          site_url = $9,\n          error = $10,\n          updated_at = $11,\n          hashtag = $12,\n          content_warning = $13,\n          status_publicity = $14,\n          admin = $15,\n          listed = $16,\n          error_count = $17\n      WHERE id = $18"
   },
   "118a91258eacfa452c873f2f089028afab2ef46afa0556de0a47cf2298191be6": {
     "describe": {
@@ -283,6 +318,18 @@
       }
     },
     "query": "SELECT * FROM users WHERE actor_url = $1"
+  },
+  "1e7ca993752c8d64d2e5eaec4ebb1d1006e4df2980a711a7a7a00dae27741bb0": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      }
+    },
+    "query": "UPDATE feeds SET error = NULL, error_count = 0 WHERE id = $1"
   },
   "1e9045f52c002a19b815351fee1c7ee7520478ff4f5886b4523fb0dc4df0e204": {
     "describe": {
@@ -466,6 +513,11 @@
           "name": "last_post_at",
           "ordinal": 20,
           "type_info": "Timestamptz"
+        },
+        {
+          "name": "error_count",
+          "ordinal": 21,
+          "type_info": "Int4"
         }
       ],
       "nullable": [
@@ -489,7 +541,8 @@
         true,
         true,
         true,
-        true
+        true,
+        false
       ],
       "parameters": {
         "Left": [
@@ -689,34 +742,6 @@
     },
     "query": "INSERT INTO blocked_domains (name, created_at, updated_at) VALUES ($1, $2, $3)"
   },
-  "5bef1c2507543b3660335d4bd0dca90560320cfbe96b3f76fcb368795866594d": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
-          "Varchar",
-          "Varchar",
-          "Varchar",
-          "Varchar",
-          "Varchar",
-          "Varchar",
-          "Varchar",
-          "Varchar",
-          "Varchar",
-          "Varchar",
-          "Timestamptz",
-          "Varchar",
-          "Varchar",
-          "Varchar",
-          "Bool",
-          "Bool",
-          "Int4"
-        ]
-      }
-    },
-    "query": "UPDATE feeds\n      SET url = $1,\n          name = $2,\n          private_key = $3,\n          public_key = $4,\n          image_url = $5,\n          icon_url = $6,\n          title = $7,\n          description = $8,\n          site_url = $9,\n          error = $10,\n          updated_at = $11,\n          hashtag = $12,\n          content_warning = $13,\n          status_publicity = $14,\n          admin = $15,\n          listed = $16\n      WHERE id = $17"
-  },
   "5c2c82d201ac2a45e1af278aa0b8d8ed5d60f4fd674ab47fce2e899382ae863f": {
     "describe": {
       "columns": [
@@ -824,6 +849,11 @@
           "name": "last_post_at",
           "ordinal": 20,
           "type_info": "Timestamptz"
+        },
+        {
+          "name": "error_count",
+          "ordinal": 21,
+          "type_info": "Int4"
         }
       ],
       "nullable": [
@@ -847,7 +877,8 @@
         true,
         true,
         true,
-        true
+        true,
+        false
       ],
       "parameters": {
         "Left": [
@@ -1285,6 +1316,11 @@
           "name": "last_post_at",
           "ordinal": 20,
           "type_info": "Timestamptz"
+        },
+        {
+          "name": "error_count",
+          "ordinal": 21,
+          "type_info": "Int4"
         }
       ],
       "nullable": [
@@ -1308,7 +1344,8 @@
         true,
         true,
         true,
-        true
+        true,
+        false
       ],
       "parameters": {
         "Left": [
@@ -1406,6 +1443,19 @@
       }
     },
     "query": "SELECT COUNT(1) AS tally FROM items WHERE feed_id = $1 AND guid = $2"
+  },
+  "99c8bc4ec37af5d70631747bafcacd2b5358d479323762d091c1c6251bdb7e0c": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Int4"
+        ]
+      }
+    },
+    "query": "UPDATE feeds SET error = $1, error_count = error_count + 1 WHERE id = $2"
   },
   "9aa6b7ce57128c554f39b68ef80c04b39b40a432baf7e3b913b8ee04f4c2a715": {
     "describe": {
@@ -1661,6 +1711,11 @@
           "name": "last_post_at",
           "ordinal": 20,
           "type_info": "Timestamptz"
+        },
+        {
+          "name": "error_count",
+          "ordinal": 21,
+          "type_info": "Int4"
         }
       ],
       "nullable": [
@@ -1684,7 +1739,8 @@
         true,
         true,
         true,
-        true
+        true,
+        false
       ],
       "parameters": {
         "Left": [
@@ -1907,6 +1963,11 @@
           "name": "last_post_at",
           "ordinal": 20,
           "type_info": "Timestamptz"
+        },
+        {
+          "name": "error_count",
+          "ordinal": 21,
+          "type_info": "Int4"
         }
       ],
       "nullable": [
@@ -1930,7 +1991,8 @@
         true,
         true,
         true,
-        true
+        true,
+        false
       ],
       "parameters": {
         "Left": [
@@ -2151,6 +2213,11 @@
           "name": "last_post_at",
           "ordinal": 20,
           "type_info": "Timestamptz"
+        },
+        {
+          "name": "error_count",
+          "ordinal": 21,
+          "type_info": "Int4"
         }
       ],
       "nullable": [
@@ -2174,7 +2241,8 @@
         true,
         true,
         true,
-        true
+        true,
+        false
       ],
       "parameters": {
         "Left": [
@@ -2533,6 +2601,11 @@
           "name": "last_post_at",
           "ordinal": 20,
           "type_info": "Timestamptz"
+        },
+        {
+          "name": "error_count",
+          "ordinal": 21,
+          "type_info": "Int4"
         }
       ],
       "nullable": [
@@ -2556,7 +2629,8 @@
         true,
         true,
         true,
-        true
+        true,
+        false
       ],
       "parameters": {
         "Left": []
@@ -2677,19 +2751,6 @@
       }
     },
     "query": "INSERT INTO followers \n        (feed_id, actor, created_at, updated_at) \n        VALUES($1, $2, $3, $4)\n        ON CONFLICT (feed_id, actor) DO UPDATE\n        SET updated_at = EXCLUDED.updated_at"
-  },
-  "e5e5360ba6289f67f7838d67dec2a63af70ba7b50e9241cc9c120854eff537c4": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
-          "Varchar",
-          "Int4"
-        ]
-      }
-    },
-    "query": "UPDATE feeds SET error = $1 WHERE id = $2"
   },
   "e6cc6b46f09f9e29fe3b9503a00b817e805161292a054ea970c2383fbf354af2": {
     "describe": {
@@ -3038,6 +3099,11 @@
           "name": "last_post_at",
           "ordinal": 20,
           "type_info": "Timestamptz"
+        },
+        {
+          "name": "error_count",
+          "ordinal": 21,
+          "type_info": "Int4"
         }
       ],
       "nullable": [
@@ -3061,7 +3127,8 @@
         true,
         true,
         true,
-        true
+        true,
+        false
       ],
       "parameters": {
         "Left": [
