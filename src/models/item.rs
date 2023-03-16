@@ -486,7 +486,7 @@ mod test {
 
   use crate::utils::queue::create_queue;
 
-  use mockito::mock;
+  use mockito;
 
   #[sqlx::test]
   async fn test_find(pool: PgPool) -> sqlx::Result<()> {
@@ -639,13 +639,14 @@ mod test {
   
   #[sqlx::test]
   async fn test_deliver(pool: PgPool) -> Result<(), String> {
+    let mut server = mockito::Server::new_async().await;
     let mut feed: Feed = real_feed(&pool).await.unwrap();
     let item: Item = fake_item();
 
-    let actor = format!("{}/users/colin", &mockito::server_url());
+    let actor = format!("{}/users/colin", &server.url());
     let inbox = format!("{}/inbox", &actor);
 
-    let profile = format!("{{\"inbox\": \"{}/users/colin/inbox\"}}", &mockito::server_url());
+    let profile = format!("{{\"inbox\": \"{}/users/colin/inbox\"}}", &server.url());
 
     Actor::create(
       &actor.to_string(),
@@ -656,15 +657,17 @@ mod test {
       &pool).await.unwrap();
   
 
-    let _m = mock("GET", "/users/colin")
+    let _m = server.mock("GET", "/users/colin")
       .with_status(200)
       .with_header("Accept", "application/ld+json")
       .with_body(profile)
-      .create();
+      .create_async()
+      .await;
 
-    let _m2 = mock("POST", "/users/colin/inbox")
+    let _m2 = server.mock("POST", "/users/colin/inbox")
       .with_status(202)
-      .create();
+      .create_async()
+      .await;
 
 
 

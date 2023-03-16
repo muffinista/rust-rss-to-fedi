@@ -1287,7 +1287,7 @@ mod test {
   use crate::routes::ap::outbox::*;
 
 
-  use mockito::mock;
+  use mockito;
 
   #[sqlx::test]
   async fn test_create(pool: PgPool) -> sqlx::Result<()> {
@@ -1427,7 +1427,7 @@ mod test {
   
   #[sqlx::test]
   async fn test_errors(pool: PgPool) -> sqlx::Result<()> {
-    let mut feed:Feed = real_feed(&pool).await?;
+    let feed:Feed = real_feed(&pool).await?;
 
     assert_eq!(feed.has_error(), false);
 
@@ -1569,20 +1569,23 @@ mod test {
 
   #[sqlx::test]
   async fn test_follow(pool: PgPool) -> Result<(), String> {
-    let actor = format!("{}/users/colin", &mockito::server_url());
+    let mut server = mockito::Server::new_async().await;
+    let actor = format!("{}/users/colin", &server.url());
 
-    let json = format!(r#"{{"id": "{}/1/2/3", "actor":"{}","object":{{ "id": "{}" }} ,"type":"Follow"}}"#, &mockito::server_url(), actor, actor).to_string();
+    let json = format!(r#"{{"id": "{}/1/2/3", "actor":"{}","object":{{ "id": "{}" }} ,"type":"Follow"}}"#, &server.url(), actor, actor).to_string();
     let act:AcceptedActivity = serde_json::from_str(&json).unwrap();
 
 
-    let _m = mock("GET", "/users/colin")
+    let _m = server.mock("GET", "/users/colin")
       .with_status(200)
       .with_header("Accept", "application/ld+json")
-      .create();
+      .create_async()
+      .await;
 
-    let _m2 = mock("POST", "/users/colin/inbox")
+    let _m2 = server.mock("POST", "/users/colin/inbox")
       .with_status(202)
-      .create();
+      .create_async()
+      .await;
 
 
     let feed:Feed = real_feed(&pool).await.unwrap();
@@ -1648,9 +1651,11 @@ mod test {
 
   #[sqlx::test]
   async fn test_generate_login_message(pool: PgPool) -> Result<(), String> {
-    let actor = format!("{}/users/colin", &mockito::server_url());
+    let server = mockito::Server::new_async().await;
 
-    let json = format!(r#"{{"id": "{}/1/2/3", "actor":"{}","object":{{ "id": "{}" }} ,"type":"Follow"}}"#, &mockito::server_url(), actor, actor).to_string();
+    let actor = format!("{}/users/colin", &server.url());
+
+    let json = format!(r#"{{"id": "{}/1/2/3", "actor":"{}","object":{{ "id": "{}" }} ,"type":"Follow"}}"#, &server.url(), actor, actor).to_string();
     let act:AcceptedActivity = serde_json::from_str(&json).unwrap();
 
     let feed:Feed = real_feed(&pool).await.unwrap();

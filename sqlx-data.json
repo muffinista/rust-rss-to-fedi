@@ -175,6 +175,27 @@
     },
     "query": "UPDATE feeds\n      SET url = $1,\n          name = $2,\n          private_key = $3,\n          public_key = $4,\n          image_url = $5,\n          icon_url = $6,\n          title = $7,\n          description = $8,\n          site_url = $9,\n          error = $10,\n          updated_at = $11,\n          hashtag = $12,\n          content_warning = $13,\n          status_publicity = $14,\n          admin = $15,\n          listed = $16,\n          error_count = $17\n      WHERE id = $18"
   },
+  "0f4dc23f3149fdb5cd3085904e8bbb32071c1179f4c3c94f012aec5722d1bce1": {
+    "describe": {
+      "columns": [
+        {
+          "name": "tally",
+          "ordinal": 0,
+          "type_info": "Int8"
+        }
+      ],
+      "nullable": [
+        null
+      ],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Text"
+        ]
+      }
+    },
+    "query": "SELECT count(1) AS tally FROM actors WHERE url = $1 OR inbox_url = $2"
+  },
   "118a91258eacfa452c873f2f089028afab2ef46afa0556de0a47cf2298191be6": {
     "describe": {
       "columns": [],
@@ -682,26 +703,6 @@
       }
     },
     "query": "DELETE FROM actors WHERE url = $1"
-  },
-  "50ab7d4310aa54254ab751d1bb406cc7651cfc2167013c9e822db0deb259fe70": {
-    "describe": {
-      "columns": [
-        {
-          "name": "tally",
-          "ordinal": 0,
-          "type_info": "Int8"
-        }
-      ],
-      "nullable": [
-        null
-      ],
-      "parameters": {
-        "Left": [
-          "Text"
-        ]
-      }
-    },
-    "query": "SELECT count(1) AS tally FROM actors WHERE url = $1"
   },
   "51eb813de2b266dc47df6601ab8ac5d11603360037c4d8361a65dbf5a7b74c75": {
     "describe": {
