@@ -1,11 +1,5 @@
 name: Rust
-
-on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
-
+on: [push]
 env:
   CARGO_TERM_COLOR: always
   POSTGRES_HOST: postgres
@@ -16,7 +10,6 @@ env:
   DATABASE_URL: "postgres://postgres:postgres@postgres/postgres"
 jobs:
   build:
-    if: ${{ false }} # disable for now
     runs-on: ubuntu-latest
     container: rustlang/rust:nightly
     services:
