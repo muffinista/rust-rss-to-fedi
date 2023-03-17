@@ -119,7 +119,7 @@ mod test {
 
     assert_eq!(response.status(), Status::Ok);
 
-    let body = response.into_string().await.unwrap();
+    // let body = response.into_string().await.unwrap();
 
     Ok(())
   }

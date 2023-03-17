@@ -1192,7 +1192,12 @@ impl Feed {
   /// generate AP data to represent outbox information
   ///
   pub async fn outbox(&self, pool: &PgPool)  -> Result<ApObject<OrderedCollection>, AnyError> {
-    let count = self.entries_count(pool).await?;
+    let count = if self.show_statuses_in_outbox() {
+      self.entries_count(pool).await?
+    } else {
+      0
+    };
+
     let total_pages = (count / PER_PAGE) + 1;
 
     let mut collection: ApObject<OrderedCollection> = ApObject::new(OrderedCollection::new());
@@ -1216,11 +1221,20 @@ impl Feed {
     Ok(collection)
   }
 
+  pub fn show_statuses_in_outbox(&self) -> bool {
+    self.status_publicity.is_some() && self.status_publicity.as_ref().unwrap() != "direct"
+  }
+
   ///
   /// generate actual AP page of follows 
   ///
   pub async fn outbox_paged(&self, page: i32, pool: &PgPool)  -> Result<ApObject<OrderedCollectionPage>, AnyError>{
-    let count = self.entries_count(pool).await?;
+    let count = if self.show_statuses_in_outbox() {
+      self.entries_count(pool).await?
+    } else {
+      0
+    };
+
     let total_pages = (count / PER_PAGE) + 1;
     let mut collection: ApObject<OrderedCollectionPage> = ApObject::new(OrderedCollectionPage::new());
 
@@ -1244,23 +1258,27 @@ impl Feed {
     if page == 0 || page > total_pages {
       return Ok(collection)
     }
-    
-    let offset = (page - 1) * PER_PAGE;
-    let result = sqlx::query_as!(Item, "SELECT * FROM items WHERE feed_id = $1 LIMIT $2 OFFSET $3",
-      self.id as i32, PER_PAGE as i32, offset as i32)
-      .fetch_all(pool)
-      .await;
 
-    match result {
-      Ok(result) => {
-        for item in result {
-          let output = item.to_activity_pub(self, pool).await.unwrap();
-          collection.add_item(output.into_any_base()?);    
-        }
+    if self.show_statuses_in_outbox() {
+      let offset = (page - 1) * PER_PAGE;
+      let result = sqlx::query_as!(Item, "SELECT * FROM items WHERE feed_id = $1 LIMIT $2 OFFSET $3",
+        self.id as i32, PER_PAGE as i32, offset as i32)
+        .fetch_all(pool)
+        .await;
 
-        Ok(collection)
-      },
-      Err(why) => Err(why.into())
+      match result {
+        Ok(result) => {
+          for item in result {
+            let output = item.to_activity_pub(self, pool).await.unwrap();
+            collection.add_item(output.into_any_base()?);    
+          }
+
+          Ok(collection)
+        },
+        Err(why) => Err(why.into())
+      }
+    } else {
+      Ok(collection)
     }
   }
 }
@@ -1793,6 +1811,29 @@ mod test {
   async fn test_outbox(pool: PgPool) -> Result<(), AnyError> {
     let feed:Feed = real_feed(&pool).await?;
 
+    for _i in 0..4 {
+      real_item(&feed, &pool).await?;
+    }
+    
+    let result = feed.outbox(&pool).await;
+    match result {
+      Ok(result) => {
+        let s = serde_json::to_string(&result).unwrap();
+
+        assert!(s.contains("A list of outbox items"));
+        assert!(s.contains(r#""totalItems":4"#));
+        Ok(())
+      },
+
+      Err(why) => Err(why)
+    }
+  }
+
+  #[sqlx::test]
+  async fn test_outbox_direct_status(pool: PgPool) -> Result<(), AnyError> {
+    let mut feed:Feed = real_feed(&pool).await?;
+    feed.status_publicity = Some("direct".to_string());
+
     for _i in 1..4 {
       real_item(&feed, &pool).await?;
     }
@@ -1801,13 +1842,16 @@ mod test {
     match result {
       Ok(result) => {
         let s = serde_json::to_string(&result).unwrap();
-        // println!("{:?}", s);
 
         assert!(s.contains("A list of outbox items"));
+        assert!(s.contains(r#""totalItems":0"#));
         Ok(())
       },
 
-      Err(why) => Err(why)
+      Err(why) => {
+        assert!(false);
+        Err(why)
+      }
     }
   }
 
@@ -1823,7 +1867,6 @@ mod test {
     match result {
       Ok(result) => {
         let s = serde_json::to_string(&result).unwrap();
-        println!("{:}", s);
 
         assert!(s.contains("OrderedCollectionPage"));
         assert!(s.contains("/items/15"));
@@ -1833,6 +1876,36 @@ mod test {
         assert!(s.contains(&format!(r#"prev":"{}"#, path_to_url(&uri!(render_feed_outbox(feed.name.clone(), Some(1)))))));      
         assert!(s.contains(&format!(r#"next":"{}"#, path_to_url(&uri!(render_feed_outbox(feed.name.clone(), Some(3)))))));
         assert!(s.contains(&format!(r#"last":"{}"#, path_to_url(&uri!(render_feed_outbox(feed.name.clone(), Some(4)))))));
+        assert!(s.contains(&format!(r#"current":"{}"#, path_to_url(&uri!(render_feed_outbox(feed.name.clone(), Some(2)))))));
+
+        Ok(())
+      },
+      Err(why) => Err(why)
+    }
+  }
+  
+  
+  #[sqlx::test]
+  async fn test_outbox_paged_direct_status(pool: PgPool) -> Result<(), AnyError> {
+    let mut feed:Feed = real_feed(&pool).await?;
+    feed.status_publicity = Some("direct".to_string());
+
+    for _i in 1..35 {
+      real_item(&feed, &pool).await?;
+    }
+
+    let result = feed.outbox_paged(2, &pool).await;
+    match result {
+      Ok(result) => {
+        let s = serde_json::to_string(&result).unwrap();
+
+        assert!(s.contains("OrderedCollectionPage"));
+        assert!(!s.contains("/items/15"));
+        assert!(!s.contains("/items/16"));
+        assert!(!s.contains("/items/17"));
+        assert!(s.contains(&format!(r#"first":"{}"#, path_to_url(&uri!(render_feed_outbox(feed.name.clone(), Some(1)))))));
+        assert!(s.contains(&format!(r#"prev":"{}"#, path_to_url(&uri!(render_feed_outbox(feed.name.clone(), Some(1)))))));      
+        assert!(s.contains(&format!(r#"last":"{}"#, path_to_url(&uri!(render_feed_outbox(feed.name.clone(), Some(1)))))));
         assert!(s.contains(&format!(r#"current":"{}"#, path_to_url(&uri!(render_feed_outbox(feed.name.clone(), Some(2)))))));
 
         Ok(())

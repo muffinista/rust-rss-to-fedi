@@ -159,6 +159,8 @@ pub async fn real_item(feed: &Feed, pool: &PgPool) -> sqlx::Result<Item> {
     .await?
     .id;
 
+  println!("!!!!!!!!!!!!! {:}", id);
+
   Item::find(item_id, &pool).await
 }
 
