@@ -2,20 +2,18 @@ use std::env;
 use rocket::response::content;
 use rocket::get;
 
-static HOST_META: &str = concat!(
-  r#"<?xml version="1.0" encoding="UTF-8"?>
-<XRD xmlns="http://docs.oasis-open.org/ns/xri/xrd-1.0">
-  <Link rel="lrdd" template="https://"#, env!("DOMAIN_NAME"), r#"/.well-known/webfinger?resource={{uri}}"/>
-</XRD>"#
-);
-
-
 #[get("/.well-known/host-meta")]
-pub async fn host_meta() -> content::RawXml<&'static str> {
-  content::RawXml(HOST_META)
+pub async fn host_meta() -> content::RawXml<String> {
+  let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
+
+  let output: String = format!(
+    r#"<?xml version="1.0" encoding="UTF-8"?>
+  <XRD xmlns="http://docs.oasis-open.org/ns/xri/xrd-1.0">
+    <Link rel="lrdd" template="https://{instance_domain:}/.well-known/webfinger?resource={{uri}}"/>
+  </XRD>"#);
+
+  content::RawXml(output)
 }
-
-
 
 #[cfg(test)]
 mod test {
@@ -25,7 +23,7 @@ mod test {
   use rocket::{Rocket, Build};
   use sqlx::postgres::PgPool;
   
-  use crate::utils::test_helpers::{build_test_server, real_user};
+  use crate::utils::test_helpers::{build_test_server};
 
 
   #[sqlx::test]
