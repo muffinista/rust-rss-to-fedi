@@ -195,7 +195,14 @@ pub async fn show_feed(user: Option<User>, username: &str, flash: Option<FlashMe
           let logged_in = user.is_some();
           let owned_by = logged_in && user.as_ref().unwrap().id == feed.user_id;
           let follow_url = feed.permalink_url();
-          let items = Item::for_feed(&feed, 10, db).await;
+
+          let items = if !owned_by && !feed.show_statuses_in_outbox() {
+            Ok(Vec::<Item>::new())
+          } else {
+            Item::for_feed(&feed, 10, db).await
+          };
+          
+
           let username = if user.is_some() {
             user.as_ref().unwrap().full_username()
           } else {
@@ -274,14 +281,48 @@ mod test {
 
   use chrono::Utc;
 
-  use crate::utils::test_helpers::{build_test_server, real_user, real_feed};
+  use crate::utils::test_helpers::{build_test_server, real_user, real_feed, real_item};
   use crate::utils::path_to_url;
+
+  use crate::models::Feed;
 
   use sqlx::postgres::PgPool;
   
   #[sqlx::test]
   async fn test_show_feed(pool: PgPool) -> sqlx::Result<()> {
     let feed = real_feed(&pool).await.unwrap();
+
+    for _i in 1..4 {
+      real_item(&feed, &pool).await?;
+    }
+
+
+    let server: Rocket<Build> = build_test_server(pool).await;
+    let client = Client::tracked(server).await.unwrap();
+
+    let req = client.get(uri!(super::show_feed(&feed.name, None::<i32>))).header(Header::new("Accept", "text/html"));
+    let response = req.dispatch().await;
+
+    assert_eq!(response.status(), Status::Ok);
+    
+    let body = response.into_string().await.unwrap();
+    println!("{:}", body);
+    assert!(body.contains(&format!("Feed for {}", feed.name)));
+    assert!(body.contains(&"Posted at"));
+
+    Ok(())
+  }
+  
+  #[sqlx::test]
+  async fn test_show_feed_direct_publicity(pool: PgPool) -> sqlx::Result<()> {
+    let mut feed:Feed = real_feed(&pool).await?;
+    feed.status_publicity = Some("direct".to_string());
+    feed.save(&pool).await?;
+
+    for _i in 1..4 {
+      real_item(&feed, &pool).await?;
+    }
+
 
     let server: Rocket<Build> = build_test_server(pool).await;
     let client = Client::tracked(server).await.unwrap();
@@ -293,6 +334,7 @@ mod test {
     
     let body = response.into_string().await.unwrap();
     assert!(body.contains(&format!("Feed for {}", feed.name)));
+    assert!(body.contains(&"No entries"));
 
     Ok(())
   }

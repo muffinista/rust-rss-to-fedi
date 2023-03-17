@@ -57,23 +57,29 @@ mod test {
   use crate::models::Follower;
   use crate::utils::test_helpers::{fake_feed, fake_follower};
 
-  use mockito::mock;
+  use mockito;
 
   #[sqlx::test]
   async fn test_find_inbox(pool: PgPool) -> Result<(), String> {
+    let mut server = mockito::Server::new_async().await;
     let feed: Feed = fake_feed();
-    let follower: Follower = fake_follower(&feed);
+    let follower: Follower = fake_follower(&feed, &server);
 
     let path = "fixtures/muffinista.json";
-    let data = fs::read_to_string(path).unwrap();
+    let data = fs::read_to_string(path).unwrap().replace("SERVER_URL", &server.url());
     
-    let _m = mock("GET", "/users/muffinista")
+
+    let m = server.mock("GET", "/users/muffinista")
       .with_status(200)
-      .with_header("Accept", "application/ld+json")
+      .with_header("Accept", "application/activity+json")
       .with_body(data)
-      .create();
+      .create_async()
+      .await;
 
     let result = follower.find_inbox(&pool).await.unwrap();
+
+    m.assert_async().await;
+
     assert!(result.expect("Failed to find inbox") == "https://botsin.space/users/muffinista/inbox");
     Ok(())
   }

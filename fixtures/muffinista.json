@@ -1,1 +1,97 @@
-{"@context":["https://www.w3.org/ns/activitystreams","https://w3id.org/security/v1",{"manuallyApprovesFollowers":"as:manuallyApprovesFollowers","toot":"http://joinmastodon.org/ns#","featured":{"@id":"toot:featured","@type":"@id"},"featuredTags":{"@id":"toot:featuredTags","@type":"@id"},"alsoKnownAs":{"@id":"as:alsoKnownAs","@type":"@id"},"movedTo":{"@id":"as:movedTo","@type":"@id"},"schema":"http://schema.org#","PropertyValue":"schema:PropertyValue","value":"schema:value","discoverable":"toot:discoverable","Device":"toot:Device","Ed25519Signature":"toot:Ed25519Signature","Ed25519Key":"toot:Ed25519Key","Curve25519Key":"toot:Curve25519Key","EncryptedMessage":"toot:EncryptedMessage","publicKeyBase64":"toot:publicKeyBase64","deviceId":"toot:deviceId","claim":{"@type":"@id","@id":"toot:claim"},"fingerprintKey":{"@type":"@id","@id":"toot:fingerprintKey"},"identityKey":{"@type":"@id","@id":"toot:identityKey"},"devices":{"@type":"@id","@id":"toot:devices"},"messageFranking":"toot:messageFranking","messageType":"toot:messageType","cipherText":"toot:cipherText","suspended":"toot:suspended","focalPoint":{"@container":"@list","@id":"toot:focalPoint"}}],"id":"http://127.0.0.1:1234/users/muffinista","type":"Person","following":"https://botsin.space/users/muffinista/following","followers":"https://botsin.space/users/muffinista/followers","inbox":"https://botsin.space/users/muffinista/inbox","outbox":"https://botsin.space/users/muffinista/outbox","featured":"https://botsin.space/users/muffinista/collections/featured","featuredTags":"https://botsin.space/users/muffinista/collections/tags","preferredUsername":"muffinista","name":"colin mitchell","summary":"\u003cp\u003ehello! i run botsin.space but my personal account is muffinista@toot.site so if you need me you can check there\u003c/p\u003e","url":"https://botsin.space/@muffinista","manuallyApprovesFollowers":false,"discoverable":false,"published":"2017-04-03T00:00:00Z","devices":"https://botsin.space/users/muffinista/collections/devices","publicKey":{"id":"https://botsin.space/users/muffinista#main-key","owner":"https://botsin.space/users/muffinista","publicKeyPem":"-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAysfVKL6uQuCZJat/BvSl\n19wnSeHs6cTDA10kEOz4eqowxSFjnR9WptYs8KhlmKbKpAfrdCcF7FT8cp0N35qX\nmZaUlmMuDPx8qEELyBYtano8bcyEmYQkLkivU/EY/3syVDyAPqlvIfMu/+cW1lUU\nenQOR1dZGwXeKkDKcZBoTe1UjnvbTXnOj0dknneeBMXl1wej3fW6972blafeko0L\n51V/DK+dev78a//KZjPtE3Vs7q6Bw+1eqim4+1aq1kL2hXdkDghtMdWoLDdhiqtj\nSI1rXIc/8+Z94Hfcc0GW817eCFMgDuqbCL3B+p99UMta2klTvzPZOd+l57uK/YYq\nuwIDAQAB\n-----END PUBLIC KEY-----\n"},"tag":[],"attachment":[],"endpoints":{"sharedInbox":"https://botsin.space/inbox"},"icon":{"type":"Image","mediaType":"image/jpeg","url":"https://files.botsin.space/accounts/avatars/000/000/001/original/9e29b61b4ad8b864.jpg"},"image":{"type":"Image","mediaType":"image/jpeg","url":"https://files.botsin.space/accounts/headers/000/000/001/original/5231bd9447c7b5f9.jpg"}}
+{
+    "@context": [
+        "https://www.w3.org/ns/activitystreams",
+        "https://w3id.org/security/v1",
+        {
+            "manuallyApprovesFollowers": "as:manuallyApprovesFollowers",
+            "toot": "http://joinmastodon.org/ns#",
+            "featured": {
+                "@id": "toot:featured",
+                "@type": "@id"
+            },
+            "featuredTags": {
+                "@id": "toot:featuredTags",
+                "@type": "@id"
+            },
+            "alsoKnownAs": {
+                "@id": "as:alsoKnownAs",
+                "@type": "@id"
+            },
+            "movedTo": {
+                "@id": "as:movedTo",
+                "@type": "@id"
+            },
+            "schema": "http://schema.org#",
+            "PropertyValue": "schema:PropertyValue",
+            "value": "schema:value",
+            "discoverable": "toot:discoverable",
+            "Device": "toot:Device",
+            "Ed25519Signature": "toot:Ed25519Signature",
+            "Ed25519Key": "toot:Ed25519Key",
+            "Curve25519Key": "toot:Curve25519Key",
+            "EncryptedMessage": "toot:EncryptedMessage",
+            "publicKeyBase64": "toot:publicKeyBase64",
+            "deviceId": "toot:deviceId",
+            "claim": {
+                "@type": "@id",
+                "@id": "toot:claim"
+            },
+            "fingerprintKey": {
+                "@type": "@id",
+                "@id": "toot:fingerprintKey"
+            },
+            "identityKey": {
+                "@type": "@id",
+                "@id": "toot:identityKey"
+            },
+            "devices": {
+                "@type": "@id",
+                "@id": "toot:devices"
+            },
+            "messageFranking": "toot:messageFranking",
+            "messageType": "toot:messageType",
+            "cipherText": "toot:cipherText",
+            "suspended": "toot:suspended",
+            "focalPoint": {
+                "@container": "@list",
+                "@id": "toot:focalPoint"
+            }
+        }
+    ],
+    "id": "SERVER_URL/users/muffinista",
+    "type": "Person",
+    "following": "https://botsin.space/users/muffinista/following",
+    "followers": "https://botsin.space/users/muffinista/followers",
+    "inbox": "https://botsin.space/users/muffinista/inbox",
+    "outbox": "https://botsin.space/users/muffinista/outbox",
+    "featured": "https://botsin.space/users/muffinista/collections/featured",
+    "featuredTags": "https://botsin.space/users/muffinista/collections/tags",
+    "preferredUsername": "muffinista",
+    "name": "colin mitchell",
+    "summary": "<p>hello! i run botsin.space but my personal account is muffinista@toot.site so if you need me you can check there</p>",
+    "url": "https://botsin.space/@muffinista",
+    "manuallyApprovesFollowers": false,
+    "discoverable": false,
+    "published": "2017-04-03T00:00:00Z",
+    "devices": "https://botsin.space/users/muffinista/collections/devices",
+    "publicKey": {
+        "id": "https://botsin.space/users/muffinista#main-key",
+        "owner": "https://botsin.space/users/muffinista",
+        "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAysfVKL6uQuCZJat/BvSl\n19wnSeHs6cTDA10kEOz4eqowxSFjnR9WptYs8KhlmKbKpAfrdCcF7FT8cp0N35qX\nmZaUlmMuDPx8qEELyBYtano8bcyEmYQkLkivU/EY/3syVDyAPqlvIfMu/+cW1lUU\nenQOR1dZGwXeKkDKcZBoTe1UjnvbTXnOj0dknneeBMXl1wej3fW6972blafeko0L\n51V/DK+dev78a//KZjPtE3Vs7q6Bw+1eqim4+1aq1kL2hXdkDghtMdWoLDdhiqtj\nSI1rXIc/8+Z94Hfcc0GW817eCFMgDuqbCL3B+p99UMta2klTvzPZOd+l57uK/YYq\nuwIDAQAB\n-----END PUBLIC KEY-----\n"
+    },
+    "tag": [],
+    "attachment": [],
+    "endpoints": {
+        "sharedInbox": "https://botsin.space/inbox"
+    },
+    "icon": {
+        "type": "Image",
+        "mediaType": "image/jpeg",
+        "url": "https://files.botsin.space/accounts/avatars/000/000/001/original/9e29b61b4ad8b864.jpg"
+    },
+    "image": {
+        "type": "Image",
+        "mediaType": "image/jpeg",
+        "url": "https://files.botsin.space/accounts/headers/000/000/001/original/5231bd9447c7b5f9.jpg"
+    }
+}

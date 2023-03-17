@@ -39,6 +39,7 @@ pub async fn fetch_object(url: &str, key_id: Option<&str>, private_key: Option<&
   let client = reqwest::Client::new();
   let config = Config::new().mastodon_compat();
 
+
   let response = if key_id.is_some() && private_key.is_some() {
     let key_id = key_id.unwrap();
     let private_key = private_key.unwrap();
@@ -73,8 +74,8 @@ pub async fn fetch_object(url: &str, key_id: Option<&str>, private_key: Option<&
 
 
       let body = response
-      .text()
-      .await?;
+        .text()
+        .await?;
   
       Ok(Some(body))  
     },

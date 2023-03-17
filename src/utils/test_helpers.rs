@@ -115,11 +115,11 @@ pub fn fake_feed() -> Feed {
   }
 }
 
-pub fn fake_follower(feed: &Feed) -> Follower {
+pub fn fake_follower(feed: &Feed, server: &mockito::Server) -> Follower {
   Follower {
     id: 1,
     feed_id: feed.id,
-    actor: format!("{}/users/muffinista", &mockito::server_url()),
+    actor: format!("{}/users/muffinista", server.url()),
     created_at: Utc::now(),
     updated_at: Utc::now()
   }
@@ -158,6 +158,8 @@ pub async fn real_item(feed: &Feed, pool: &PgPool) -> sqlx::Result<Item> {
     .fetch_one(pool)
     .await?
     .id;
+
+  println!("!!!!!!!!!!!!! {:}", id);
 
   Item::find(item_id, &pool).await
 }

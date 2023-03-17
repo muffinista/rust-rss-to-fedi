@@ -35,7 +35,7 @@ url = "2.3.1"
 sha2 = "0.10.6"
 base64 = "0.21.0"
 chrono = { version = "0.4.23", features = ["serde"] }
-scraper = "0.14.0"
+scraper = "0.15.0"
 sanitize_html = "0.7.0"
 reqwest-retry = "0.2.1"
 md-5 = "0.10.5"
@@ -66,7 +66,7 @@ features = [
 native-tls = { version = "~0.2.11", features = ["vendored"] }
 openssl = { version = "~0.10.42", features = ["vendored"] }
 openssl-sys = "~0.9.78"
-mockito = "0.31.1"
+mockito = "1.0.0"
 
 [build-dependencies]
 native-tls = { version = "~0.2.11", features = ["vendored"] }

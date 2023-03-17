@@ -25,6 +25,8 @@ use crate::models::Feed;
 /// Then, when we need to communicate with someone, we have their inbox and key data
 /// cached locally
 ///
+
+#[derive(Debug)]
 pub struct Actor {
   pub url: String,
   pub inbox_url: String,
@@ -92,7 +94,7 @@ impl Actor {
     // look for an actor but exclude old data
     // let age = Utc::now() - Duration::seconds(3600);
     //  AND refreshed_at > $2
-    let result = sqlx::query!("SELECT count(1) AS tally FROM actors WHERE url = $1", url)
+    let result = sqlx::query!("SELECT count(1) AS tally FROM actors WHERE url = $1 OR inbox_url = $2", url, url)
       .fetch_one(pool)
       .await;
 
@@ -109,7 +111,6 @@ impl Actor {
     log::info!("FETCH ACTOR: {url:}");
     let admin_feed = Feed::for_admin(pool).await?;
 
-
     let resp = if admin_feed.is_some() {
       let admin_feed = admin_feed.unwrap();
       crate::services::mailer::fetch_object(url, Some(&admin_feed.ap_url()), Some(&admin_feed.private_key)).await
@@ -125,6 +126,7 @@ impl Actor {
 
         let resp = resp.unwrap();
         let data:Value = serde_json::from_str(&resp).unwrap();
+
         if data["id"].is_string() && data["publicKey"].is_object() {
           let username = if data["preferredUsername"].is_string() {
             Some(data["preferredUsername"].as_str().unwrap().to_string())
