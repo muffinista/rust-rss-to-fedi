@@ -37,8 +37,7 @@ use activitystreams::{
 
 use activitystreams::time::OffsetDateTime;
 
-use rocket_dyn_templates::tera::Tera;
-use rocket_dyn_templates::tera::Context;
+use crate::utils::templates::{Context, render};
 
 use sanitize_html::sanitize_str;
 use sanitize_html::rules::predefined::RELAXED;
@@ -221,16 +220,7 @@ impl Item {
   /// generate an HTML-ish version of this item suitable
   /// for adding to an AP message
   ///
-  pub fn to_html(&self, hashtag: Option<String>) -> String {
-    let tera = match Tera::new("templates/ap/*.*") {
-      Ok(t) => t,
-      Err(e) => {
-        log::info!("Parsing error(s): {e}");
-        ::std::process::exit(1);
-      }
-    };
-
-
+  pub async fn to_html(&self, hashtag: Option<String>) -> String {
     let mut context = Context::new();
     context.insert("title", &self.title);
     context.insert("body", &self.content);
@@ -251,7 +241,7 @@ impl Item {
       }
     };
    
-    tera.render("feed-item.html.tera", &context).unwrap()
+    render("ap/feed-item", &context).unwrap()
   }
 
   
@@ -267,7 +257,7 @@ impl Item {
 
     note
       .set_attributed_to(iri!(feed_url))
-      .set_content(self.to_html(feed.hashtag.clone()))
+      .set_content(self.to_html(feed.hashtag.clone()).await)
       .set_url(iri!(feed_url))
       .set_id(iri!(item_url))
       .set_published(ts);
@@ -558,7 +548,7 @@ mod test {
   async fn test_to_html() -> Result<(), String> {
     let item: Item = fake_item();
 
-    let result = item.to_html(Some("hashytime".to_string()));
+    let result = item.to_html(Some("hashytime".to_string())).await;
     assert!(result.contains("Hello!"));
     assert!(result.contains("<p>Hey!</p>"));
     assert!(result.contains("hashytime"));

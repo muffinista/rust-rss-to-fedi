@@ -3074,6 +3074,7 @@ dependencies = [
  "env_logger",
  "fang",
  "feed-rs",
+ "glob",
  "http-signature-normalization-reqwest",
  "httpdate",
  "log",
