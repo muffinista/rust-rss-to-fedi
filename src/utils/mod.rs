@@ -4,6 +4,7 @@ pub mod urls;
 pub mod admin;
 pub mod queue;
 pub mod pool;
+pub mod templates;
 
 pub use urls::*;
 

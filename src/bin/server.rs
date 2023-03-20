@@ -18,6 +18,9 @@ pub async fn main() -> Result<(), rocket::Error> {
   env_logger::init();
 
   let _domain_name = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
+
+  rustypub::utils::templates::init_templating();
+
   let pool = db_pool().await;
 
   let server = build_server(pool)

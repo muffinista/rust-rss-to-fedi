@@ -1,3 +1,5 @@
+#![feature(once_cell)]
+
 pub mod utils;
 pub mod services;
 pub mod traits;

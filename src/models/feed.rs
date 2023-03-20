@@ -30,7 +30,8 @@ use reqwest;
 use feed_rs::parser;
 
 use chrono::{Duration, Utc, prelude::*};
-use rocket_dyn_templates::tera::{Tera, Context};
+
+use crate::utils::templates::{Context, render};
 
 use std::{env, error::Error, fmt};
 
@@ -945,18 +946,11 @@ impl Feed {
       .set_href(iri!(dest_actor.url.to_string()))
       .set_name("en");
 
-    let tera = match Tera::new("templates/email/*.*") {
-      Ok(t) => t,
-      Err(e) => {
-        println!("Parsing error(s): {e}");
-        ::std::process::exit(1);
-      }
-    };
   
     let mut template_context = Context::new();
     template_context.insert("link", &auth_url);
     
-    let body = tera.render("send-login-status.text.tera", &template_context).unwrap();
+    let body = render("email/send-login-status", &template_context).unwrap();
 
     reply
       .set_sensitive(true)
@@ -1048,20 +1042,11 @@ impl Feed {
       .set_href(iri!(&self.permalink_url()))
       .set_name(self.address());
   
-
-    let tera = match Tera::new("templates/email/*.*") {
-      Ok(t) => t,
-      Err(e) => {
-        println!("Parsing error(s): {e}");
-        ::std::process::exit(1);
-      }
-    };
-  
     let mut template_context = Context::new();
     template_context.insert("link", &self.permalink_url());
     template_context.insert("address", &self.address());
     
-    let body = tera.render("send-creation-status.text.tera", &template_context).unwrap();
+    let body = render("email/send-creation-status", &template_context).unwrap();
 
     reply
       .set_sensitive(true)
