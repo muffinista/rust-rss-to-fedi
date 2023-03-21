@@ -59,6 +59,9 @@ pub async fn add_feed(user: User, db: &State<PgPool>, form: Form<FeedForm>) -> R
     return Ok(Flash::error(Redirect::to("/"), "Sorry, something went wrong!"));
   }
 
+  //
+  // follow the URL to make sure we add a valid RSS feed at this point
+  //
   let url = url_to_feed_url(&form.url).await;
   match url {
     Err(_why) =>{
@@ -93,8 +96,6 @@ pub async fn add_feed(user: User, db: &State<PgPool>, form: Form<FeedForm>) -> R
             Ok(Flash::error(Redirect::to("/"), "Sorry, something went wrong!"))
           }
         }
-      
-
       } else {
         Err(Status::NotFound)
       }
