@@ -1,9 +1,8 @@
 use http_signature_normalization_reqwest::prelude::*;
 use reqwest::Request;
 use reqwest_middleware::RequestBuilder;
-use reqwest::header::{HeaderValue, HeaderMap};
 
-use crate::utils::http::http_client;
+use crate::utils::http::*;
 
 use openssl::{
   hash::MessageDigest,
@@ -12,24 +11,13 @@ use openssl::{
 };
 
 use url::Url;
-use httpdate::fmt_http_date;
-use std::time::SystemTime;
 
 use sha2::{Digest, Sha256};
 use base64::{Engine as _, engine::general_purpose};
 
 use anyhow::{anyhow};
 
-use std::env;
-
-
 use serde::Serialize;
-
-static BASE_USER_AGENT: &str = concat!(
-  env!("CARGO_PKG_NAME"),
-  "/",
-  env!("CARGO_PKG_VERSION"),
-);
 
 
 ///
@@ -38,7 +26,6 @@ static BASE_USER_AGENT: &str = concat!(
 pub async fn fetch_object(url: &str, key_id: Option<&str>, private_key: Option<&str>) -> Result<Option<String>, anyhow::Error> {
   let client = reqwest::Client::new();
   let config = Config::new().mastodon_compat();
-
 
   let response = if key_id.is_some() && private_key.is_some() {
     let key_id = key_id.unwrap();
@@ -88,7 +75,7 @@ pub async fn fetch_object(url: &str, key_id: Option<&str>, private_key: Option<&
 ///
 pub async fn deliver_to_inbox<T: Serialize + ?Sized>(inbox: &Url, key_id: &str, private_key: &str, json: &T) -> Result<(), anyhow::Error> {
   let client = http_client();
-  let heads = generate_request_headers(inbox);
+  let heads = generate_request_headers();
   let payload = serde_json::to_vec(json).unwrap();
   // let printable_payload = String::from_utf8(payload).unwrap();
 
@@ -122,28 +109,6 @@ pub async fn deliver_to_inbox<T: Serialize + ?Sized>(inbox: &Url, key_id: &str, 
     },
     Err(why) => Err(why.into())
   }
-}
-
-///
-/// Generate a user agent for the current version of the code and the running instance
-///
-pub fn user_agent() -> String {
-  let domain_name = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
-  format!("{BASE_USER_AGENT}; +{domain_name})")
-}
-
-fn generate_request_headers(_inbox: &Url) -> HeaderMap {
-  let mut headers = HeaderMap::new();
-  headers.insert(
-    "user-agent",
-    HeaderValue::from_str(&user_agent()).expect("Invalid user agent"),
-  );
-  headers.insert(
-    "date",
-    HeaderValue::from_str(&fmt_http_date(SystemTime::now())).expect("Date is valid"),
-  );
-
-  headers
 }
 
 pub async fn sign_request(

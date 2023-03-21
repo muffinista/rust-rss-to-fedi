@@ -49,6 +49,8 @@ use crate::models::Item;
 use crate::models::Follower;
 use crate::utils::keys::*;
 use crate::utils::path_to_url;
+use crate::utils::http::*;
+
 use crate::services::mailer::*;
 
 use crate::routes::feeds::*;
@@ -512,9 +514,24 @@ impl Feed {
   /// load the contents of the feed
   ///
   pub async fn load(&self) -> Result<String, reqwest::Error> {
-    let res = reqwest::get(&self.url).await?;
+    let client = reqwest::Client::new();
+    let heads = generate_request_headers();
+    let response = client
+      .get(&self.url)
+      .headers(heads)
+      .send()
+      .await;
 
-    res.text().await
+    match response {
+      Ok(response) => {
+        let body = response
+          .text()
+          .await?;
+    
+        Ok(body)  
+      },
+      Err(err) => Err(err)
+    }
   }
 
 

@@ -51,6 +51,9 @@ pub struct FeedLookup {
   error: Option<String>
 }
 
+///
+/// POST action to create a new feed
+///
 #[post("/feed", data = "<form>")]
 pub async fn add_feed(user: User, db: &State<PgPool>, form: Form<FeedForm>) -> Result<Flash<Redirect>, Status> {
   let signups_enabled = Setting::value_or(&"signups_enabled".to_string(), &"true".to_string(), db).await.unwrap();
@@ -65,7 +68,7 @@ pub async fn add_feed(user: User, db: &State<PgPool>, form: Form<FeedForm>) -> R
   let url = url_to_feed_url(&form.url).await;
   match url {
     Err(_why) =>{
-      return Err(Status::NotFound)
+      Err(Status::NotFound)
     },
     Ok(result) => {
       if result.is_some() {
@@ -103,6 +106,9 @@ pub async fn add_feed(user: User, db: &State<PgPool>, form: Form<FeedForm>) -> R
   }
 }
 
+///
+/// Update settings on a feed
+///
 #[put("/feed/<username>", data = "<form>")]
 pub async fn update_feed(user: User, username: &str, db: &State<PgPool>, form: Form<FeedUpdateForm>) -> Result<Flash<Redirect>, Status> {
   let feed_lookup = Feed::find_by_user_and_name(&user, &username.to_string(), db).await;
@@ -132,6 +138,9 @@ pub async fn update_feed(user: User, username: &str, db: &State<PgPool>, form: F
   }
 }
 
+///
+/// Take a potential URL/name for a feed and check if they are valid
+///
 #[post("/test-feed", data = "<form>")]
 pub async fn test_feed(_user: User, db: &State<PgPool>, form: Json<FeedForm>) -> Result<Json<FeedLookup>, Status> {
   // check if feed name is already in use
@@ -164,6 +173,9 @@ pub async fn test_feed(_user: User, db: &State<PgPool>, form: Json<FeedForm>) ->
   }
 }
 
+///
+/// Delete a feed
+///
 #[delete("/feed/<id>/delete")]
 pub async fn delete_feed(user: User, id: i32, db: &State<PgPool>) -> Result<Redirect, Status> {
   let feed = Feed::delete(&user, id, db).await;
@@ -179,6 +191,9 @@ pub async fn delete_feed(user: User, id: i32, db: &State<PgPool>) -> Result<Redi
   }
 }
 
+///
+/// show a feed's ActivityPub output
+///
 #[get("/feed/<username>", format = "application/activity+json")]
 pub async fn render_feed(username: &str, db: &State<PgPool>) -> Result<String, Status> {
   let feed_lookup = Feed::find_by_name(&username.to_string(), db).await;
@@ -200,6 +215,9 @@ pub async fn render_feed(username: &str, db: &State<PgPool>) -> Result<String, S
   }
 }
 
+///
+/// show a feed's HTML output
+///
 #[get("/feed/<username>?<added>", format = "text/html", rank = 2)]
 pub async fn show_feed(user: Option<User>, username: &str, flash: Option<FlashMessage<'_>>, added: Option<i32>, db: &State<PgPool>) -> Result<Template, Status> {
   let feed_lookup = Feed::find_by_name(&username.to_string(), db).await;
@@ -252,6 +270,9 @@ pub async fn show_feed(user: Option<User>, username: &str, flash: Option<FlashMe
   }
 }
 
+///
+/// Render the AP data for a feed's followers
+///
 #[get("/feed/<username>/followers?<page>")]
 pub async fn render_feed_followers(username: &str, page: Option<i32>, db: &State<PgPool>) -> Result<String, Status> {
   let feed_lookup = Feed::find_by_name(&username.to_string(), db).await;
