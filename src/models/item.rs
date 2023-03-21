@@ -232,7 +232,6 @@ impl Item {
     // tack on hashtag
     if let Some(ht) = hashtag  {
       if ! ht.is_empty() {
-        // let formatted_hashtag = format!("#{:}", hashtag);
         let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
         let hashtag_url = format!("https://{instance_domain:}/tags/{ht:}");
 
@@ -549,6 +548,9 @@ mod test {
     let item: Item = fake_item();
 
     let result = item.to_html(Some("hashytime".to_string())).await;
+
+    println!("{:}", result);
+
     assert!(result.contains("Hello!"));
     assert!(result.contains("<p>Hey!</p>"));
     assert!(result.contains("hashytime"));

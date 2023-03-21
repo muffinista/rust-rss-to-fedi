@@ -1,6 +1,5 @@
-{% if link %}<a href="{{ link }}">{{ title }}</a>
-{% else %}{{ title }}
-{% endif %}
-<p>{{ body }}</p>
-
-{% if hashtag %}<p><a href="{{ hashtag_link }}" class="mention hashtag" rel="tag">#{{ hashtag }}</a></p>{% endif %}
+{%- if link -%}<a href="{{ link }}">{{ title }}</a>
+{%- else -%}{{ title }}
+{%- endif -%}
+<p>{{ body | safe }}</p>
+{%- if hashtag -%}<p><a href="{{ hashtag_link }}" class="mention hashtag" rel="tag">#{{ hashtag }}</a></p>{%- endif -%}

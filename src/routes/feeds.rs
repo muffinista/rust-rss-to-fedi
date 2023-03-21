@@ -59,30 +59,45 @@ pub async fn add_feed(user: User, db: &State<PgPool>, form: Form<FeedForm>) -> R
     return Ok(Flash::error(Redirect::to("/"), "Sorry, something went wrong!"));
   }
 
-  let feed = Feed::create(&user, &form.url, &form.name, db).await;
-  
-  match feed {
-    Ok(feed) => {
-      let task = RefreshFeed { id: feed.id };
-      let mut queue = create_queue().await;
-
-      queue
-        .insert_task(&task as &dyn AsyncRunnable)
-        .await
-        .unwrap();
-
-      let notify = user.send_link_to_feed(&feed, db).await;
-      match notify {
-        Ok(_notify) => log::info!("user notified!"),
-        Err(why) => log::info!("something went wrong with notification: {why:?}")
-      }
-
-      let dest = uri!(show_feed(feed.name, Some(1)));
-      Ok(Flash::success(Redirect::to(dest), "Feed created!"))
+  let url = url_to_feed_url(&form.url).await;
+  match url {
+    Err(_why) =>{
+      return Err(Status::NotFound)
     },
-    Err(why) => {
-      log::info!("{why}");
-      Ok(Flash::error(Redirect::to("/"), "Sorry, something went wrong!"))
+    Ok(result) => {
+      if result.is_some() {
+        let url = result.unwrap();
+        let feed = Feed::create(&user, &url, &form.name, db).await;
+  
+        match feed {
+          Ok(feed) => {
+            let task = RefreshFeed { id: feed.id };
+            let mut queue = create_queue().await;
+      
+            queue
+              .insert_task(&task as &dyn AsyncRunnable)
+              .await
+              .unwrap();
+      
+            let notify = user.send_link_to_feed(&feed, db).await;
+            match notify {
+              Ok(_notify) => log::info!("user notified!"),
+              Err(why) => log::info!("something went wrong with notification: {why:?}")
+            }
+      
+            let dest = uri!(show_feed(feed.name, Some(1)));
+            Ok(Flash::success(Redirect::to(dest), "Feed created!"))
+          },
+          Err(why) => {
+            log::info!("{why}");
+            Ok(Flash::error(Redirect::to("/"), "Sorry, something went wrong!"))
+          }
+        }
+      
+
+      } else {
+        Err(Status::NotFound)
+      }
     }
   }
 }
