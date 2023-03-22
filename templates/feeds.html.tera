@@ -1,7 +1,7 @@
 <ul class="feed-list">
   {% for feed in feeds %}
     <li>
-      <a href="/feed/{{feed.name}}"><b>{{feed.name}}</b></a>
+      <a href="{% if feed_link_prefix %}{{feed_link_prefix}}{% endif %}/feed/{{feed.name}}"><b>{{feed.name}}</b></a>
       {% if feed.description %}<br /><span>{{feed.description | truncate(length=100)}}</span>{% endif %}
       {% if feed.last_post_at %}<br /><span>Last post at: {{ feed.last_post_at }}</span>{% endif %}
     </li>
@@ -11,11 +11,11 @@
 {% if page %}
 <div class="pagination">
   {% if page > 1 %}
-    <a href="/?page={{page-1}}">prev</a>
+    <a href="{% if feed_link_prefix %}{{feed_link_prefix}}{% endif %}/?page={{page-1}}">prev</a>
   {% endif %}
 
   {% if page < total_pages %}
-    <a href="/?page={{page+1}}">next</a>
+    <a href="{% if feed_link_prefix %}{{feed_link_prefix}}{% endif %}?page={{page+1}}">next</a>
   {% endif %}
 </div>
 {% endif %}

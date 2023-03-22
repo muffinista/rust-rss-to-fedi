@@ -27,19 +27,7 @@
 
     Total feeds: {{total}} 
 
-    <ul>
-      {% for feed in feeds %}
-        <li><a href="/admin/feed/{{feed.name}}">{{feed.name}}</a></li>
-      {% endfor %}
-    </ul>
-    
-    {% if page > 1 %}
-    <a href="/admin?page={{page-1}}">prev</a>
-    {% endif %}
-
-    {% if page < total_pages %}
-    <a href="/admin?page={{page+1}}">next</a>
-    {% endif %}
+    {% include "feeds" %}
 
   </section>
 {% endblock content %}

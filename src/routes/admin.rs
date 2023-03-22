@@ -50,7 +50,8 @@ pub async fn index_admin(user: User, page: Option<i32>, db: &State<PgPool>) -> R
     total_pages: total_pages,
     total: count,
     signups_enabled: signups_enabled,
-    instance_domain: instance_domain
+    instance_domain: instance_domain,
+    feed_link_prefix: "/admin"
   }))
 }
 
