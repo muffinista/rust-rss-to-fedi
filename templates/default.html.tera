@@ -24,7 +24,9 @@
       {% block content %}{% endblock content %}
     </main>
     <footer>
-      <p>A project of <a href="https://botsin.space/@muffinista">https://botsin.space/@muffinista</a></p>
+      <p>
+        A project of <a href="https://botsin.space/@muffinista">@muffinista</a>. The <a href="https://github.com/muffinista/rust-rss-to-fedi/">source code</a> is available. Please report any <a href="https://github.com/muffinista/rust-rss-to-fedi/issues">bugs or issues</a>!
+      </p>
     </footer>
     <script src="/assets/script.js"></script>
   </body>
