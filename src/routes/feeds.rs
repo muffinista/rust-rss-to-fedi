@@ -79,7 +79,8 @@ pub async fn add_feed(user: User, db: &State<PgPool>, form: Form<FeedForm>) -> R
           Ok(feed) => {
             let task = RefreshFeed { id: feed.id };
             let mut queue = create_queue().await;
-      
+            queue.connect(fang::NoTls).await.unwrap();
+
             queue
               .insert_task(&task as &dyn AsyncRunnable)
               .await
