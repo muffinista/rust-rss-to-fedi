@@ -558,7 +558,7 @@ impl Feed {
 
   pub async fn update_last_post_at(&self, published_at: chrono::DateTime::<Utc>, pool: &PgPool) -> Result<(), sqlx::Error> {
     sqlx::query!(
-      "UPDATE feeds SET last_post_at = $1 WHERE id = $2 AND last_post_at < $1",
+      "UPDATE feeds SET last_post_at = $1 WHERE id = $2 AND (last_post_at IS NULL OR last_post_at < $1)",
       published_at,
       self.id
     ).execute(pool).await?;

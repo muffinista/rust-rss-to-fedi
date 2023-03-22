@@ -196,19 +196,6 @@
     },
     "query": "SELECT count(1) AS tally FROM actors WHERE url = $1 OR inbox_url = $2"
   },
-  "118a91258eacfa452c873f2f089028afab2ef46afa0556de0a47cf2298191be6": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
-          "Timestamptz",
-          "Int4"
-        ]
-      }
-    },
-    "query": "UPDATE feeds SET last_post_at = $1 WHERE id = $2 AND last_post_at < $1"
-  },
   "127d18d1e252038d0e8382bc6c03ff37ebbe97719d24d26f262513f0ac988ff9": {
     "describe": {
       "columns": [
@@ -1444,6 +1431,19 @@
       }
     },
     "query": "SELECT COUNT(1) AS tally FROM items WHERE feed_id = $1 AND guid = $2"
+  },
+  "997d57ae03aca5800913c342493d8274bfc8fabe357f36f22568ec3aced6faac": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Timestamptz",
+          "Int4"
+        ]
+      }
+    },
+    "query": "UPDATE feeds SET last_post_at = $1 WHERE id = $2 AND (last_post_at IS NULL OR last_post_at < $1)"
   },
   "99c8bc4ec37af5d70631747bafcacd2b5358d479323762d091c1c6251bdb7e0c": {
     "describe": {
