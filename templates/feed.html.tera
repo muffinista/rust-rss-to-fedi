@@ -2,6 +2,7 @@
 {% block title %}Feed for {{feed.name}}{% endblock title %}
 
 {% block meta %}
+  <meta name="description" content="Fediverse account for {{ feed.name }}" />
   {% if noindex %}<meta name="robots" content="noindex">{% endif %}
 {% endblock meta %}
 

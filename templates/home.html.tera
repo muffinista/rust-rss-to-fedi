@@ -1,5 +1,7 @@
 {% extends "default" %}
 {% block title %}Index{% endblock title %}
+{% block meta %}<meta name="description" content="A service to load RSS feeds into the Fediverse" />{% endblock meta %}
+
 
 {% block content %}
   {% if logged_in %}
