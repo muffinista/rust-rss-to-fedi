@@ -50,10 +50,10 @@ impl AsyncRunnable for RefreshFeed {
     }
   }
 
-  // the maximum number of retries. Set it to 0 to make it not retriable
-  // the default value is 20
+
+  /// Don't retry fetch issues, we'll just try again on the next go around
   fn max_retries(&self) -> i32 {
-    4
+    0
   }
 
   // backoff mode for retries
