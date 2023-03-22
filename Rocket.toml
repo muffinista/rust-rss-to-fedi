@@ -3,6 +3,3 @@ address = "0.0.0.0"
 
 [development]
 # secret_key = "+ULFIiuJcIF+fhLQMyt+RTHWGMhLXVjpQzIuPg9buo0="
-
-[default.databases.sqlite_logs]
-url = "database.sqlite"

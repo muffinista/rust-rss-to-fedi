@@ -17,7 +17,7 @@ openssl = { version = "~0.10.42", features = ["vendored"] }
 openssl-sys = "~0.9.78"
 dotenvy = "0.15"
 rocket = { version = "0.5.0-rc.2", features = ["json", "secrets"] }
-sqlx = { version = "~0.6.2", features = ["chrono", "macros", "migrate", "offline", "postgres", "sqlite", "runtime-tokio-rustls"] }
+sqlx = { version = "~0.6.2", features = ["chrono", "macros", "migrate", "offline", "postgres", "runtime-tokio-rustls"] }
 serde = {version = "~1.0", features = ["derive"] }
 rand = { version = "0.8.5" }
 feed-rs = "1.2"
