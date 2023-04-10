@@ -327,18 +327,6 @@
     },
     "query": "SELECT * FROM users WHERE actor_url = $1"
   },
-  "1e7ca993752c8d64d2e5eaec4ebb1d1006e4df2980a711a7a7a00dae27741bb0": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
-          "Int4"
-        ]
-      }
-    },
-    "query": "UPDATE feeds SET error = NULL, error_count = 0 WHERE id = $1"
-  },
   "1e9045f52c002a19b815351fee1c7ee7520478ff4f5886b4523fb0dc4df0e204": {
     "describe": {
       "columns": [
@@ -1773,6 +1761,19 @@
       }
     },
     "query": "INSERT INTO users (actor_url, login_token, created_at, updated_at)\n      VALUES($1, $2, $3, $4)\n      RETURNING id"
+  },
+  "a306fce897299f0ea4f90030a1a4c70bd445f3dbdf028f1ad8f6eea8d2ef372e": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Timestamptz",
+          "Int4"
+        ]
+      }
+    },
+    "query": "UPDATE feeds SET refreshed_at = $1, error_count = 0, error = NULL WHERE id = $2"
   },
   "a4e47a475da7f29cfbd3a1a43c119bbbcfbbe81c579ad8032e82739ae426e05e": {
     "describe": {

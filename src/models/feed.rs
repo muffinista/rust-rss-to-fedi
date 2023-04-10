@@ -419,7 +419,8 @@ impl Feed {
   }
 
   pub async fn mark_valid(&self, pool: &PgPool) -> Result<(), sqlx::Error> {
-    let result = sqlx::query!("UPDATE feeds SET error = NULL, error_count = 0 WHERE id = $1", self.id)
+    let now = Utc::now();
+    let result = sqlx::query!("UPDATE feeds SET refreshed_at = $1, error_count = 0, error = NULL WHERE id = $2", now, self.id)
       .execute(pool)
       .await;
 
@@ -542,7 +543,7 @@ impl Feed {
           }  
         }
 
-        self.mark_fresh(pool).await?;
+        self.mark_valid(pool).await?;
 
         Ok(())
       },
