@@ -1,5 +1,6 @@
 pub mod user;
 pub mod feed;
+pub mod feed_error;
 pub mod follower;
 pub mod item;
 pub mod enclosure;
@@ -12,6 +13,7 @@ pub mod sensitive_note;
 pub use actor::Actor;
 pub use user::User;
 pub use feed::Feed;
+pub use feed_error::FeedError;
 pub use follower::Follower;
 pub use item::Item;
 pub use enclosure::Enclosure;

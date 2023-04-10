@@ -33,7 +33,7 @@ use chrono::{Duration, Utc, prelude::*};
 
 use crate::utils::templates::{Context, render};
 
-use std::{env, error::Error, fmt};
+use std::env;
 
 use md5::{Md5, Digest};
 
@@ -48,6 +48,7 @@ use crate::models::User;
 use crate::models::Item;
 use crate::models::Follower;
 use crate::models::SensitiveNote;
+use crate::models::FeedError;
 
 use crate::utils::keys::*;
 use crate::utils::path_to_url;
@@ -103,35 +104,6 @@ pub struct Feed {
 impl PartialEq for Feed {
   fn eq(&self, other: &Self) -> bool {
     self.id == other.id
-  }
-}
-
-pub struct FeedError {
-  message: String
-}
-
-impl Error for FeedError {}
-impl fmt::Display for FeedError {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "Oh no, something bad went down: {:}", self.message)
-  }
-}
-
-impl fmt::Debug for FeedError {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    // @todo does this work?
-    let current_file = file!();
-    let current_line = line!();
-
-    write!(f, "FeedError {:} {{ file: {current_file:}, line: {current_line:} }}", self.message)
-  }
-}
-
-impl From<sqlx::Error> for FeedError {
-  fn from(error: sqlx::Error) -> Self {
-    FeedError {
-      message: error.to_string(),
-    }
   }
 }
 
