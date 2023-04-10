@@ -47,6 +47,8 @@ use crate::models::Actor;
 use crate::models::User;
 use crate::models::Item;
 use crate::models::Follower;
+use crate::models::SensitiveNote;
+
 use crate::utils::keys::*;
 use crate::utils::path_to_url;
 use crate::utils::http::*;
@@ -58,29 +60,10 @@ use crate::routes::ap::inbox::*;
 use crate::routes::ap::outbox::*;
 use crate::routes::login::*;
 
-use crate::traits::sensitive::*;
-
 use crate::PER_PAGE;
 
-///
-/// Extend Notes with a 'sensitive' field which Mastodon uses
-///
-pub type SensitiveNote = CanBeSensitive<ApObject<Note>>;
+use crate::traits::sensitive::CanBeSensitiveExt;
 
-impl SensitiveNote {
-  pub fn new() -> SensitiveNote {
-    CanBeSensitive {
-      sensitive: false,
-      inner: ApObject::new(Note::new()),
-    }
-  }
-}
-
-impl Default for SensitiveNote {
-  fn default() -> Self {
-    Self::new()
-  }
-}
 
 
 ///

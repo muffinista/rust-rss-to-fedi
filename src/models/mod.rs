@@ -7,6 +7,7 @@ pub mod actor;
 pub mod blocked_domain;
 pub mod setting;
 pub mod message;
+pub mod sensitive_note;
 
 pub use actor::Actor;
 pub use user::User;
@@ -17,3 +18,4 @@ pub use enclosure::Enclosure;
 pub use blocked_domain::BlockedDomain;
 pub use setting::Setting;
 pub use message::Message;
+pub use sensitive_note::SensitiveNote;
