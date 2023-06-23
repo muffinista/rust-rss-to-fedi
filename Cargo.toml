@@ -47,13 +47,11 @@ sentry = { version = "0.30.0", features = ["anyhow"] }
 clap = { version = "4.1.8", features = ["derive"] }
 glob = "0.3.1"
 
+rocket_dyn_templates = { version = "0.1.0-rc.3", features = ["tera"] }
+
 # https://cosmichorror.dev/posts/speeding-up-sqlx-compile-times/
 [profile.dev.package.sqlx-macros]
 opt-level = 3
-
-[dependencies.rocket_dyn_templates]
-rocket_dyn_templates = "0.1.0-rc.2"
-features = ["tera"]
 
 [dependencies.uuid]
 version = "1.2.2"
