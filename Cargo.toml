@@ -13,10 +13,11 @@ default-run = "server"
 activitystreams = "0.7.0-alpha.24"
 activitystreams-ext = "0.1.0-alpha.3"
 native-tls = { version = "~0.2.11", features = ["vendored"] }
-openssl = { version = "~0.10.48", features = ["vendored"] }
+openssl = { version = "~0.10.55", features = ["vendored"] }
 openssl-sys = "~0.9.78"
 dotenvy = "0.15"
-rocket = { version = "0.5.0-rc.2", features = ["json", "secrets"] }
+rocket = { version = "0.5.0-rc.3", features = ["json", "secrets"] }
+rocket_dyn_templates = { version = "0.1.0-rc.3", features = ["tera"] }
 sqlx = { version = "~0.6.2", features = ["chrono", "macros", "migrate", "offline", "postgres", "runtime-tokio-rustls"] }
 serde = {version = "~1.0", features = ["derive"] }
 rand = { version = "0.8.5" }
@@ -35,7 +36,7 @@ url = "2.3.1"
 sha2 = "0.10.6"
 base64 = "0.21.0"
 chrono = { version = "0.4.23", features = ["serde"] }
-scraper = "0.15.0"
+scraper = "0.16.0"
 sanitize_html = "0.7.0"
 reqwest-retry = "0.2.1"
 md-5 = "0.10.5"
@@ -47,7 +48,6 @@ sentry = { version = "0.30.0", features = ["anyhow"] }
 clap = { version = "4.1.8", features = ["derive"] }
 glob = "0.3.1"
 
-rocket_dyn_templates = { version = "0.1.0-rc.3", features = ["tera"] }
 
 # https://cosmichorror.dev/posts/speeding-up-sqlx-compile-times/
 [profile.dev.package.sqlx-macros]
@@ -63,11 +63,11 @@ features = [
 
 [dev-dependencies]
 native-tls = { version = "~0.2.11", features = ["vendored"] }
-openssl = { version = "~0.10.48", features = ["vendored"] }
+openssl = { version = "~0.10.55", features = ["vendored"] }
 openssl-sys = "~0.9.78"
 mockito = "1.0.0"
 
 [build-dependencies]
 native-tls = { version = "~0.2.11", features = ["vendored"] }
-openssl = { version = "~0.10.48", features = ["vendored"] }
+openssl = { version = "~0.10.55", features = ["vendored"] }
 openssl-sys = "~0.9.78"
