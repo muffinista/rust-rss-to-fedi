@@ -51,6 +51,7 @@ pub async fn build_server(pool: PgPool) -> Rocket<Build> {
       crate::routes::admin::update_settings_admin,
       crate::routes::admin::delete_feed_admin,
       crate::routes::well_known::host_meta,
+      crate::routes::nodeinfo::nodeinfo
 
     ])
     .attach(Template::fairing())
