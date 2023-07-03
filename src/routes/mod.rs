@@ -7,3 +7,4 @@ pub mod login;
 pub mod webfinger;
 pub mod enclosures;
 pub mod well_known;
+pub mod nodeinfo;

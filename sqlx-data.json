@@ -2270,6 +2270,24 @@
     },
     "query": "INSERT INTO settings (name, value, created_at, updated_at)\n      VALUES ($1, $2, $3, $4)\n      ON CONFLICT (name) DO UPDATE\n        SET value = EXCLUDED.value,\n        updated_at = EXCLUDED.updated_at"
   },
+  "c0c0dfd33a6881f987b3c5c0bd7df9aa4b95e6ba1a2f77223a88085e8d0807a9": {
+    "describe": {
+      "columns": [
+        {
+          "name": "tally",
+          "ordinal": 0,
+          "type_info": "Int8"
+        }
+      ],
+      "nullable": [
+        null
+      ],
+      "parameters": {
+        "Left": []
+      }
+    },
+    "query": "SELECT COUNT(1) AS tally FROM users"
+  },
   "c0d888f4223f17dfa375286a5932da8c00002bebdf397c17b0b013d50782363e": {
     "describe": {
       "columns": [
@@ -2495,6 +2513,24 @@
       }
     },
     "query": "SELECT * FROM enclosures WHERE id = $1"
+  },
+  "d609aaf801dab511eec10fbc9c2a646cb94fcbd4e7807f478b0672ee80f1e9a4": {
+    "describe": {
+      "columns": [
+        {
+          "name": "tally",
+          "ordinal": 0,
+          "type_info": "Int8"
+        }
+      ],
+      "nullable": [
+        null
+      ],
+      "parameters": {
+        "Left": []
+      }
+    },
+    "query": "SELECT COUNT(1) AS tally FROM items"
   },
   "da788272bbd9045f75d93e24cd646a6ef7b4714d03ad1bc7a7c0c1562e70926c": {
     "describe": {
