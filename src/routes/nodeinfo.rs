@@ -1,7 +1,7 @@
 use rocket::get;
-// use rocket::serde::json::Json;
 use rocket::State;
 use rocket::http::Status;
+use rocket::http::ContentType;
 
 use sqlx::postgres::PgPool;
 use serde_json::json;
@@ -11,7 +11,7 @@ use std::env;
 
 
 #[get("/nodeinfo/2.0")]
-pub async fn nodeinfo(db: &State<PgPool>) -> Result<String, Status> {
+pub async fn nodeinfo(db: &State<PgPool>) -> Result<(ContentType, String), Status> {
   let data = NodeInfo::current(db).await;
 
   if data.is_ok() {
@@ -42,7 +42,7 @@ pub async fn nodeinfo(db: &State<PgPool>) -> Result<String, Status> {
       "metadata": {}
     });
 
-    Ok(results.to_string())
+    Ok((ContentType::JSON, results.to_string()))
   } else {
     Err(Status::NotFound)
   }
