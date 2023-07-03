@@ -24,8 +24,10 @@ use crate::services::url_to_feed::url_to_feed_url;
 
 use crate::utils::queue::create_queue;
 
-
 use crate::tasks::RefreshFeed;
+use crate::traits::ActivityJsonContentType;
+
+
 
 #[derive(FromForm, serde::Deserialize)]
 #[serde(crate = "rocket::serde")]
@@ -251,7 +253,7 @@ pub async fn show_feed(user: Option<User>, username: &str, flash: Option<FlashMe
 /// show a feed's ActivityPub output
 ///
 #[get("/feed/<username>", format = "any", rank = 2)]
-pub async fn render_feed(username: &str, db: &State<PgPool>) -> Result<String, Status> {
+pub async fn render_feed(username: &str, db: &State<PgPool>) -> Result<ActivityJsonContentType<String>, Status> {
   let feed_lookup = Feed::find_by_name(&username.to_string(), db).await;
 
   match feed_lookup {
@@ -260,7 +262,7 @@ pub async fn render_feed(username: &str, db: &State<PgPool>) -> Result<String, S
         Some(feed) => {
           let ap = feed.to_activity_pub();
           match ap {
-            Ok(ap) => Ok(ap),
+            Ok(ap) => Ok(ActivityJsonContentType(ap)),
             Err(_why) => Err(Status::NotFound)
           }
         },
@@ -276,7 +278,7 @@ pub async fn render_feed(username: &str, db: &State<PgPool>) -> Result<String, S
 /// Render the AP data for a feed's followers
 ///
 #[get("/feed/<username>/followers?<page>")]
-pub async fn render_feed_followers(username: &str, page: Option<i32>, db: &State<PgPool>) -> Result<String, Status> {
+pub async fn render_feed_followers(username: &str, page: Option<i32>, db: &State<PgPool>) -> Result<ActivityJsonContentType<String>, Status> {
   let feed_lookup = Feed::find_by_name(&username.to_string(), db).await;
 
   match feed_lookup {
@@ -289,14 +291,14 @@ pub async fn render_feed_followers(username: &str, page: Option<i32>, db: &State
             Some(page) => {
               let result = feed.followers_paged(page, db).await;
               match result {
-                Ok(result) => Ok(serde_json::to_string(&result).unwrap()),
+                Ok(result) => Ok(ActivityJsonContentType(serde_json::to_string(&result).unwrap())),
                 Err(_why) => Err(Status::InternalServerError)
               }
             },
             None => {
               let result = feed.followers(db).await;
               match result {
-                Ok(result) => Ok(serde_json::to_string(&result).unwrap()),
+                Ok(result) => Ok(ActivityJsonContentType(serde_json::to_string(&result).unwrap())),
                 Err(_why) => Err(Status::InternalServerError)
               }
             }
@@ -390,10 +392,13 @@ mod test {
     let response = req.dispatch().await;
 
     assert_eq!(response.status(), Status::Ok);
+    assert_eq!(response.content_type().unwrap().to_string(), "application/activity+json");
 
     let body = response.into_string().await.unwrap();
     assert!(body.contains("-----BEGIN PUBLIC KEY-----"));
     assert!(body.contains(&name));
+
+
 
     Ok(())
   }
@@ -410,6 +415,7 @@ mod test {
     let response = req.dispatch().await;
 
     assert_eq!(response.status(), Status::Ok);
+    assert_eq!(response.content_type().unwrap().to_string(), "application/activity+json");
 
     let body = response.into_string().await.unwrap();
     assert!(body.contains("-----BEGIN PUBLIC KEY-----"));
@@ -430,6 +436,7 @@ mod test {
     let response = req.dispatch().await;
 
     assert_eq!(response.status(), Status::Ok);
+    assert_eq!(response.content_type().unwrap().to_string(), "application/activity+json");
 
     let body = response.into_string().await.unwrap();
     assert!(body.contains("-----BEGIN PUBLIC KEY-----"));
@@ -484,6 +491,7 @@ mod test {
     let response = req.dispatch().await;
 
     assert_eq!(response.status(), Status::Ok);
+    assert_eq!(response.content_type().unwrap().to_string(), "application/activity+json");
 
     let body = response.into_string().await.unwrap();
  

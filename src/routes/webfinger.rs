@@ -13,12 +13,14 @@ use crate::models::Feed;
 use crate::routes::feeds::*;
 use crate::utils::urls::path_to_url;
 
+use crate::traits::CustomContentType;
+
 
 ///
 /// Respond to webfinger requests
 ///
 #[get("/.well-known/webfinger?<resource>")]
-pub async fn lookup_webfinger(resource: &str, db: &State<PgPool>) -> Result<String, Status> {
+pub async fn lookup_webfinger(resource: &str, db: &State<PgPool>) -> Result<CustomContentType<String>, Status> {
   let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
   
   // https://github.com/Plume-org/webfinger/blob/main/src/async_resolver.rs
@@ -41,8 +43,7 @@ pub async fn lookup_webfinger(resource: &str, db: &State<PgPool>) -> Result<Stri
 
   if feed_exists.is_ok() && feed_exists.unwrap() {
     let href = path_to_url(&uri!(render_feed(&userstr)));
-
-    Ok(serde_json::to_string(&Webfinger {
+    let results = serde_json::to_string(&Webfinger {
       subject: format!("acct:{}@{}", userstr.clone(), instance_domain),
       aliases: vec![userstr.clone()],
       links: vec![
@@ -59,7 +60,9 @@ pub async fn lookup_webfinger(resource: &str, db: &State<PgPool>) -> Result<Stri
           template: None,
         }
       ],
-    }).unwrap())
+    }).unwrap();
+
+    Ok(CustomContentType("application/jrd+json".to_string(), results))
   }
   else {
     Err(Status::NotFound)
@@ -102,6 +105,7 @@ mod test {
     let response = req.dispatch().await;
 
     assert_eq!(response.status(), Status::Ok);
+    assert_eq!(response.content_type().unwrap().to_string(), "application/jrd+json");
     
     let body = response.into_string().await.unwrap();
     assert!(body.contains(&format!(r#"href":"https://{}/feed/{}"#, instance_domain, &feed.name)));
