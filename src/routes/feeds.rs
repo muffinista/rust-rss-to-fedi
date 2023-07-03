@@ -193,33 +193,9 @@ pub async fn delete_feed(user: User, id: i32, db: &State<PgPool>) -> Result<Redi
 }
 
 ///
-/// show a feed's ActivityPub output
-///
-#[get("/feed/<username>", format = "application/activity+json")]
-pub async fn render_feed(username: &str, db: &State<PgPool>) -> Result<String, Status> {
-  let feed_lookup = Feed::find_by_name(&username.to_string(), db).await;
-
-  match feed_lookup {
-    Ok(feed_lookup) => {
-      match feed_lookup {
-        Some(feed) => {
-          let ap = feed.to_activity_pub();
-          match ap {
-            Ok(ap) => Ok(ap),
-            Err(_why) => Err(Status::NotFound)
-          }
-        },
-        None => Err(Status::NotFound)
-      }
-    },
-    Err(_why) => Err(Status::NotFound)
-  }
-}
-
-///
 /// show a feed's HTML output
 ///
-#[get("/feed/<username>?<added>", format = "text/html", rank = 2)]
+#[get("/feed/<username>?<added>", format = "text/html")]
 pub async fn show_feed(user: Option<User>, username: &str, flash: Option<FlashMessage<'_>>, added: Option<i32>, db: &State<PgPool>) -> Result<Template, Status> {
   let feed_lookup = Feed::find_by_name(&username.to_string(), db).await;
 
@@ -270,6 +246,31 @@ pub async fn show_feed(user: Option<User>, username: &str, flash: Option<FlashMe
     Err(_why) => Err(Status::NotFound)
   }
 }
+
+///
+/// show a feed's ActivityPub output
+///
+#[get("/feed/<username>", format = "any", rank = 2)]
+pub async fn render_feed(username: &str, db: &State<PgPool>) -> Result<String, Status> {
+  let feed_lookup = Feed::find_by_name(&username.to_string(), db).await;
+
+  match feed_lookup {
+    Ok(feed_lookup) => {
+      match feed_lookup {
+        Some(feed) => {
+          let ap = feed.to_activity_pub();
+          match ap {
+            Ok(ap) => Ok(ap),
+            Err(_why) => Err(Status::NotFound)
+          }
+        },
+        None => Err(Status::NotFound)
+      }
+    },
+    Err(_why) => Err(Status::NotFound)
+  }
+}
+
 
 ///
 /// Render the AP data for a feed's followers
@@ -386,6 +387,46 @@ mod test {
 
     let name = feed.name;
     let req = client.get(uri!(super::render_feed(&name))).header(Header::new("Accept", "application/activity+json"));
+    let response = req.dispatch().await;
+
+    assert_eq!(response.status(), Status::Ok);
+
+    let body = response.into_string().await.unwrap();
+    assert!(body.contains("-----BEGIN PUBLIC KEY-----"));
+    assert!(body.contains(&name));
+
+    Ok(())
+  }
+
+  #[sqlx::test]
+  async fn test_render_feed_text_accept(pool: PgPool) -> sqlx::Result<()> {
+    let feed = real_feed(&pool).await.unwrap();
+
+    let server: Rocket<Build> = build_test_server(pool).await;
+    let client = Client::tracked(server).await.unwrap();
+
+    let name = feed.name;
+    let req = client.get(uri!(super::render_feed(&name))).header(Header::new("Accept", "text/plain"));
+    let response = req.dispatch().await;
+
+    assert_eq!(response.status(), Status::Ok);
+
+    let body = response.into_string().await.unwrap();
+    assert!(body.contains("-----BEGIN PUBLIC KEY-----"));
+    assert!(body.contains(&name));
+
+    Ok(())
+  }
+
+  #[sqlx::test]
+  async fn test_render_feed_json_accept(pool: PgPool) -> sqlx::Result<()> {
+    let feed = real_feed(&pool).await.unwrap();
+
+    let server: Rocket<Build> = build_test_server(pool).await;
+    let client = Client::tracked(server).await.unwrap();
+
+    let name = feed.name;
+    let req = client.get(uri!(super::render_feed(&name))).header(Header::new("Accept", "application/json"));
     let response = req.dispatch().await;
 
     assert_eq!(response.status(), Status::Ok);
