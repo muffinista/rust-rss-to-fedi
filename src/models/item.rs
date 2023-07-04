@@ -270,7 +270,13 @@ impl Item {
     // set destination according to desired publicity level
     //
     match item_publicity {
-      "public" => { note.set_cc(iri!("https://www.w3.org/ns/activitystreams#Public")) },
+      // public items are sent _to_ activitystreams#Public
+      // and cc'd to followers
+      "public" => { 
+        note
+          .set_to(iri!("https://www.w3.org/ns/activitystreams#Public")) 
+          .add_cc(iri!(feed.followers_url()))
+      },
 
       // we'll handle some DM logic outside of message generation here
       "direct" => { &mut note },
@@ -350,6 +356,33 @@ impl Item {
       .set_context(context())
       .add_context(iri!("as:Hashtag"))
       .add_context(security());
+
+    //
+    // set destination according to desired publicity level
+    //
+    match item_publicity {
+      // public items are sent _to_ activitystreams#Public
+      // and cc'd to followers
+      "public" => { 
+        action
+          .set_to(iri!("https://www.w3.org/ns/activitystreams#Public")) 
+          .add_cc(iri!(feed.followers_url()))
+      },
+
+      // we'll handle some DM logic outside of message generation here
+      "direct" => { &mut action },
+      "followers" => { action.set_to(iri!(feed.followers_url())) },
+
+      // unlisted/fallback
+      // unlisted items are sent _to_ the feed followes
+      // and cc'd to public
+      _ => { 
+        action
+          .set_to(iri!(feed.followers_url()))
+          .add_cc(iri!("https://www.w3.org/ns/activitystreams#Public"))
+      },
+    };
+
 
     Ok(action)
   }
@@ -477,6 +510,8 @@ mod test {
 
   use mockito;
 
+  use serde_json::Value;
+
   #[sqlx::test]
   async fn test_find(pool: PgPool) -> sqlx::Result<()> {
     let feed: Feed = real_feed(&pool).await?;
@@ -568,8 +603,75 @@ mod test {
       Ok(result) => {
         let s = serde_json::to_string(&result).unwrap();
         
+        println!("{:?}", result);
         assert!(s.contains("Hello!"));
         assert!(s.contains("<p>Hey!</p>"));
+
+        Ok(())
+      },
+      Err(why) => Err(why.to_string())
+    }
+  }
+
+  
+  #[sqlx::test]
+  async fn test_to_activity_pub_publicity_public(pool: PgPool) -> Result<(), String> {
+    let mut feed: Feed = real_feed(&pool).await.unwrap();
+    let item: Item = fake_item();
+
+    feed.status_publicity = Some("public".to_string());
+    let result = item.to_activity_pub(&feed, &pool).await;
+    match result {
+      Ok(result) => {
+        let s = serde_json::to_string(&result).unwrap();
+       
+        let v: Value = serde_json::from_str(&s).unwrap();
+        assert_eq!(v["to"], "https://www.w3.org/ns/activitystreams#Public");
+        assert!(v["cc"][0].to_string().contains("/followers"));
+
+        Ok(())
+      },
+      Err(why) => Err(why.to_string())
+    }
+  }
+  
+  #[sqlx::test]
+  async fn test_to_activity_pub_publicity_unlisted(pool: PgPool) -> Result<(), String> {
+    let mut feed: Feed = real_feed(&pool).await.unwrap();
+    let item: Item = fake_item();
+
+    feed.status_publicity = Some("unlisted".to_string());
+    let result = item.to_activity_pub(&feed, &pool).await;
+    match result {
+      Ok(result) => {
+        let s = serde_json::to_string(&result).unwrap();
+       
+        let v: Value = serde_json::from_str(&s).unwrap();
+        assert!(v["to"].to_string().contains("/followers"));
+        assert_eq!(v["cc"][0], "https://www.w3.org/ns/activitystreams#Public");
+
+        Ok(())
+      },
+      Err(why) => Err(why.to_string())
+    }
+  }
+
+  #[sqlx::test]
+  async fn test_to_activity_pub_publicity_followers(pool: PgPool) -> Result<(), String> {
+    use rocket::serde::json::Value::Null;
+    
+    let mut feed: Feed = real_feed(&pool).await.unwrap();
+    let item: Item = fake_item();
+
+    feed.status_publicity = Some("followers".to_string());
+    let result = item.to_activity_pub(&feed, &pool).await;
+    match result {
+      Ok(result) => {
+        let s = serde_json::to_string(&result).unwrap();
+       
+        let v: Value = serde_json::from_str(&s).unwrap();
+        assert!(v["to"].to_string().contains("/followers"));
+        assert_eq!(v["cc"][0], Null);
 
         Ok(())
       },
