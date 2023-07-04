@@ -6,6 +6,7 @@ use rocket::State;
 use sqlx::postgres::PgPool;
 
 use crate::models::Feed;
+use crate::traits::ActivityJsonContentType;
 
 
 ///  The outbox is discovered through the outbox property of an actor's profile.
@@ -20,7 +21,7 @@ use crate::models::Feed;
 /// discretion of those implementing and deploying the server. 
 ///
 #[get("/feed/<username>/outbox?<page>")]
-pub async fn render_feed_outbox(username: &str, page: Option<i32>, db: &State<PgPool>) -> Result<String, Status> {
+pub async fn render_feed_outbox(username: &str, page: Option<i32>, db: &State<PgPool>) -> Result<ActivityJsonContentType<String>, Status> {
   let feed_lookup = Feed::find_by_name(&username.to_string(), db).await;
 
   match feed_lookup {
@@ -33,14 +34,14 @@ pub async fn render_feed_outbox(username: &str, page: Option<i32>, db: &State<Pg
             Some(page) => {
               let result = feed.outbox_paged(page, db).await;
               match result {
-                Ok(result) => Ok(serde_json::to_string(&result).unwrap()),
+                Ok(result) => Ok(ActivityJsonContentType(serde_json::to_string(&result).unwrap())),
                 Err(_why) => Err(Status::InternalServerError)
               }
             },
             None => {
               let result = feed.outbox(db).await;
               match result {
-                Ok(result) => Ok(serde_json::to_string(&result).unwrap()),
+                Ok(result) => Ok(ActivityJsonContentType(serde_json::to_string(&result).unwrap())),
                 Err(_why) => Err(Status::InternalServerError)
               }
             }
@@ -78,6 +79,7 @@ mod test {
     let response = req.dispatch().await;
 
     assert_eq!(response.status(), Status::Ok);
+    assert_eq!(response.content_type().unwrap().to_string(), "application/activity+json");
 
     Ok(())
   }
