@@ -96,12 +96,34 @@ mod test {
   }
 
   #[tokio::test]
+  async fn test_mastodon_feed_url() -> Result<(), String>  {
+    let path = "fixtures/test_mastodon_feed.xml";
+    let data = fs::read_to_string(path).unwrap();
+    let mut server = mockito::Server::new_async().await;
+
+    let m = server.mock("GET", "/feed.xml")
+      .with_status(200)
+      .with_body(data)
+      .create_async()
+      .await;
+
+    let feed_url = format!("{}/feed.xml", &server.url()).to_string();
+
+    let result = url_to_feed_url(&feed_url).await.unwrap();
+
+    m.assert_async().await;
+    assert!(result.is_none());
+
+    Ok(())
+  }
+
+  #[tokio::test]
   async fn test_html_with_feed_link() -> Result<(), String>  {
     let path = "fixtures/test_html_with_feed_link.html";
     let data = fs::read_to_string(path).unwrap();
     let mut server = mockito::Server::new_async().await;
 
-    let _m = server.mock("GET", "/")
+    let m = server.mock("GET", "/")
       .with_status(200)
       .with_body(data)
       .create_async()
@@ -111,6 +133,8 @@ mod test {
     let feed_url = "http://testfeed.com/atom.xml";
 
     let result = url_to_feed_url(&page_url).await.unwrap();
+
+    m.assert_async().await;
 
     match result {
       Some(result) => assert_eq!(feed_url, result),
@@ -126,7 +150,7 @@ mod test {
     let data = fs::read_to_string(path).unwrap();
     let mut server = mockito::Server::new_async().await;
 
-    let _m = server.mock("GET", "/")
+    let m = server.mock("GET", "/")
       .with_status(200)
       .with_body(data)
       .create_async()
@@ -136,6 +160,8 @@ mod test {
 
     let result = url_to_feed_url(&page_url).await.unwrap();
 
+    m.assert_async().await;
+
     assert!(result.is_none());
 
     Ok(())
@@ -144,7 +170,7 @@ mod test {
   #[tokio::test]
   async fn test_html_with_server_error() -> Result<(), String>  {
     let mut server = mockito::Server::new_async().await;
-    let _m = server.mock("GET", "/")
+    let m = server.mock("GET", "/")
       .with_status(500)
       .create_async()
       .await;
@@ -152,6 +178,8 @@ mod test {
     let page_url = format!("{}/", &server.url()).to_string();
 
     let result = url_to_feed_url(&page_url).await.unwrap();
+
+    m.assert_async().await;
 
     assert!(result.is_none());
 
@@ -162,7 +190,7 @@ mod test {
   #[tokio::test]
   async fn test_404_feed_url() -> Result<(), String>  {
     let mut server = mockito::Server::new_async().await;
-    let _m = server.mock("GET", "/feed.xml")
+    let m = server.mock("GET", "/feed.xml")
       .with_status(404)
       .create_async()
       .await;
@@ -170,6 +198,8 @@ mod test {
     let feed_url = format!("{}/feed.xml", &server.url()).to_string();
 
     let result = url_to_feed_url(&feed_url).await.unwrap();
+
+    m.assert_async().await;
 
     assert!(result.is_none());
 

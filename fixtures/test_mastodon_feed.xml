@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:webfeeds="http://webfeeds.org/rss/1.0" xmlns:media="http://search.yahoo.com/mrss/">
+  <channel>
+    <title>colin mitchell</title>
+    <description>Public posts from @muffinista@botsin.space</description>
+    <link>https://botsin.space/@muffinista</link>
+    <image>
+      <url>https://files.botsin.space/accounts/avatars/000/000/001/original/c766bf1ee2ed9287.jpg</url>
+      <title>colin mitchell</title>
+      <link>https://botsin.space/@muffinista</link>
+    </image>
+    <lastBuildDate>Wed, 28 Jun 2023 02:20:37 +0000</lastBuildDate>
+    <webfeeds:icon>https://files.botsin.space/accounts/avatars/000/000/001/original/c766bf1ee2ed9287.jpg</webfeeds:icon>
+    <generator>Mastodon v4.1.2</generator>
+    <item>
+      <guid isPermaLink="true">https://botsin.space/@muffinista/110619448954462641</guid>
+      <link>https://botsin.space/@muffinista/110619448954462641</link>
+      <pubDate>Wed, 28 Jun 2023 02:20:37 +0000</pubDate>
+      <description>&lt;p&gt;boo&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>
