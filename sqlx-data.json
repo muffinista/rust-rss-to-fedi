@@ -112,6 +112,11 @@
           "name": "error_count",
           "ordinal": 21,
           "type_info": "Int4"
+        },
+        {
+          "name": "tweaked_profile_data",
+          "ordinal": 22,
+          "type_info": "Bool"
         }
       ],
       "nullable": [
@@ -136,6 +141,7 @@
         true,
         true,
         true,
+        false,
         false
       ],
       "parameters": {
@@ -145,35 +151,6 @@
       }
     },
     "query": "SELECT feeds.* FROM feeds INNER JOIN items ON items.feed_id = feeds.id WHERE items.id = $1"
-  },
-  "040e413f315a2aa819703e517fec33670317f1ac06adb684c9017aa8bb34e457": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
-          "Varchar",
-          "Varchar",
-          "Varchar",
-          "Varchar",
-          "Varchar",
-          "Varchar",
-          "Varchar",
-          "Varchar",
-          "Varchar",
-          "Varchar",
-          "Timestamptz",
-          "Varchar",
-          "Varchar",
-          "Varchar",
-          "Bool",
-          "Bool",
-          "Int4",
-          "Int4"
-        ]
-      }
-    },
-    "query": "UPDATE feeds\n      SET url = $1,\n          name = $2,\n          private_key = $3,\n          public_key = $4,\n          image_url = $5,\n          icon_url = $6,\n          title = $7,\n          description = $8,\n          site_url = $9,\n          error = $10,\n          updated_at = $11,\n          hashtag = $12,\n          content_warning = $13,\n          status_publicity = $14,\n          admin = $15,\n          listed = $16,\n          error_count = $17\n      WHERE id = $18"
   },
   "0f4dc23f3149fdb5cd3085904e8bbb32071c1179f4c3c94f012aec5722d1bce1": {
     "describe": {
@@ -514,6 +491,11 @@
           "name": "error_count",
           "ordinal": 21,
           "type_info": "Int4"
+        },
+        {
+          "name": "tweaked_profile_data",
+          "ordinal": 22,
+          "type_info": "Bool"
         }
       ],
       "nullable": [
@@ -538,6 +520,7 @@
         true,
         true,
         true,
+        false,
         false
       ],
       "parameters": {
@@ -830,6 +813,11 @@
           "name": "error_count",
           "ordinal": 21,
           "type_info": "Int4"
+        },
+        {
+          "name": "tweaked_profile_data",
+          "ordinal": 22,
+          "type_info": "Bool"
         }
       ],
       "nullable": [
@@ -854,6 +842,7 @@
         true,
         true,
         true,
+        false,
         false
       ],
       "parameters": {
@@ -1297,6 +1286,11 @@
           "name": "error_count",
           "ordinal": 21,
           "type_info": "Int4"
+        },
+        {
+          "name": "tweaked_profile_data",
+          "ordinal": 22,
+          "type_info": "Bool"
         }
       ],
       "nullable": [
@@ -1321,6 +1315,7 @@
         true,
         true,
         true,
+        false,
         false
       ],
       "parameters": {
@@ -1705,6 +1700,11 @@
           "name": "error_count",
           "ordinal": 21,
           "type_info": "Int4"
+        },
+        {
+          "name": "tweaked_profile_data",
+          "ordinal": 22,
+          "type_info": "Bool"
         }
       ],
       "nullable": [
@@ -1729,6 +1729,7 @@
         true,
         true,
         true,
+        false,
         false
       ],
       "parameters": {
@@ -1970,6 +1971,11 @@
           "name": "error_count",
           "ordinal": 21,
           "type_info": "Int4"
+        },
+        {
+          "name": "tweaked_profile_data",
+          "ordinal": 22,
+          "type_info": "Bool"
         }
       ],
       "nullable": [
@@ -1994,6 +2000,7 @@
         true,
         true,
         true,
+        false,
         false
       ],
       "parameters": {
@@ -2108,6 +2115,36 @@
     },
     "query": "SELECT count(1) AS tally FROM blocked_domains WHERE name = $1"
   },
+  "b4e9df17b28c422488fc5f6ed5702a4bb703be6d97f6cb425a606f41bd7bc056": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Timestamptz",
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Bool",
+          "Bool",
+          "Int4",
+          "Bool",
+          "Int4"
+        ]
+      }
+    },
+    "query": "UPDATE feeds\n      SET url = $1,\n          name = $2,\n          private_key = $3,\n          public_key = $4,\n          image_url = $5,\n          icon_url = $6,\n          title = $7,\n          description = $8,\n          site_url = $9,\n          error = $10,\n          updated_at = $11,\n          hashtag = $12,\n          content_warning = $13,\n          status_publicity = $14,\n          admin = $15,\n          listed = $16,\n          error_count = $17,\n          tweaked_profile_data = $18\n      WHERE id = $19"
+  },
   "b7fcf5392c2bc2050c0adde8c24d54d6e430d7baa0b7c8eeb9b65815c1235b02": {
     "describe": {
       "columns": [
@@ -2220,6 +2257,11 @@
           "name": "error_count",
           "ordinal": 21,
           "type_info": "Int4"
+        },
+        {
+          "name": "tweaked_profile_data",
+          "ordinal": 22,
+          "type_info": "Bool"
         }
       ],
       "nullable": [
@@ -2244,6 +2286,7 @@
         true,
         true,
         true,
+        false,
         false
       ],
       "parameters": {
@@ -2644,6 +2687,11 @@
           "name": "error_count",
           "ordinal": 21,
           "type_info": "Int4"
+        },
+        {
+          "name": "tweaked_profile_data",
+          "ordinal": 22,
+          "type_info": "Bool"
         }
       ],
       "nullable": [
@@ -2668,6 +2716,7 @@
         true,
         true,
         true,
+        false,
         false
       ],
       "parameters": {
@@ -3142,6 +3191,11 @@
           "name": "error_count",
           "ordinal": 21,
           "type_info": "Int4"
+        },
+        {
+          "name": "tweaked_profile_data",
+          "ordinal": 22,
+          "type_info": "Bool"
         }
       ],
       "nullable": [
@@ -3166,6 +3220,7 @@
         true,
         true,
         true,
+        false,
         false
       ],
       "parameters": {

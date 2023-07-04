@@ -42,7 +42,9 @@ pub struct FeedUpdateForm {
   listed: bool,
   status_publicity: Option<String>,
   content_warning: Option<String>,
-  hashtag: Option<String>
+  hashtag: Option<String>,
+  title: Option<String>,
+  description: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -125,6 +127,14 @@ pub async fn update_feed(user: User, username: &str, db: &State<PgPool>, form: F
           feed.content_warning = form.content_warning.clone();
           feed.hashtag = form.hashtag.clone();
           feed.status_publicity = form.status_publicity.clone();
+
+          // user has tweaked title/description, let's mark that
+          if form.title != feed.title || feed.description != form.description {
+            feed.tweaked_profile_data = true;
+          }
+
+          feed.title = form.title.clone();
+          feed.description = form.description.clone();
 
           let result = feed.save(db).await;
           let dest = uri!(show_feed(&feed.name, None::<i32>));

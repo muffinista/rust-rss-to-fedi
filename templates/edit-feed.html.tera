@@ -6,6 +6,24 @@
     <input type="hidden" name="_method" value="put" />
 
     <fieldset>
+      <legend>Feed Details</legend>
+      <div class="form-row">
+        <label for="title">Name/Title:</label>
+        <div class="input">
+          <input type="text" name="title"  value="{{ feed.title }}" />
+          <div class="help">The name/title of the feed.</div>
+        </div>
+      </div>
+      <div class="form-row">
+        <label for="description">Description:</label>
+        <div class="input">
+          <textarea name="description">{{ feed.description }}</textarea>
+          <div class="help">A description of the feed.</div>
+        </div>
+      </div>
+    </fieldset>
+
+    <fieldset>
       <legend>Search Engine Indexing</legend>
       <div>
         <label for="listed-true"><input type="radio" id="listed-true" name="listed" value="true" {% if feed.listed %}checked{% endif %}/> Allow search engines to index this account</label><br />

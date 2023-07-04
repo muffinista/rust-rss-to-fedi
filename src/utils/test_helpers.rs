@@ -111,7 +111,8 @@ pub fn fake_feed() -> Feed {
     refreshed_at: Utc::now(),
     last_post_at: None,
     error: None,
-    error_count: 0
+    error_count: 0,
+    tweaked_profile_data: false
   }
 }
 

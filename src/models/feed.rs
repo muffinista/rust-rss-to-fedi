@@ -87,6 +87,8 @@ pub struct Feed {
   pub description: Option<String>,
   pub site_url: Option<String>,
 
+  pub tweaked_profile_data: bool,
+
   pub listed: bool,
   pub hashtag: Option<String>,
   pub content_warning: Option<String>,
@@ -314,8 +316,9 @@ impl Feed {
           status_publicity = $14,
           admin = $15,
           listed = $16,
-          error_count = $17
-      WHERE id = $18",
+          error_count = $17,
+          tweaked_profile_data = $18
+      WHERE id = $19",
       self.url,
       self.name,
       self.private_key,
@@ -333,6 +336,7 @@ impl Feed {
       self.admin,
       self.listed,
       self.error_count,
+      self.tweaked_profile_data,
       self.id
     ).execute(pool)
       .await?;
@@ -593,11 +597,12 @@ impl Feed {
         
     match data {
       Ok(data) => {
-        if data.title.is_some() {
-          self.title = Some(data.title.as_ref().unwrap().content.clone());
+        // only update title/description if user hasn't customized them
+        if data.title.is_some() && self.tweaked_profile_data == false {
+          self.title = Some(sanitize_str(&DEFAULT, &data.title.as_ref().unwrap().content.clone()).unwrap());
         }
-        if data.description.is_some() {
-          self.description = Some(data.description.as_ref().unwrap().content.clone());
+        if data.description.is_some() && self.tweaked_profile_data == false {
+          self.description = Some(sanitize_str(&DEFAULT, &data.description.as_ref().unwrap().content.clone()).unwrap());
         }
         if data.icon.is_some() {
           self.icon_url = Some(data.icon.as_ref().unwrap().uri.clone());
@@ -623,8 +628,6 @@ impl Feed {
             None
           }
         }
-
-        // todo snag link too
 
         let update = self.save(pool).await;
         match update {
