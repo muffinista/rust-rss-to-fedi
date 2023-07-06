@@ -176,6 +176,8 @@ impl<'r> FromRequest<'r> for SignatureValidity {
 ///
 #[post("/feed/<username>/inbox", data="<activity>")]
 pub async fn user_inbox(digest: Option<SignatureValidity>, username: &str, activity: Json<AcceptedActivity>, db: &State<PgPool>) -> Result<(), Status> {
+  let msg = serde_json::to_string(activity.deref()).unwrap();
+  log::info!("{:}", msg);
 
   // get the actor from headers and check if the signature is valid
   let (actor, error) = if env::var("DISABLE_SIGNATURE_CHECKS").is_ok() {
@@ -192,7 +194,6 @@ pub async fn user_inbox(digest: Option<SignatureValidity>, username: &str, activ
     }
   };
 
-  let msg = serde_json::to_string(activity.deref()).unwrap();
 
   if env::var("DISABLE_SIGNATURE_CHECKS").is_ok() {
     log::info!("Skipping signature check because DISABLE_SIGNATURE_CHECKS is set");
