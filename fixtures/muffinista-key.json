@@ -1,0 +1,12 @@
+{
+    "id": "SERVER_URL/users/muffinista",
+    "type": "Person",
+    "owner": "SERVER_URL/users/muffinista",
+    "preferredUsername": "muffinista",
+    "name": "colin mitchell",
+    "publicKey": {
+        "id": "SERVER_URL/users/muffinista#main-key",
+        "owner": "SERVER_URL/users/muffinista",
+        "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAysfVKL6uQuCZJat/BvSl\n19wnSeHs6cTDA10kEOz4eqowxSFjnR9WptYs8KhlmKbKpAfrdCcF7FT8cp0N35qX\nmZaUlmMuDPx8qEELyBYtano8bcyEmYQkLkivU/EY/3syVDyAPqlvIfMu/+cW1lUU\nenQOR1dZGwXeKkDKcZBoTe1UjnvbTXnOj0dknneeBMXl1wej3fW6972blafeko0L\n51V/DK+dev78a//KZjPtE3Vs7q6Bw+1eqim4+1aq1kL2hXdkDghtMdWoLDdhiqtj\nSI1rXIc/8+Z94Hfcc0GW817eCFMgDuqbCL3B+p99UMta2klTvzPZOd+l57uK/YYq\nuwIDAQAB\n-----END PUBLIC KEY-----\n"
+    }
+}

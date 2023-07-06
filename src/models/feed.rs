@@ -598,10 +598,10 @@ impl Feed {
     match data {
       Ok(data) => {
         // only update title/description if user hasn't customized them
-        if data.title.is_some() && self.tweaked_profile_data == false {
+        if data.title.is_some() && !self.tweaked_profile_data {
           self.title = Some(sanitize_str(&DEFAULT, &data.title.as_ref().unwrap().content.clone()).unwrap());
         }
-        if data.description.is_some() && self.tweaked_profile_data == false {
+        if data.description.is_some() && !self.tweaked_profile_data {
           self.description = Some(sanitize_str(&DEFAULT, &data.description.as_ref().unwrap().content.clone()).unwrap());
         }
         if data.icon.is_some() {
