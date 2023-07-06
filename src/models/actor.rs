@@ -16,7 +16,6 @@ use openssl::{
 };
 
 use crate::models::BlockedDomain;
-use crate::models::Feed;
 
 ///
 /// Model for an ActivityPub actor. This could be a remote user who also has
@@ -109,14 +108,7 @@ impl Actor {
   ///
   pub async fn fetch(url: &String, pool: &PgPool) -> Result<(), AnyError> {
     log::info!("FETCH ACTOR: {url:}");
-    let admin_feed = Feed::for_admin(pool).await?;
-
-    let resp = if admin_feed.is_some() {
-      let admin_feed = admin_feed.unwrap();
-      crate::services::mailer::fetch_object(url, Some(&admin_feed.ap_url()), Some(&admin_feed.private_key)).await
-    } else {
-      crate::services::mailer::fetch_object(url, None, None).await
-    };
+    let resp = crate::services::mailer::admin_fetch_object(url, pool).await;
 
     match resp {
       Ok(resp) => {
@@ -125,6 +117,8 @@ impl Actor {
         }
 
         let resp = resp.unwrap();
+        log::info!("ACTOR: {url:} -> {resp:}");
+
         let data:Value = serde_json::from_str(&resp).unwrap();
 
         if data["id"].is_string() && data["publicKey"].is_object() {
@@ -134,8 +128,41 @@ impl Actor {
             None
           };
 
+          let inbox = if data["inbox"].is_string() {
+            data["inbox"].as_str().unwrap().to_string()
+          } else if data["owner"].is_string() {
+            // https://docs.gotosocial.org/en/latest/federation/federating_with_gotosocial/
+            let owner_url = data["owner"].as_str().unwrap();
+
+            // Remote servers federating with GoToSocial should extract the
+            // public key from the publicKey field. Then, they should use the
+            // owner field of the public key to further dereference the full
+            // version of the Actor, using a signed GET request.
+            let resp = crate::services::mailer::admin_fetch_object(owner_url, pool).await;
+
+            match resp {
+              Ok(resp) => {
+                if resp.is_none() {
+                  return Err(anyhow!("User not found"))
+                }
+        
+                let resp = resp.unwrap();
+                log::info!("ACTOR: {url:} -> {resp:}");
+        
+                let data:Value = serde_json::from_str(&resp).unwrap();       
+                data["inbox"].as_str().unwrap().to_string()
+              },
+              Err(why) => {
+                log::info!("fetch failed: {why:?}");
+                return Err(why);        
+              }
+            }
+          } else {
+            return Err(anyhow!("User not found"))
+          };
+
           Actor::create(&data["id"].as_str().unwrap().to_string(),
-                        &data["inbox"].as_str().unwrap().to_string(),
+                        &inbox,
                         &data["publicKey"]["id"].as_str().unwrap().to_string(),
                         &data["publicKey"]["publicKeyPem"].as_str().unwrap().to_string(),
                         username,
@@ -194,40 +221,6 @@ impl Actor {
     Ok(())
   }
 
-  // pub async fn mark_stale(&self, pool: &PgPool) -> Result<(), sqlx::Error> {
-  //   let old = Utc.with_ymd_and_hms(1900, 1, 1, 0, 0, 0).unwrap();
-  //   let result = sqlx::query!("UPDATE actors SET refreshed_at = $1 WHERE url = $2", old, self.url)
-  //     .execute(pool)
-  //     .await;
-
-  //   match result {
-  //     Ok(_result) => Ok(()),
-  //     Err(why) => Err(why)
-  //   }
-  // }
-
-  // pub async fn mark_error(&self, err:&String, pool: &PgPool) -> Result<(), sqlx::Error> {
-  //   let result = sqlx::query!("UPDATE actors SET error = $1 WHERE url = $2", err, self.url)
-  //     .execute(pool)
-  //     .await;
-
-  //   match result {
-  //     Ok(_result) => Ok(()),
-  //     Err(why) => Err(why)
-  //   }
-  // }
-
-  // pub async fn mark_fresh(&self, pool: &PgPool) -> Result<(), sqlx::Error> {
-  //   let now = Utc::now();
-  //   let result = sqlx::query!("UPDATE actors SET refreshed_at = $1 WHERE url = $2", now, self.url)
-  //     .execute(pool)
-  //     .await;
-
-  //   match result {
-  //     Ok(_result) => Ok(()),
-  //     Err(why) => Err(why)
-  //   }
-  // }
 
   ///
   /// Given a message payload and a signature, confirm that they came from this Actor
@@ -247,6 +240,8 @@ impl Actor {
 #[cfg(test)]
 mod test {
   use sqlx::postgres::PgPool;
+  use mockito;
+  use std::fs;
 
   use crate::models::actor::Actor;
     
@@ -258,6 +253,75 @@ mod test {
 
     assert_eq!(actor.url, url);
     assert_eq!(actor.public_key_id, "https://botsin.space/users/muffinista#main-key");
+
+    Ok(())
+  }
+
+  #[sqlx::test]
+  async fn test_fetch(pool: PgPool) -> Result<(), sqlx::Error> {
+    let mut server = mockito::Server::new_async().await;
+    let path = "fixtures/muffinista.json";
+    let data = fs::read_to_string(path).unwrap().replace("SERVER_URL", &server.url());
+
+    let m = server.mock("GET", "/users/muffinista")
+      .with_status(200)
+      .with_header("Accept", "application/activity+json")
+      .with_body(data)
+      .create_async()
+      .await;
+
+    let url = format!("{}/users/muffinista", &server.url()).to_string();
+
+    let exists = Actor::exists_by_url(&url, &pool).await?;
+    assert!(!exists);
+
+    let _actor = Actor::fetch(&url, &pool).await;
+
+    m.assert_async().await;
+
+    let exists = Actor::exists_by_url(&url, &pool).await?;
+    assert!(exists);
+
+    Ok(())
+  }
+
+  #[sqlx::test]
+  async fn test_fetch_no_inbox(pool: PgPool) -> Result<(), sqlx::Error> {
+    let mut server = mockito::Server::new_async().await;
+    let path = "fixtures/muffinista-key.json";
+    let data = fs::read_to_string(path).unwrap().replace("SERVER_URL", &server.url());
+
+    let full_path = "fixtures/muffinista.json";
+    let full_data = fs::read_to_string(full_path).unwrap().replace("SERVER_URL", &server.url());
+
+    let m = server.mock("GET", "/users/muffinista/main-key")
+      .with_status(200)
+      .with_header("Accept", "application/activity+json")
+      .with_body(data)
+      .create_async()
+      .await;
+
+    let m2 = server.mock("GET", "/users/muffinista")
+      .with_status(200)
+      .with_header("Accept", "application/activity+json")
+      .with_body(full_data)
+      .create_async()
+      .await;
+
+    let url = format!("{}/users/muffinista/main-key", &server.url()).to_string();
+
+    let exists = Actor::exists_by_url(&url, &pool).await?;
+    assert!(!exists);
+
+    let _actor = Actor::fetch(&url, &pool).await;
+
+    m.assert_async().await;
+    m2.assert_async().await;
+
+    let url = format!("{}/users/muffinista", &server.url()).to_string();
+
+    let exists = Actor::exists_by_url(&url, &pool).await?;
+    assert!(exists);
 
     Ok(())
   }

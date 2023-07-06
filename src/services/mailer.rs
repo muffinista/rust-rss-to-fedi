@@ -1,8 +1,10 @@
 use http_signature_normalization_reqwest::prelude::*;
 use reqwest::Request;
 use reqwest_middleware::RequestBuilder;
+use sqlx::postgres::PgPool;
 
 use crate::utils::http::*;
+use crate::models::Feed;
 
 use openssl::{
   hash::MessageDigest,
@@ -19,6 +21,16 @@ use anyhow::{anyhow};
 
 use serde::Serialize;
 
+pub async fn admin_fetch_object(url: &str, pool: &PgPool) -> Result<Option<String>, anyhow::Error> {
+  let admin_feed = Feed::for_admin(pool).await?;
+
+  if admin_feed.is_some() {
+    let admin_feed = admin_feed.as_ref().unwrap();
+    crate::services::mailer::fetch_object(url, Some(&admin_feed.ap_url()), Some(&admin_feed.private_key)).await
+  } else {
+    crate::services::mailer::fetch_object(url, None, None).await
+  }
+}
 
 ///
 /// fetch an http object. Sign request with key if provided
