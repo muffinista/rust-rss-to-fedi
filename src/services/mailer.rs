@@ -1,6 +1,8 @@
 use http_signature_normalization_reqwest::prelude::*;
 use reqwest::Request;
 use reqwest_middleware::RequestBuilder;
+use reqwest::header::HeaderValue;
+
 use sqlx::postgres::PgPool;
 
 use crate::utils::http::*;
@@ -87,12 +89,18 @@ pub async fn fetch_object(url: &str, key_id: Option<&str>, private_key: Option<&
 ///
 pub async fn deliver_to_inbox<T: Serialize + ?Sized>(inbox: &Url, key_id: &str, private_key: &str, json: &T) -> Result<(), anyhow::Error> {
   let client = http_client();
-  let heads = generate_request_headers();
+  let mut heads = generate_request_headers();
   let payload = serde_json::to_vec(json).unwrap();
-  // let printable_payload = String::from_utf8(payload).unwrap();
+  // let printable_payload = String::from_utf8(payload.clone()).unwrap();
 
   log::info!("deliver to {inbox:}");
   // log::info!("message {printable_payload:}");
+
+  // ensure we're sending proper content-type
+  heads.insert(
+    "Content-Type",
+    HeaderValue::from_str("application/activity+json").unwrap(),
+  );
 
   let request_builder = client
     .post(inbox.to_string())
@@ -109,6 +117,7 @@ pub async fn deliver_to_inbox<T: Serialize + ?Sized>(inbox: &Url, key_id: &str, 
     .await?;
 
   log::info!("{:?}", request);
+  println!("{request:?}");
 
   let response = client.execute(request).await;
   match response {
@@ -116,7 +125,10 @@ pub async fn deliver_to_inbox<T: Serialize + ?Sized>(inbox: &Url, key_id: &str, 
       if response.status().is_success() {
         Ok(())
       } else {
-        Err(anyhow!(response.status().to_string()))
+        // println!("{:?}", response.text().await.unwrap());
+        let status = response.status().to_string();
+        let text = response.text().await.unwrap();
+        Err(anyhow!(format!("{status:} {text:}")))
       }
     },
     Err(why) => Err(why.into())
@@ -150,44 +162,3 @@ pub async fn sign_request(
     )
     .await
 }
-
-
-// #[cfg(test)]
-// mod test {
-//   use url::Url;
-//   use webfinger::Webfinger;
-
-//   use crate::services::mailer::*;
-
-//   #[tokio::test]
-//   async fn test_parse_webfinger() {
-//     let json = r#"
-//       {
-//           "subject": "acct:test@example.org",
-//           "aliases": [
-//               "https://example.org/@test/"
-//           ],
-//           "links": [
-//               {
-//                   "rel": "http://webfinger.net/rel/profile-page",
-//                   "href": "https://example.org/@test/"
-//               },
-//               {
-//                   "rel": "http://schemas.google.com/g/2010#updates-from",
-//                   "type": "application/atom+xml",
-//                   "href": "https://example.org/@test/feed.atom"
-//               },
-//               {
-//                   "rel": "self",
-//                   "type": "application/activity+json",
-//                   "href": "https://example.org/@test/json"
-//               }
-//           ]
-//       }"#;
-
-//     let wf:Webfinger = serde_json::from_str::<Webfinger>(json).unwrap();
-
-//     let inbox:Url = parse_webfinger(wf).unwrap();
-//     assert_eq!("https://example.org/@test/json", inbox.to_string());
-//   }
-// }

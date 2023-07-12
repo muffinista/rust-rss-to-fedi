@@ -152,27 +152,6 @@
     },
     "query": "SELECT feeds.* FROM feeds INNER JOIN items ON items.feed_id = feeds.id WHERE items.id = $1"
   },
-  "0f4dc23f3149fdb5cd3085904e8bbb32071c1179f4c3c94f012aec5722d1bce1": {
-    "describe": {
-      "columns": [
-        {
-          "name": "tally",
-          "ordinal": 0,
-          "type_info": "Int8"
-        }
-      ],
-      "nullable": [
-        null
-      ],
-      "parameters": {
-        "Left": [
-          "Text",
-          "Text"
-        ]
-      }
-    },
-    "query": "SELECT count(1) AS tally FROM actors WHERE url = $1 OR inbox_url = $2"
-  },
   "127d18d1e252038d0e8382bc6c03ff37ebbe97719d24d26f262513f0ac988ff9": {
     "describe": {
       "columns": [
@@ -303,6 +282,76 @@
       }
     },
     "query": "SELECT * FROM users WHERE actor_url = $1"
+  },
+  "1ab154415ade783957216b8893644446938a35cdce79507feccb571418b9d6af": {
+    "describe": {
+      "columns": [
+        {
+          "name": "url",
+          "ordinal": 0,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "error",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "public_key_id",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "public_key",
+          "ordinal": 3,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "created_at",
+          "ordinal": 4,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "ordinal": 5,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "refreshed_at",
+          "ordinal": 6,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "inbox_url",
+          "ordinal": 7,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "username",
+          "ordinal": 8,
+          "type_info": "Varchar"
+        }
+      ],
+      "nullable": [
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Text",
+          "Text"
+        ]
+      }
+    },
+    "query": "SELECT * FROM actors WHERE url = $1 OR inbox_url = $2 OR public_key_id = $3"
   },
   "1e9045f52c002a19b815351fee1c7ee7520478ff4f5886b4523fb0dc4df0e204": {
     "describe": {
@@ -549,6 +598,28 @@
     },
     "query": "INSERT INTO messages \n      (username, text, actor, error, handled, created_at, updated_at)\n      VALUES ($1, $2, $3, $4, $5, $6, $7)"
   },
+  "35cf5791db6618517563c26b10650edbc0cada9c2ca0791ba7a860081f449883": {
+    "describe": {
+      "columns": [
+        {
+          "name": "tally",
+          "ordinal": 0,
+          "type_info": "Int8"
+        }
+      ],
+      "nullable": [
+        null
+      ],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Text",
+          "Text"
+        ]
+      }
+    },
+    "query": "SELECT count(1) AS tally FROM actors WHERE url = $1 OR inbox_url = $2 OR public_key_id = $3"
+  },
   "39aadafcfc39f0a28c282ac7561cf6d3fbee9b03b3c84683e702fce730332939": {
     "describe": {
       "columns": [],
@@ -581,74 +652,6 @@
       }
     },
     "query": "SELECT COUNT(1) AS tally FROM feeds WHERE user_id = $1"
-  },
-  "4d64e51db24b141b9ca52385419277a1c1e77e7610345088a207766e925a9e1d": {
-    "describe": {
-      "columns": [
-        {
-          "name": "url",
-          "ordinal": 0,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "error",
-          "ordinal": 1,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "public_key_id",
-          "ordinal": 2,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "public_key",
-          "ordinal": 3,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "created_at",
-          "ordinal": 4,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "updated_at",
-          "ordinal": 5,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "refreshed_at",
-          "ordinal": 6,
-          "type_info": "Timestamptz"
-        },
-        {
-          "name": "inbox_url",
-          "ordinal": 7,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "username",
-          "ordinal": 8,
-          "type_info": "Varchar"
-        }
-      ],
-      "nullable": [
-        false,
-        true,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        true
-      ],
-      "parameters": {
-        "Left": [
-          "Text"
-        ]
-      }
-    },
-    "query": "SELECT * FROM actors WHERE url = $1"
   },
   "4e3e0fdf04776ee17f5434b3814ed2fbe3408b677b4bd9b609834375dae698e8": {
     "describe": {

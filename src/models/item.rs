@@ -20,6 +20,7 @@ use activitystreams::base::ExtendsExt;
 use activitystreams::object::ObjectExt;
 use activitystreams::link::Mention;
 use activitystreams::link::LinkExt;
+use activitystreams::time::OffsetDateTime;
 
 use crate::activitystreams::Hashtag;
 
@@ -34,8 +35,6 @@ use activitystreams::{
   security,
   context
 };
-
-use activitystreams::time::OffsetDateTime;
 
 use crate::utils::templates::{Context, render};
 
@@ -355,7 +354,10 @@ impl Item {
     action
       .set_context(context())
       .add_context(iri!("as:Hashtag"))
-      .add_context(security());
+      .add_context(security())
+      .set_id(iri!(item_url))
+      .set_published(ts);
+
 
     //
     // set destination according to desired publicity level
@@ -474,8 +476,7 @@ impl Item {
               targeted.set_many_tos(vec![iri!(inbox)]);
                 
               let msg = serde_json::to_string(&targeted).unwrap();
-              log::info!("{msg}");
-      
+              log::info!("{msg}");     
       
               let task = DeliverMessage { feed_id: feed.id, actor_url: inbox, message: msg };
               let _result = queue
