@@ -69,10 +69,10 @@ async fn main() -> Result<(), AnyError> {
       let inbox = dest_actor.inbox_url;
       println!("{dest_url:} -> {inbox:}");
 
-      message.set_many_tos(vec![iri!(inbox)]);
+      message.set_many_tos(vec![iri!(dest_actor.url)]);
 
-      // let msg = serde_json::to_string(&message).unwrap();
-      // println!("{msg}");
+      let msg = serde_json::to_string(&message).unwrap();
+      println!("{msg}");
 
       let dest_url = &Url::parse(&inbox).unwrap();
       let result = deliver_to_inbox(dest_url, &feed.ap_url(), &feed.private_key, &message).await;

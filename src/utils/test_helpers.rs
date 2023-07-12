@@ -68,7 +68,7 @@ pub async fn real_actor(pool: &PgPool) -> sqlx::Result<Actor> {
     Some("username".to_string()),
     &pool).await?;
   
-  let actor: Actor = Actor::find_or_fetch(&"https://foo.com/users/user".to_string(), &pool).await.unwrap().unwrap();
+  let actor:Actor = Actor::find_or_fetch(&"https://foo.com/users/user".to_string(), &pool).await.unwrap().unwrap();
 
   Ok(actor)
 }
@@ -159,8 +159,6 @@ pub async fn real_item(feed: &Feed, pool: &PgPool) -> sqlx::Result<Item> {
     .fetch_one(pool)
     .await?
     .id;
-
-  println!("!!!!!!!!!!!!! {:}", id);
 
   Item::find(item_id, &pool).await
 }

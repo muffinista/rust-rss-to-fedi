@@ -65,25 +65,40 @@ impl Actor {
 
     let lookup_url = clean_url.as_str().to_string();
 
-    let exists = Actor::exists_by_url(&lookup_url, pool).await?;
-    if ! exists {
-      let result = Actor::fetch(&lookup_url, pool).await;
-      match result {
-        Ok(_result) => {}
-        Err(why) => {
-          return Err(why)
+    //
+    // look for actor in db
+    //
+    let result = Actor::find(url, pool).await?;  
+    if result.is_some() {
+      return Ok(result);
+    }
+
+    //
+    // fetch remote data
+    //
+    let fetch_result = Actor::fetch(&lookup_url, pool).await;
+    match fetch_result {
+      Ok(_fetch_result) => {
+        // re-check db
+        let result = Actor::find(url, pool).await?;
+        if result.is_some() {
+          return Ok(result);
         }
-      }      
-    }
+        return Ok(None);
+      }
+      Err(why) => {
+        return Err(why)
+      }
+    }      
+  }
 
-    let result = sqlx::query_as!(Actor, "SELECT * FROM actors WHERE url = $1", &lookup_url)
+  ///
+  /// query the db for this actor
+  ///
+  pub async fn find(url: &str, pool: &PgPool) -> Result<Option<Actor>, sqlx::Error> {
+    sqlx::query_as!(Actor, "SELECT * FROM actors WHERE url = $1 OR inbox_url = $2 OR public_key_id = $3", &url, &url, &url)
       .fetch_optional(pool)
-      .await;
-
-    match result {
-      Ok(result) => Ok(result),
-      Err(why) => Err(why.into())
-    }
+      .await
   }
 
   ///
@@ -93,7 +108,7 @@ impl Actor {
     // look for an actor but exclude old data
     // let age = Utc::now() - Duration::seconds(3600);
     //  AND refreshed_at > $2
-    let result = sqlx::query!("SELECT count(1) AS tally FROM actors WHERE url = $1 OR inbox_url = $2", url, url)
+    let result = sqlx::query!("SELECT count(1) AS tally FROM actors WHERE url = $1 OR inbox_url = $2 OR public_key_id = $3", url, url, url)
       .fetch_one(pool)
       .await;
 
@@ -121,6 +136,8 @@ impl Actor {
 
         let data:Value = serde_json::from_str(&resp).unwrap();
 
+        // {"@context":["https://w3id.org/security/v1","https://www.w3.org/ns/activitystreams"],"id":"https://gotosocial.biff.colinlabs.com/users/muffinista","preferredUsername":"muffinista","publicKey":{"id":"https://gotosocial.biff.colinlabs.com/users/muffinista/main-key","owner":"https://gotosocial.biff.colinlabs.com/users/muffinista","publicKeyPem":"-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArzi69UwtYB4zTxMXrVJc\npjIoIElyARQU9099BmeXJFLXusRlGlmy02ZKMdrGL5FxdevjmK8P23qVFxYZ0Zzf\nqVvFVuz28hR7ilTF0f5X1thhoaclpoZufQYTKnLXkHlWxigWRiU52MMN8J+5i6Rx\nlEKvQUQddyN3HP5n7GuKnM0Mi7wsaiRdafR111CR2QCADU10eoD20aQgK/TsxFix\nI2SAkeTDcVhZPBnNj8PGTW7QITQCU2QlPET/ePnD9uXrrhFHe5giRKaPr0CcxxsB\nVjPzjpzi4gz/smOsFdfo1z9p2ryHj0rI5guLo79igBhXX1bGW0qWUONDVKkIplrQ\nHQIDAQAB\n-----END PUBLIC KEY-----\n"},"type":"Person"}
+
         if data["id"].is_string() && data["publicKey"].is_object() {
           let username = if data["preferredUsername"].is_string() {
             Some(data["preferredUsername"].as_str().unwrap().to_string())
@@ -129,10 +146,19 @@ impl Actor {
           };
 
           let inbox = if data["inbox"].is_string() {
+            log::info!("data has inbox key");
             data["inbox"].as_str().unwrap().to_string()
-          } else if data["owner"].is_string() {
+          } else if data["actor"].is_string() {
+            log::info!("data has actor key");
+            data["actor"].as_str().unwrap().to_string()
+          } else if data["publicKey"]["owner"].is_string() {
+            log::info!("data has owner key");
+
             // https://docs.gotosocial.org/en/latest/federation/federating_with_gotosocial/
-            let owner_url = data["owner"].as_str().unwrap();
+            let owner_url = data["publicKey"]["owner"].as_str().unwrap();
+
+            log::info!("FETCH ACTOR OWNER: {owner_url:}");
+
 
             // Remote servers federating with GoToSocial should extract the
             // public key from the publicKey field. Then, they should use the
@@ -158,9 +184,12 @@ impl Actor {
               }
             }
           } else {
+            log::info!("data has neither????");
+
             return Err(anyhow!("User not found"))
           };
 
+          log::info!("actor create: {inbox:}");
           Actor::create(&data["id"].as_str().unwrap().to_string(),
                         &inbox,
                         &data["publicKey"]["id"].as_str().unwrap().to_string(),
@@ -223,13 +252,20 @@ impl Actor {
 
 
   ///
+  /// generate a full username address for the actor, ie @username@domain
+  ///
+  pub fn full_username(&self) -> String {
+    let url = Url::parse(&self.url).unwrap();
+    let domain = url.host().unwrap();
+
+    format!("@{}@{}", &self.username.as_ref().expect("Actor has no username!"), domain)
+  }
+
+
+  ///
   /// Given a message payload and a signature, confirm that they came from this Actor
   ///
   pub fn verify_signature(&self, payload: &str, signature: &[u8]) -> Result<bool, AnyError> {
-    // println!("{:}", payload);
-    // println!("{:?}", signature);
-    // println!("{:}", self.public_key);
-
     let key = PKey::from_rsa(Rsa::public_key_from_pem(self.public_key.as_ref()).unwrap()).unwrap();
     let mut verifier = sign::Verifier::new(MessageDigest::sha256(), &key)?;
     verifier.update(payload.as_bytes())?;
@@ -244,15 +280,41 @@ mod test {
   use std::fs;
 
   use crate::models::actor::Actor;
-    
+  use crate::utils::test_helpers::real_actor;
+
   #[sqlx::test]
   async fn test_find_or_fetch(pool: PgPool) -> Result<(), String> {
-    let url = "https://botsin.space/users/muffinista".to_string();
+    let mut server = mockito::Server::new_async().await;
+    let path = "fixtures/muffinista.json";
+    let data = fs::read_to_string(path).unwrap().replace("SERVER_URL", &server.url());
+
+    let m = server.mock("GET", "/users/muffinista")
+      .with_status(200)
+      .with_header("Accept", "application/activity+json")
+      .with_body(data)
+      .create_async()
+      .await;
+
+    let url = format!("{}/users/muffinista", &server.url()).to_string();
+
     let actor = Actor::find_or_fetch(&url, &pool).await.unwrap().expect("Failed to load actor");
-    // println!("{:?}", actor);
+
+    m.assert_async().await;
 
     assert_eq!(actor.url, url);
     assert_eq!(actor.public_key_id, "https://botsin.space/users/muffinista#main-key");
+
+    Ok(())
+  }
+
+  #[sqlx::test]
+  async fn test_find(pool: PgPool) -> Result<(), String> {
+    let _actor:Actor = real_actor(&pool).await.unwrap();
+
+    assert!(Actor::find("https://foo.com/users/user", &pool).await.unwrap().is_some());
+    assert!(Actor::find("https://foo.com/users/user/inbox", &pool).await.unwrap().is_some());
+    assert!(Actor::find("public_key_id", &pool).await.unwrap().is_some());
+    assert!(Actor::find("random_string", &pool).await.unwrap().is_none());
 
     Ok(())
   }
@@ -326,4 +388,12 @@ mod test {
     Ok(())
   }
 
+  #[sqlx::test]
+  async fn test_full_username(pool: PgPool) -> Result<(), String> {
+    let actor:Actor = real_actor(&pool).await.unwrap();
+
+    assert_eq!(actor.full_username(), "@username@foo.com");
+
+    Ok(())
+  }
 }

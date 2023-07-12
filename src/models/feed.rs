@@ -21,7 +21,9 @@ use activitystreams::{
   link::Mention,
   object::ApObject,
   object::*,
+  time::OffsetDateTime
 };
+
 
 use sqlx::postgres::PgPool;
 use serde::{Serialize};
@@ -802,6 +804,7 @@ impl Feed {
 
     // generate accept message for follow activity
     let mut accept = Accept::new(self.ap_url(), follow.into_any_base()?);
+    accept.set_id(follow_id.clone());
     accept.set_context(context());
 
     // deliver to the user
@@ -920,13 +923,14 @@ impl Feed {
     let mut mention = Mention::new();
     mention
       .set_href(iri!(dest_actor.url.to_string()))
-      .set_name("en");
+      .set_name(dest_actor.full_username());
 
-  
+
     let mut template_context = Context::new();
     template_context.insert("link", &auth_url);
     
     let body = render("email/send-login-status", &template_context).unwrap();
+    let ts = OffsetDateTime::now_utc();
 
     reply
       .set_sensitive(true)
@@ -935,12 +939,12 @@ impl Feed {
       .set_url(iri!(my_url))
       .set_id(iri!(format!("{my_url}/{uniq_hash}")))
       .set_to(iri!(dest_actor.url))
-      .set_tag(mention.into_any_base()?);
+      .set_tag(mention.into_any_base()?)
+      .set_published(ts);
 
     if source_id.is_some() {
       reply.set_in_reply_to(iri!(source_id.expect("")));
     }
-
 
     let mut action: ApObject<Create> = ApObject::new(
       Create::new(
@@ -952,7 +956,11 @@ impl Feed {
     action
       .set_context(context())
       .add_context(security())
-      .add_context("as:sensitive".to_string());
+      .add_context("as:sensitive".to_string())
+      .set_id(iri!(format!("{my_url}/{uniq_hash}")))
+      .set_to(iri!(dest_actor.url))
+      .set_published(ts);
+
 
     Ok(action) 
   }
