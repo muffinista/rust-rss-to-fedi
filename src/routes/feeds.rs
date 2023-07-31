@@ -171,7 +171,11 @@ pub async fn test_feed(_user: User, db: &State<PgPool>, form: Json<FeedForm>) ->
   let url = url_to_feed_url(&form.url).await;
 
   match url {
-    Err(_why) => Err(Status::NotFound),
+    Err(why) => {
+      let output_url = form.url.to_string();
+      log::info!("Feed test: {output_url:} {why:}");
+      Err(Status::NotFound)
+    },
     Ok(result) => {
       if result.is_some() {
         Ok(Json(FeedLookup {
