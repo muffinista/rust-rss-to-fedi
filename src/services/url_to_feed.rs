@@ -31,6 +31,7 @@ pub async fn url_to_feed_url(url:&String) -> Result<Option<String>, AnyError>{
   // grab the URL contents
   let res = reqwest::get(url).await;
   if let Err(err) = res {
+    log::info!("Feed test: get failed {url:} -> {err:}");
     return Err(anyhow!(err.to_string()))
   }
 
@@ -39,6 +40,7 @@ pub async fn url_to_feed_url(url:&String) -> Result<Option<String>, AnyError>{
     Ok(contents) => {
       // if it's a valid feed, we're good
       if is_valid_feed(contents) {
+        log::info!("Feed test: {url:} -> valid feed!");
         return Ok(Some(url.clone()))
       }
 
@@ -57,7 +59,10 @@ pub async fn url_to_feed_url(url:&String) -> Result<Option<String>, AnyError>{
         None => Ok(None)
       }
     },
-    Err(err) => Err(anyhow!(err.to_string()))
+    Err(err) => {
+      log::info!("Feed test: {url:} -> {err:}");
+      Err(anyhow!(err.to_string()))
+    }
   }
 }
 
