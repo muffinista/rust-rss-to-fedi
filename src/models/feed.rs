@@ -123,6 +123,12 @@ pub enum AcceptedTypes {
   Delete,
   Follow,
   Undo,
+  Update,
+  Reject,
+  Add,
+  Remove,
+  Like,
+  Announce
 }
 
 pub type AcceptedActivity = ActorAndObject<AcceptedTypes>;
@@ -996,7 +1002,10 @@ impl Feed {
       Some(AcceptedTypes::Create) => self.incoming_message(pool, &actor_id, activity).await,
       // we don't need to handle this but if we receive it, just move on
       Some(AcceptedTypes::Accept) => Ok(()),
-      None => Ok(())
+      None => Ok(()),
+
+      // unknown activity type, just ignore quietly
+      _ => Ok(())
     }
   }
 
