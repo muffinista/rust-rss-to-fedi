@@ -683,6 +683,15 @@ impl Feed {
     format!("@{}@{}", self.name, instance_domain)
   }
 
+  pub fn display_name(&self) -> &String {
+    if self.title.is_some() {
+      self.title.as_ref().unwrap()
+    } else {
+      &self.name
+    }
+  }
+
+
   pub fn description_with_footer(&self) -> String {
     let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
     let footer = format!("Powered by @admin@{instance_domain:}");
@@ -719,7 +728,7 @@ impl Feed {
       .set_context(context())
       .add_context(security())
       .set_id(iri!(path_to_url(&uri!(render_feed(&self.name)))))
-      .set_name(self.name.clone())
+      .set_name(self.display_name().clone())
       .set_preferred_username(self.name.clone())
       .set_inbox(iri!(path_to_url(&uri!(user_inbox(&self.name)))))
       .set_outbox(iri!(path_to_url(&uri!(render_feed_outbox(&self.name, None::<i32>)))))
