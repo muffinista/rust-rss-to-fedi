@@ -36,15 +36,15 @@ url = "2.3.1"
 sha2 = "0.10.6"
 base64 = "0.21.0"
 chrono = { version = "0.4.23", features = ["serde"] }
-scraper = "0.16.0"
+scraper = "0.17.1"
 sanitize_html = "0.7.0"
 reqwest-retry = "0.2.1"
 md-5 = "0.10.5"
 
-fang = { version = "0.10" , features = ["asynk"], default-features = false }
+fang = { version = "0.10.4" , features = ["asynk"], default-features = false }
 env_logger = "0.10.0"
 log = "0.4.17"
-sentry = { version = "0.30.0", features = ["anyhow"] }
+sentry = { version = "0.31.5", features = ["anyhow"] }
 clap = { version = "4.1.8", features = ["derive"] }
 glob = "0.3.1"
 
