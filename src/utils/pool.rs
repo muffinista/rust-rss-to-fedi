@@ -37,6 +37,8 @@ fn connect_options() -> PgConnectOptions {
 pub async fn init_db_pool() -> Pool<Postgres> {
   PgPoolOptions::new()
     .max_connections(pool_size())
+    .max_lifetime(Duration::from_secs(3600))
+    .idle_timeout(Duration::from_secs(60))
     .connect_with(connect_options())
     .await
     .expect("Failed to create pool")
