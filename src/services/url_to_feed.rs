@@ -5,6 +5,7 @@ use reqwest;
 use feed_rs::parser;
 use scraper::{Html, Selector};
 
+use crate::utils::http::*;
 
 pub fn is_valid_feed(data:&String) -> bool {
   let result = parser::parse(data.as_bytes());
@@ -28,8 +29,16 @@ pub fn is_valid_feed(data:&String) -> bool {
 /// from any HTML returned
 ///
 pub async fn url_to_feed_url(url:&String) -> Result<Option<String>, AnyError>{
+  let client = reqwest::Client::new();
+  let heads = generate_request_headers();
+  let res = client
+    .get(url)
+    .headers(heads)
+    .send()
+    .await;
+
   // grab the URL contents
-  let res = reqwest::get(url).await;
+  // let res = reqwest::get(url).await;
   if let Err(err) = res {
     log::info!("Feed test: get failed {url:} -> {err:}");
     return Err(anyhow!(err.to_string()))
@@ -38,6 +47,8 @@ pub async fn url_to_feed_url(url:&String) -> Result<Option<String>, AnyError>{
   let contents = &res.unwrap().text().await;
   match contents {
     Ok(contents) => {
+      log::info!("Feed test: {contents:}");
+
       // if it's a valid feed, we're good
       if is_valid_feed(contents) {
         log::info!("Feed test: {url:} -> valid feed!");
