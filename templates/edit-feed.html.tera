@@ -8,6 +8,13 @@
     <fieldset>
       <legend>Feed Details</legend>
       <div class="form-row">
+        <label for="title">URL:</label>
+        <div class="input">
+          <input type="text" name="url"  value="{{ feed.url }}" />
+          <div class="help">The URL of the feed.</div>
+        </div>
+      </div>
+      <div class="form-row">
         <label for="title">Name/Title:</label>
         <div class="input">
           <input type="text" name="title"  value="{{ feed.title }}" />
