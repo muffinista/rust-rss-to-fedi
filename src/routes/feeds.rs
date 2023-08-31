@@ -39,12 +39,13 @@ pub struct FeedForm {
 #[derive(FromForm, serde::Deserialize)]
 #[serde(crate = "rocket::serde")]
 pub struct FeedUpdateForm {
+  url: String,
   listed: bool,
   status_publicity: Option<String>,
   content_warning: Option<String>,
   hashtag: Option<String>,
   title: Option<String>,
-  description: Option<String>,
+  description: Option<String>
 }
 
 #[derive(Serialize)]
@@ -53,6 +54,19 @@ pub struct FeedLookup {
   src: String,
   url: String,
   error: Option<String>
+}
+
+///
+/// After creating/updating a feed, let's refresh its data
+/// 
+async fn request_feed_update(feed: &Feed) -> Result<fang::Task, fang::AsyncQueueError> {
+  let task = RefreshFeed { id: feed.id };
+  let mut queue = create_queue().await;
+  queue.connect(fang::NoTls).await.unwrap();
+
+  queue
+    .insert_task(&task as &dyn AsyncRunnable)
+    .await
 }
 
 ///
@@ -81,14 +95,7 @@ pub async fn add_feed(user: User, db: &State<PgPool>, form: Form<FeedForm>) -> R
   
         match feed {
           Ok(feed) => {
-            let task = RefreshFeed { id: feed.id };
-            let mut queue = create_queue().await;
-            queue.connect(fang::NoTls).await.unwrap();
-
-            queue
-              .insert_task(&task as &dyn AsyncRunnable)
-              .await
-              .unwrap();
+            let _ = request_feed_update(&feed).await;
       
             let notify = user.send_link_to_feed(&feed, db).await;
             match notify {
@@ -127,6 +134,7 @@ pub async fn update_feed(user: User, username: &str, db: &State<PgPool>, form: F
           feed.content_warning = form.content_warning.clone();
           feed.hashtag = form.hashtag.clone();
           feed.status_publicity = form.status_publicity.clone();
+          feed.url = form.url.clone();
 
           // user has tweaked title/description, let's mark that
           if form.title != feed.title || feed.description != form.description {
@@ -140,7 +148,11 @@ pub async fn update_feed(user: User, username: &str, db: &State<PgPool>, form: F
           let dest = uri!(show_feed(&feed.name, None::<i32>));
 
           match result {
-            Ok(_result) => Ok(Flash::success(Redirect::to(dest), "Feed updated!")),
+            Ok(_result) => {
+              let _ = request_feed_update(&feed).await;
+
+              Ok(Flash::success(Redirect::to(dest), "Feed updated!"))
+            },
             Err(_why) => Ok(Flash::error(Redirect::to(dest), "Sorry, something went wrong!"))
           }
         },
