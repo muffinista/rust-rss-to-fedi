@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM followers WHERE feed_id = $1 AND actor = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "39aadafcfc39f0a28c282ac7561cf6d3fbee9b03b3c84683e702fce730332939"
+}
