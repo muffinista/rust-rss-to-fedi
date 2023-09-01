@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO followers \n        (feed_id, actor, created_at, updated_at) \n        VALUES($1, $2, $3, $4)\n        ON CONFLICT (feed_id, actor) DO UPDATE\n        SET updated_at = EXCLUDED.updated_at",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Varchar",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e1c8c677f91099aee0e4db3f4c20d4859692c6328f8edced785ed502ad17e8b1"
+}

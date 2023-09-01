@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE feeds SET error = $1, error_count = error_count + 1 WHERE id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "99c8bc4ec37af5d70631747bafcacd2b5358d479323762d091c1c6251bdb7e0c"
+}

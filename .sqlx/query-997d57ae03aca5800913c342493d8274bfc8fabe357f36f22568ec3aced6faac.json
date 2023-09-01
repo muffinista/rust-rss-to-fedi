@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE feeds SET last_post_at = $1 WHERE id = $2 AND (last_post_at IS NULL OR last_post_at < $1)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "997d57ae03aca5800913c342493d8274bfc8fabe357f36f22568ec3aced6faac"
+}

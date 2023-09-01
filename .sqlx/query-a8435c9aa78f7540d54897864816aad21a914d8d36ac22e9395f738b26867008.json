@@ -1,0 +1,155 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT * FROM feeds WHERE name = $1 AND user_id = $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "user_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "url",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "error",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "public_key",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "private_key",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 7,
+        "name": "image_url",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 8,
+        "name": "icon_url",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 9,
+        "name": "title",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 10,
+        "name": "description",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 11,
+        "name": "site_url",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 12,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 13,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 14,
+        "name": "refreshed_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 15,
+        "name": "admin",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 16,
+        "name": "listed",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 17,
+        "name": "hashtag",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 18,
+        "name": "content_warning",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 19,
+        "name": "status_publicity",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 20,
+        "name": "last_post_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 21,
+        "name": "error_count",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 22,
+        "name": "tweaked_profile_data",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "a8435c9aa78f7540d54897864816aad21a914d8d36ac22e9395f738b26867008"
+}

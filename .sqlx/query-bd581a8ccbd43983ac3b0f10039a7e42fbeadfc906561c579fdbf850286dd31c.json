@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO settings (name, value, created_at, updated_at)\n      VALUES ($1, $2, $3, $4)\n      ON CONFLICT (name) DO UPDATE\n        SET value = EXCLUDED.value,\n        updated_at = EXCLUDED.updated_at",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Varchar",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "bd581a8ccbd43983ac3b0f10039a7e42fbeadfc906561c579fdbf850286dd31c"
+}

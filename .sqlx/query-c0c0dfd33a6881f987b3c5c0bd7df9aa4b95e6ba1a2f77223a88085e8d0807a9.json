@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT COUNT(1) AS tally FROM users",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "tally",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "c0c0dfd33a6881f987b3c5c0bd7df9aa4b95e6ba1a2f77223a88085e8d0807a9"
+}

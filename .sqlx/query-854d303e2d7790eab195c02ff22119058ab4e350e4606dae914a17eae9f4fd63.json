@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT COUNT(1) AS tally FROM items WHERE feed_id = $1 AND guid = $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "tally",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "854d303e2d7790eab195c02ff22119058ab4e350e4606dae914a17eae9f4fd63"
+}

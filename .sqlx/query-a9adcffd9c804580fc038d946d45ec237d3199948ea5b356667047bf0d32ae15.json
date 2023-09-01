@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO actors\n        (url, inbox_url, public_key_id, public_key, username, refreshed_at, created_at, updated_at)\n        VALUES($1, $2, $3, $4, $5, $6, $7, $8)\n        ON CONFLICT (url) DO UPDATE\n          SET inbox_url = EXCLUDED.inbox_url,\n            public_key_id = EXCLUDED.public_key_id,\n            public_key = EXCLUDED.public_key,\n            username = EXCLUDED.username,\n            updated_at = EXCLUDED.updated_at,\n            refreshed_at = EXCLUDED.updated_at",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Timestamptz",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a9adcffd9c804580fc038d946d45ec237d3199948ea5b356667047bf0d32ae15"
+}

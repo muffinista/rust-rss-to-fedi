@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE feeds SET refreshed_at = $1, error_count = 0, error = NULL WHERE id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a306fce897299f0ea4f90030a1a4c70bd445f3dbdf028f1ad8f6eea8d2ef372e"
+}
