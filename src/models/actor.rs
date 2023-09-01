@@ -224,12 +224,13 @@ impl Actor {
 
     // create new row, or update existing row
     sqlx::query!("INSERT INTO actors
-        (url, inbox_url, public_key_id, public_key, username, created_at, updated_at, refreshed_at)
+        (url, inbox_url, public_key_id, public_key, username, refreshed_at, created_at, updated_at)
         VALUES($1, $2, $3, $4, $5, $6, $7, $8)
         ON CONFLICT (url) DO UPDATE
           SET inbox_url = EXCLUDED.inbox_url,
             public_key_id = EXCLUDED.public_key_id,
             public_key = EXCLUDED.public_key,
+            username = EXCLUDED.username,
             updated_at = EXCLUDED.updated_at,
             refreshed_at = EXCLUDED.updated_at",
         url, inbox_url, public_key_id, public_key, username, now, now, now)
