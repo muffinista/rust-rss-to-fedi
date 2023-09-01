@@ -48,6 +48,15 @@ impl PartialEq for Actor {
 
 impl Actor {
   ///
+  /// Query the db for actors with no username
+  ///
+  pub async fn stale(pool: &PgPool) -> Result<Vec<Actor>, sqlx::Error> {
+    sqlx::query_as!(Actor, "SELECT * FROM actors WHERE username IS NULL")
+    .fetch_all(pool)
+    .await
+  }
+
+  ///
   /// Query the DB for the actor with the given URL. If not found, fetch the data and cache it
   ///
   pub async fn find_or_fetch(url: &str, pool: &PgPool) -> Result<Option<Actor>, AnyError> {
