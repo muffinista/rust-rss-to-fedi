@@ -16,7 +16,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     cargo build -r
 
 COPY Rocket.toml Rocket.toml
-COPY sqlx-data.json sqlx-data.json
+COPY .sqlx .sqlx
 COPY src src/
 COPY migrations migrations/
 COPY assets assets/
