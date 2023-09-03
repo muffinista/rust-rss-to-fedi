@@ -41,10 +41,14 @@ async fn main() -> Result<(), AnyError> {
               let actor = actor.unwrap();
       
               let inbox = &actor.inbox_url;
-              let username = &actor.username.unwrap();
+              if actor.username.is_none() {
+                println!("{url:} -> no username ;(");
+              } else {
+                let username = &actor.username.unwrap();
         
-              println!("{url:} -> {inbox:}");
-              println!("{url:} -> {username:}");  
+                println!("{url:} -> {inbox:}");
+                println!("{url:} -> {username:}");    
+              }
             }
           },
           Err(why) => {
