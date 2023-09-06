@@ -748,7 +748,7 @@ mod test {
       &inbox,
       &"public_key_id".to_string(),
       &"public_key".to_string(),
-      Some("username".to_string()),
+      &"username".to_string(),
       &pool).await.unwrap();
   
 

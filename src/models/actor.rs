@@ -37,7 +37,7 @@ pub struct Actor {
   pub refreshed_at: chrono::DateTime::<Utc>,
 
   pub error: Option<String>,
-  pub username: Option<String>
+  pub username: String
 }
 
 impl PartialEq for Actor {
@@ -47,15 +47,6 @@ impl PartialEq for Actor {
 }
 
 impl Actor {
-  ///
-  /// Query the db for actors with no username
-  ///
-  pub async fn stale(pool: &PgPool) -> Result<Vec<Actor>, sqlx::Error> {
-    sqlx::query_as!(Actor, "SELECT * FROM actors WHERE username IS NULL")
-    .fetch_all(pool)
-    .await
-  }
-
   ///
   /// Query the DB for the actor with the given URL. If not found, fetch the data and cache it
   ///
@@ -148,10 +139,10 @@ impl Actor {
         // {"@context":["https://w3id.org/security/v1","https://www.w3.org/ns/activitystreams"],"id":"https://gotosocial.biff.colinlabs.com/users/muffinista","preferredUsername":"muffinista","publicKey":{"id":"https://gotosocial.biff.colinlabs.com/users/muffinista/main-key","owner":"https://gotosocial.biff.colinlabs.com/users/muffinista","publicKeyPem":"-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArzi69UwtYB4zTxMXrVJc\npjIoIElyARQU9099BmeXJFLXusRlGlmy02ZKMdrGL5FxdevjmK8P23qVFxYZ0Zzf\nqVvFVuz28hR7ilTF0f5X1thhoaclpoZufQYTKnLXkHlWxigWRiU52MMN8J+5i6Rx\nlEKvQUQddyN3HP5n7GuKnM0Mi7wsaiRdafR111CR2QCADU10eoD20aQgK/TsxFix\nI2SAkeTDcVhZPBnNj8PGTW7QITQCU2QlPET/ePnD9uXrrhFHe5giRKaPr0CcxxsB\nVjPzjpzi4gz/smOsFdfo1z9p2ryHj0rI5guLo79igBhXX1bGW0qWUONDVKkIplrQ\nHQIDAQAB\n-----END PUBLIC KEY-----\n"},"type":"Person"}
 
         if data["id"].is_string() && data["publicKey"].is_object() {
-          let username = if data["preferredUsername"].is_string() {
-            Some(data["preferredUsername"].as_str().unwrap().to_string())
+          let username: String = if data["preferredUsername"].is_string() {
+            data["preferredUsername"].as_str().unwrap().to_string()
           } else {
-            None
+            return Err(anyhow!("User has no preferredUsername"))
           };
 
           let inbox = if data["inbox"].is_string() {
@@ -203,7 +194,7 @@ impl Actor {
                         &inbox,
                         &data["publicKey"]["id"].as_str().unwrap().to_string(),
                         &data["publicKey"]["publicKeyPem"].as_str().unwrap().to_string(),
-                        username,
+                        &username,
                         pool
           ).await?;
         } else {
@@ -226,7 +217,7 @@ impl Actor {
       inbox_url: &String,
       public_key_id: &String,
       public_key: &String,
-      username: Option<String>,
+      username: &String,
       pool: &PgPool) -> Result<(), sqlx::Error> {
 
     let now = Utc::now();
@@ -268,7 +259,7 @@ impl Actor {
     let url = Url::parse(&self.url).unwrap();
     let domain = url.host().unwrap();
 
-    format!("@{}@{}", &self.username.as_ref().expect("Actor has no username!"), domain)
+    format!("@{}@{}", &self.username, domain)
   }
 
 
