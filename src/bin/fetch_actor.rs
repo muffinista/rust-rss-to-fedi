@@ -50,7 +50,7 @@ async fn main() -> Result<(), AnyError> {
       let actor = actor.unwrap();
 
       let inbox = &actor.inbox_url;
-      let username = &actor.username.unwrap();
+      let username = &actor.username;
 
       println!("{url:} -> {inbox:}");
       println!("{url:} -> {username:}");
