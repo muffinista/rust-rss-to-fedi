@@ -1,7 +1,7 @@
 use anyhow::{anyhow};
 use anyhow::Error as AnyError;
 
-use reqwest;
+
 use feed_rs::parser;
 use scraper::{Html, Selector};
 
@@ -29,8 +29,11 @@ pub fn is_valid_feed(data:&String) -> bool {
 /// from any HTML returned
 ///
 pub async fn url_to_feed_url(url:&String) -> Result<Option<String>, AnyError>{
-  let client = reqwest::Client::new();
+  let client = http_client();
   let heads = generate_request_headers();
+
+  // let client = reqwest::Client::new();
+  // let heads = generate_request_headers();
   let res = client
     .get(url)
     .headers(heads)
@@ -187,6 +190,7 @@ mod test {
   async fn test_html_with_server_error() -> Result<(), String>  {
     let mut server = mockito::Server::new_async().await;
     let m = server.mock("GET", "/")
+      .expect_at_least(1)
       .with_status(500)
       .create_async()
       .await;

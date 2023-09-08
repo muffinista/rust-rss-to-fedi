@@ -84,10 +84,10 @@ impl Actor {
         if result.is_some() {
           return Ok(result);
         }
-        return Ok(None);
+        Ok(None)
       }
       Err(why) => {
-        return Err(why)
+        Err(why)
       }
     }      
   }
