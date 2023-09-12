@@ -44,7 +44,6 @@ md-5 = "0.10.5"
 fang = { version = "0.10.4" , features = ["asynk"], default-features = false }
 env_logger = "0.10.0"
 log = "0.4.17"
-sentry = { version = "0.31.5", features = ["anyhow"] }
 clap = { version = "4.1.8", features = ["derive"] }
 glob = "0.3.1"
 
