@@ -37,8 +37,8 @@ sha2 = "0.10.6"
 base64 = "0.21.0"
 chrono = { version = "0.4.23", features = ["serde"] }
 scraper = "0.17.1"
-sanitize_html = "0.7.0"
-reqwest-retry = "0.2.1"
+sanitize_html = "0.8.0"
+reqwest-retry = "0.3.0"
 md-5 = "0.10.5"
 
 fang = { version = "0.10.4" , features = ["asynk"], default-features = false }
