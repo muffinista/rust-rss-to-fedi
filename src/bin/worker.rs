@@ -18,14 +18,6 @@ use rustypub::utils::queue::create_queue;
 
 #[tokio::main]
 async fn main() {
-  if env::var("SENTRY_DSN").is_ok() {
-    let sentry_dsn = env::var("SENTRY_DSN").expect("SENTRY_DSN is not set");
-    let _guard = sentry::init((sentry_dsn, sentry::ClientOptions {
-      release: sentry::release_name!(),
-      ..Default::default()
-    }));
-  }
-
   env_logger::init();
 
   rustypub::utils::templates::init_templating();
