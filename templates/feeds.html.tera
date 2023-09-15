@@ -1,7 +1,7 @@
 <ul class="feed-list">
   {% for feed in feeds %}
     <li>
-      <a href="{% if feed_link_prefix %}{{feed_link_prefix}}{% endif %}/feed/{{feed.name}}"><b>{{feed.name}}</b></a>
+      <a href="{% if feed_link_prefix %}{{feed_link_prefix}}{% endif %}/feed/{{feed.name}}">{{feed.title}}</a> <b>@{{feed.name}}</b>
       {% if feed.description %}<br /><span>{{feed.description | truncate(length=100)}}</span>{% endif %}
       {% if feed.last_post_at %}<br /><span>Last post at: {{ feed.last_post_at }}</span>{% endif %}
       {% if feed.error %}<br /><span>Error: {{ feed.error }}</span>{% endif %}
