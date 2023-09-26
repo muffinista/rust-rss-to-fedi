@@ -50,8 +50,6 @@ pub async fn url_to_feed_url(url:&String) -> Result<Option<String>, AnyError>{
   let contents = &res.unwrap().text().await;
   match contents {
     Ok(contents) => {
-      log::info!("Feed test: {contents:}");
-
       // if it's a valid feed, we're good
       if is_valid_feed(contents) {
         log::info!("Feed test: {url:} -> valid feed!");
