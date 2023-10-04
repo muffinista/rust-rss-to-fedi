@@ -5,6 +5,9 @@ use fang::typetag;
 use fang::AsyncRunnable;
 use fang::FangError;
 
+use tokio::time::timeout;
+use std::time::Duration;
+
 use crate::models::Feed;
 use crate::utils::pool::db_pool;
 
@@ -19,13 +22,8 @@ impl RefreshFeed {
   pub fn new(id: i32) -> Self {
     Self { id }
   }
-}
 
-
-#[async_trait]
-#[typetag::serde]
-impl AsyncRunnable for RefreshFeed {
-  async fn run(&self, queue: &mut dyn AsyncQueueable) -> Result<(), FangError> {
+  async fn job(&self, queue: &mut dyn AsyncQueueable) -> Result<(), FangError> {
     let pool = db_pool().await;
 
     let feed = Feed::find(self.id, &pool).await;
@@ -49,7 +47,22 @@ impl AsyncRunnable for RefreshFeed {
       }
     }
   }
+}
 
+
+#[async_trait]
+#[typetag::serde]
+impl AsyncRunnable for RefreshFeed {
+  async fn run(&self, queue: &mut dyn AsyncQueueable) -> Result<(), FangError> {
+    let result = timeout(Duration::from_secs(crate::JOB_TIMEOUT), self.job(queue)).await;
+    match result {
+      Ok(_result) => Ok(()),
+      Err(why) => {
+        log::info!("RefreshFeed: timeout! {why:}");
+        Err(FangError { description: why.to_string() })
+      }
+    }
+  }
 
   /// Don't retry fetch issues, we'll just try again on the next go around
   fn max_retries(&self) -> i32 {

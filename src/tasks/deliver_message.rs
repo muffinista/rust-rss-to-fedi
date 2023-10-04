@@ -11,7 +11,10 @@ use crate::services::mailer::*;
 use crate::models::Feed;
 
 use crate::utils::pool::db_pool;
-use serde_json::{Value};
+use serde_json::Value;
+
+use tokio::time::timeout;
+use std::time::Duration;
 
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "fang::serde")]
@@ -25,13 +28,8 @@ impl DeliverMessage {
   pub fn new(feed_id: i32, actor_url: String, message: String) -> Self {
     Self { feed_id, actor_url, message }
   }
-}
 
-
-#[async_trait]
-#[typetag::serde]
-impl AsyncRunnable for DeliverMessage {
-  async fn run(&self, _queue: &mut dyn AsyncQueueable) -> Result<(), FangError> {
+  async fn job(&self) -> Result<(), FangError> {
     let pool = db_pool().await;
     let feed = Feed::find(self.feed_id, &pool).await;
     match feed {
@@ -59,6 +57,22 @@ impl AsyncRunnable for DeliverMessage {
         log::info!("DeliverMessage failed: {why:}");
         Err(FangError { description: why.to_string() })
       }   
+    }
+  }
+}
+
+
+#[async_trait]
+#[typetag::serde]
+impl AsyncRunnable for DeliverMessage {
+  async fn run(&self, _queue: &mut dyn AsyncQueueable) -> Result<(), FangError> {
+    let result = timeout(Duration::from_secs(crate::JOB_TIMEOUT), self.job()).await;
+    match result {
+      Ok(_result) => Ok(()),
+      Err(why) => {
+        log::info!("DeliverMessage: timeout! {why:}");
+        Err(FangError { description: why.to_string() })
+      }
     }
   }
 

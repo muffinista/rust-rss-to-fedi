@@ -10,3 +10,5 @@ pub mod tasks;
 pub mod activitystreams;
 
 const PER_PAGE:i32 = 10i32;
+
+const JOB_TIMEOUT:u64 = 60u64;
