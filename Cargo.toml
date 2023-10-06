@@ -24,6 +24,7 @@ rand = { version = "0.8.5" }
 feed-rs = "1.2"
 reqwest = { version = "0.11", features = ["json"] }
 http-signature-normalization-reqwest = { version = "0.8.0", default-features = false, features = ["sha-2", "middleware"] }
+iri-string = "0.7.0"
 
 tokio = "1.24.2"
 webfinger = { version = "0.5.1", features = ["async", "async-trait"] }
@@ -41,7 +42,7 @@ sanitize_html = "0.8.0"
 reqwest-retry = "0.3.0"
 md-5 = "0.10.5"
 
-fang = { version = "0.10.4" , features = ["asynk"], default-features = false }
+fang = { version = "0.10.4" , features = ["asynk", "derive-error"], default-features = false }
 env_logger = "0.10.0"
 log = "0.4.17"
 clap = { version = "4.1.8", features = ["derive"] }

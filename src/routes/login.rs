@@ -14,7 +14,7 @@ use crate::models::user::User;
 
 #[derive(FromForm)]
 pub struct LoginForm {
-  email: String
+  pub email: String
 }
 
 

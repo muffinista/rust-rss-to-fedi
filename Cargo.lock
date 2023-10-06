@@ -846,6 +846,7 @@ dependencies = [
  "bb8-postgres",
  "chrono",
  "cron",
+ "fang-derive-error",
  "hex",
  "log",
  "postgres-types",
@@ -858,6 +859,16 @@ dependencies = [
  "typed-builder",
  "typetag",
  "uuid",
+]
+
+[[package]]
+name = "fang-derive-error"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d9f5641b79902b8b40295f05db8a94277897f58f23645dc32057a0b8423496f2"
+dependencies = [
+ "quote",
+ "syn 2.0.28",
 ]
 
 [[package]]
@@ -2800,6 +2811,7 @@ dependencies = [
  "glob",
  "http-signature-normalization-reqwest",
  "httpdate",
+ "iri-string",
  "log",
  "md-5",
  "mockito",

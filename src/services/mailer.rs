@@ -1,9 +1,12 @@
+
 use http_signature_normalization_reqwest::prelude::*;
 use reqwest::Request;
 use reqwest_middleware::RequestBuilder;
 use reqwest::header::HeaderValue;
 
 use sqlx::postgres::PgPool;
+
+use crate::error::DeliveryError;
 
 use crate::utils::http::*;
 use crate::models::Feed;
@@ -18,8 +21,6 @@ use url::Url;
 
 use sha2::{Digest, Sha256};
 use base64::{Engine as _, engine::general_purpose};
-
-use anyhow::{anyhow};
 
 use serde::Serialize;
 
@@ -84,10 +85,12 @@ pub async fn fetch_object(url: &str, key_id: Option<&str>, private_key: Option<&
   }
 }
 
+
+
 ///
 /// deliver a payload to an inbox
 ///
-pub async fn deliver_to_inbox<T: Serialize + ?Sized>(inbox: &Url, key_id: &str, private_key: &str, json: &T) -> Result<(), anyhow::Error> {
+pub async fn deliver_to_inbox<T: Serialize + ?Sized>(inbox: &Url, key_id: &str, private_key: &str, json: &T) -> Result<(), DeliveryError> {
   let client = http_client();
   let mut heads = generate_request_headers();
   let payload = serde_json::to_vec(json).unwrap();
@@ -125,13 +128,12 @@ pub async fn deliver_to_inbox<T: Serialize + ?Sized>(inbox: &Url, key_id: &str, 
       if response.status().is_success() {
         Ok(())
       } else {
-        // println!("{:?}", response.text().await.unwrap());
         let status = response.status().to_string();
         let text = response.text().await.unwrap();
-        Err(anyhow!(format!("{status:} {text:}")))
+        Err(DeliveryError::Error(format!("{status:} {text:}")))
       }
     },
-    Err(why) => Err(why.into())
+    Err(why) => Err(DeliveryError::HttpMiddlewareError(why))
   }
 }
 
@@ -140,7 +142,7 @@ pub async fn sign_request(
   key_id: String,
   private_key: String,
   payload: Vec<u8>
-) -> Result<Request, anyhow::Error> {
+) -> Result<Request, DeliveryError> {
 
   // https://docs.rs/http-signature-normalization-reqwest/0.7.1/http_signature_normalization_reqwest/struct.Config.html#method.mastodon_compat
   let config = Config::new().mastodon_compat();
@@ -157,7 +159,7 @@ pub async fn sign_request(
         let mut signer = Signer::new(MessageDigest::sha256(), &private_key)?;
         signer.update(signing_string.as_bytes())?;
         
-        Ok(general_purpose::STANDARD.encode(signer.sign_to_vec()?)) as Result<_, anyhow::Error>
+        Ok(general_purpose::STANDARD.encode(signer.sign_to_vec()?)) as Result<_, DeliveryError>
       },
     )
     .await

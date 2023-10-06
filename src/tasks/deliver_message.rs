@@ -27,7 +27,6 @@ impl DeliverMessage {
   }
 }
 
-
 #[async_trait]
 #[typetag::serde]
 impl AsyncRunnable for DeliverMessage {
@@ -42,18 +41,20 @@ impl AsyncRunnable for DeliverMessage {
         // is serializable to reqwest, since right now we can't manage deserializable objects
         // with fang
         let message_object:Value = serde_json::from_str(&self.message).unwrap();
-        let result = deliver_to_inbox(dest_url, &feed.ap_url(), &feed.private_key, &message_object).await;
+        deliver_to_inbox(dest_url, &feed.ap_url(), &feed.private_key, &message_object).await?;
 
-        match result {
-          Ok(_result) => {
-            log::info!("DeliverMessage: delivery to {dest_url:} succeeded!");
-            Ok(())
-          },
-          Err(why) => {
-            log::info!("DeliverMessage: delivery to {dest_url:} failed: {why:}");
-            Err(FangError { description: why.to_string() })
-          }
-        }    
+        Ok(())
+
+        // match result {
+        //   Ok(_result) => {
+        //     log::info!("DeliverMessage: delivery to {dest_url:} succeeded!");
+        //     Ok(())
+        //   },
+        //   Err(why) => {
+        //     log::info!("DeliverMessage: delivery to {dest_url:} failed: {why:}");
+        //     Err(FangError { description: why.to_string() })
+        //   }
+        // }    
       },
       Err(why) => {
         log::info!("DeliverMessage failed: {why:}");
@@ -94,7 +95,7 @@ mod test {
 
     let msg = DeliverMessage {
       feed_id: 1i32,
-      actor_url: "https://muffin.pizza/".to_string(),
+      actor_url: "https://muffinlabs.pizza/".to_string(),
       message: "{}".to_string()   
     };
 

@@ -31,8 +31,8 @@ pub async fn index_admin(user: User, page: Option<i32>, db: &State<PgPool>) -> R
   }
 
   let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
-  let page = if page.is_some() {
-    page.unwrap()
+  let page: i32 = if let Some(page) = page {
+    page
   } else {
     1
   };

@@ -31,18 +31,9 @@ impl Default for UpdateStaleFeeds {
 impl AsyncRunnable for UpdateStaleFeeds {
   async fn run(&self, queue: &mut dyn AsyncQueueable) -> Result<(), FangError> {
     let pool = db_pool().await;
+    crate::services::loader::update_stale_feeds(&pool, queue).await?;
 
-    let result = crate::services::loader::update_stale_feeds(&pool, queue).await;
-    match result {
-      Ok(_result) => {
-        log::info!("UpdateStaleFeeds: It worked!");
-        Ok(())
-      },
-      Err(why) => {
-        log::info!("UpdateStaleFeeds: Something went wrong: {why:}");
-        Err(FangError { description: why.to_string() })
-      }
-    }
+    Ok(())
   }
 
   // If `uniq` is set to true and the task is already in the storage, it won't be inserted again

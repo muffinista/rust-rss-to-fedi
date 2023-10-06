@@ -44,6 +44,7 @@ use fang::AsyncQueueable;
 use sanitize_html::sanitize_str;
 use sanitize_html::rules::predefined::DEFAULT;
 
+use crate::DeliveryError;
 
 use crate::models::Actor;
 use crate::models::User;
@@ -629,12 +630,12 @@ impl Feed {
               (link.media_type.is_some() && link.media_type.as_ref().unwrap() == "text/html") ||
               (link.rel.is_some() && link.rel.as_ref().unwrap() == "self")
             );
-      
-          self.site_url = if query.is_some() {
-            Some(query.unwrap().href)
+
+          self.site_url = if let Some(query) = query {
+            Some(query.href)
           } else {
             None
-          }
+          };
         }
 
         let update = self.save(pool).await;
@@ -780,29 +781,25 @@ impl Feed {
   ///
   /// add follower to feed
   ///
-  pub async fn add_follower(&self, pool: &PgPool, actor: &str) -> Result<(), AnyError> {
+  pub async fn add_follower(&self, pool: &PgPool, actor: &str) -> Result<(), sqlx::Error> {
     let now = Utc::now();
 
-
-    let result = sqlx::query!("INSERT INTO followers 
+    sqlx::query!("INSERT INTO followers 
         (feed_id, actor, created_at, updated_at) 
         VALUES($1, $2, $3, $4)
         ON CONFLICT (feed_id, actor) DO UPDATE
         SET updated_at = EXCLUDED.updated_at",
                  self.id, actor, now, now)
       .execute(pool)
-      .await;
+      .await?;
 
-    match result {
-      Ok(_result) => Ok(()),
-      Err(why) => Err(anyhow!(why.to_string()))
-    } 
+      Ok(())
   }
 
   ///
   /// handle an actor following the feed by adding them to the db and sending an Accept message back
   ///
-  pub async fn follow(&self, pool: &PgPool, actor: &str, activity: &AcceptedActivity) -> Result<(), AnyError> {
+  pub async fn follow(&self, pool: &PgPool, actor: &str, activity: &AcceptedActivity) -> Result<(), DeliveryError> {
     // store follower in the db
     self.add_follower(pool, actor).await?;
 
@@ -830,7 +827,7 @@ impl Feed {
   /// handle an incoming message. we mostly ignore these except a user can message the admin
   /// feed to login to the site to add/manage feeds
   ///
-  pub async fn incoming_message(&self, pool: &PgPool, actor_url: &str, activity: &AcceptedActivity) -> Result<(), AnyError> {
+  pub async fn incoming_message(&self, pool: &PgPool, actor_url: &str, activity: &AcceptedActivity) -> Result<(), DeliveryError> {
 
     log::info!("ACTOR: {actor_url:}");
 
@@ -838,7 +835,12 @@ impl Feed {
     // a bit of a hack, but it's hard to get the content of the
     // note to not end up in an unparsed bit of modelling anyway 
     // @todo figure out the polite way to do this
-    let s = serde_json::to_string(&activity.object()?).unwrap();
+    let obj = activity.object();
+    if obj.is_err() {
+      return Err(DeliveryError::Error("Something went wrong".to_string()));
+    } 
+
+    let s = serde_json::to_string(&obj.unwrap()).unwrap();
     log::info!("MESSAGE: {s:}");
 
 
@@ -901,7 +903,7 @@ impl Feed {
   ///
   /// generate a login message to send to the user
   ///
-  pub async fn generate_login_message(&self, activity: Option<&AcceptedActivity>, dest_actor: &Actor, pool: &PgPool) -> Result<ApObject<Create>, AnyError> {
+  pub async fn generate_login_message(&self, activity: Option<&AcceptedActivity>, dest_actor: &Actor, pool: &PgPool) -> Result<ApObject<Create>, DeliveryError> {
 
     let mut reply: SensitiveNote = SensitiveNote::new();
 
@@ -984,7 +986,7 @@ impl Feed {
   ///
   /// handle unfollow activity
   ///
-  pub async fn unfollow(&self, pool: &PgPool, actor: &str) -> Result<(), AnyError>  {
+  pub async fn unfollow(&self, pool: &PgPool, actor: &str) -> Result<(), DeliveryError>  {
     sqlx::query!("DELETE FROM followers WHERE feed_id = $1 AND actor = $2",
                  self.id, actor)
       .execute(pool)
@@ -996,7 +998,7 @@ impl Feed {
   ///
   /// handle any incoming events
   ///
-  pub async fn handle_activity(&self, pool: &PgPool, activity: &AcceptedActivity)  -> Result<(), AnyError> {
+  pub async fn handle_activity(&self, pool: &PgPool, activity: &AcceptedActivity)  -> Result<(), DeliveryError> {
     let s = serde_json::to_string(&activity).unwrap();
     log::info!("{s:}");
 

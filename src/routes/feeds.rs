@@ -191,10 +191,10 @@ pub async fn test_feed(_user: User, db: &State<PgPool>, form: Json<FeedForm>) ->
       Err(Status::NotFound)
     },
     Ok(result) => {
-      if result.is_some() {
+      if let Some(result) = result {
         Ok(Json(FeedLookup {
           src: form.url.to_string(),
-          url: result.unwrap(),
+          url: result,
           error: None
         }))
       } else {
@@ -244,11 +244,17 @@ pub async fn show_feed(user: Option<User>, username: &str, flash: Option<FlashMe
           };
           
 
-          let username = if user.is_some() {
-            user.as_ref().unwrap().full_username()
+          let username = if let Some(user) = &user {
+            user.full_username()
           } else {
             None
           };
+
+          // let username = if user.is_some() {
+          //   user.as_ref().unwrap().full_username()
+          // } else {
+          //   None
+          // };
 
           match items {
             Ok(items) => {
