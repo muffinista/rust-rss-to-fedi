@@ -63,7 +63,7 @@ async fn main() -> Result<(), AnyError> {
       let inbox = &dest_actor.inbox_url;
       println!("{dest_url:} -> {inbox:}");
 
-      let message = feed.generate_login_message(None, &dest_actor, &pool).await?;
+      let message = feed.generate_login_message(None, &dest_actor, &pool).await.unwrap();
 
       let msg = serde_json::to_string(&message).unwrap();
       println!("{msg}");

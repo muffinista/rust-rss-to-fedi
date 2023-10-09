@@ -1,16 +1,13 @@
 use sqlx::postgres::PgPool;
 
-use anyhow::{anyhow};
-use anyhow::Error as AnyError;
-
 use fang::asynk::async_queue::AsyncQueueable;
 use fang::AsyncRunnable;
-
+use fang::FangError;
 
 use crate::models::Feed;
 use crate::tasks::RefreshFeed;
 
-pub async fn update_stale_feeds(pool: &PgPool, queue: &mut dyn AsyncQueueable) -> Result<(), AnyError> {
+pub async fn update_stale_feeds(pool: &PgPool, queue: &mut dyn AsyncQueueable) -> Result<(), FangError> {
   let feeds = Feed::stale(pool, 600, 5).await;
   match feeds {
     Ok(feeds) => {
@@ -28,8 +25,11 @@ pub async fn update_stale_feeds(pool: &PgPool, queue: &mut dyn AsyncQueueable) -
 
       Ok(())
     },
-    Err(why) => Err(anyhow!(why.to_string()))
-  }
+    Err(err) => {
+      let description = format!("{err:?}");
+
+      Err(FangError { description })
+  }  }
 }
 
 

@@ -32,8 +32,8 @@ impl Setting {
 
     match result {
       Ok(result) => {
-        if result.is_some() {
-          Ok(result.unwrap().value)
+        if let Some(result) = result {
+          Ok(result.value)
         } else {
           Ok(default.to_owned())
         }

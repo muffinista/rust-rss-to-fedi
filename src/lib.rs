@@ -9,4 +9,8 @@ pub mod tasks;
 
 pub mod activitystreams;
 
+pub mod error;
+pub use error::DeliveryError;
+
 const PER_PAGE:i32 = 10i32;
+

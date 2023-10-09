@@ -37,10 +37,10 @@ impl Follower {
     let actor = Actor::find_or_fetch(&self.actor.to_string(), pool).await;
     match actor {
       Ok(actor) => {
-        if actor.is_none() {
-          Ok(None)
+        if let Some(actor) = actor {
+          Ok(Some(actor.inbox_url))
         } else {
-          Ok(Some(actor.unwrap().inbox_url))
+          Ok(None)
         }
       },
       Err(why) => Err(why)

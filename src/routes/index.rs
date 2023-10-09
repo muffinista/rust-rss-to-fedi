@@ -17,9 +17,8 @@ pub async fn index_logged_in(user: User, page: Option<i32>, db: &State<PgPool>) 
   let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
   let signups_enabled = Setting::value_or(&"signups_enabled".to_string(), &"true".to_string(), db).await.unwrap();
 
-
-  let page = if page.is_some() {
-    page.unwrap()
+  let page: i32 = if let Some(page) = page {
+    page
   } else {
     1
   };
