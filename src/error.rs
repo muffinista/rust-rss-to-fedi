@@ -2,6 +2,8 @@ use std::fmt;
 use fang::FangError;
 use http_signature_normalization_reqwest::SignError;
 
+use crate::models::FeedError;
+
 #[derive(Debug)]
 pub enum DeliveryError {
     Error(String),
@@ -13,11 +15,18 @@ pub enum DeliveryError {
     JsonError(serde_json::Error),
     DbError(sqlx::Error),
     StringValidationError(iri_string::validate::Error),
+    FeedError(FeedError),
 }
 
 impl std::fmt::Display for DeliveryError {
   fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
     write!(f, "An Error Occurred, Please Try Again!") // user-facing output
+  }
+}
+
+impl From<&str> for DeliveryError {
+  fn from(error: &str) ->  Self {
+      DeliveryError::Error(String::from(error))
   }
 }
 
@@ -70,5 +79,10 @@ impl From<iri_string::validate::Error> for DeliveryError {
   }
 }
 
+impl From<FeedError> for DeliveryError {
+  fn from(error: FeedError) ->  Self {
+    DeliveryError::FeedError(error)
+  }
+}
 
 

@@ -6,8 +6,7 @@ use chrono::Utc;
 use crate::models::Actor;
 use crate::models::Feed;
 use crate::services::mailer::deliver_to_inbox;
-
-use anyhow::Error as AnyError;
+use crate::DeliveryError;
 
 use url::Url;
 
@@ -233,7 +232,7 @@ impl User {
   }
 
 
-  pub async fn send_link_to_feed(&self, feed: &Feed, pool: &PgPool) -> Result<(), AnyError> {
+  pub async fn send_link_to_feed(&self, feed: &Feed, pool: &PgPool) -> Result<(), DeliveryError> {
     let dest_actor = Actor::find_or_fetch(self.actor_url.as_ref().expect("No actor url!"), pool).await;
 
     match dest_actor {

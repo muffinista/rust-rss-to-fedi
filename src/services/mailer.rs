@@ -24,7 +24,7 @@ use base64::{Engine as _, engine::general_purpose};
 
 use serde::Serialize;
 
-pub async fn admin_fetch_object(url: &str, pool: &PgPool) -> Result<Option<String>, anyhow::Error> {
+pub async fn admin_fetch_object(url: &str, pool: &PgPool) -> Result<Option<String>, DeliveryError> {
   let admin_feed = Feed::for_admin(pool).await?;
 
   if admin_feed.is_some() {
@@ -38,7 +38,7 @@ pub async fn admin_fetch_object(url: &str, pool: &PgPool) -> Result<Option<Strin
 ///
 /// fetch an http object. Sign request with key if provided
 ///
-pub async fn fetch_object(url: &str, key_id: Option<&str>, private_key: Option<&str>) -> Result<Option<String>, anyhow::Error> {
+pub async fn fetch_object(url: &str, key_id: Option<&str>, private_key: Option<&str>) -> Result<Option<String>, DeliveryError> {
   let client = reqwest::Client::new();
   let config = Config::new().mastodon_compat();
 
@@ -55,7 +55,7 @@ pub async fn fetch_object(url: &str, key_id: Option<&str>, private_key: Option<&
         let mut signer = Signer::new(MessageDigest::sha256(), &private_key)?;
         signer.update(signing_string.as_bytes())?;
         
-        Ok(general_purpose::STANDARD.encode(signer.sign_to_vec()?)) as Result<_, anyhow::Error>
+        Ok(general_purpose::STANDARD.encode(signer.sign_to_vec()?)) as Result<_, DeliveryError>
       })?;
   
     client.execute(request).await

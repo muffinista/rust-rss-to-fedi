@@ -1,5 +1,6 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
+use rustypub::DeliveryError;
 use sqlx::postgres::PgPoolOptions;
 use std::env;
 
@@ -12,7 +13,6 @@ use url::Url;
 
 use clap::Parser;
 
-use anyhow::Error as AnyError;
 
 use activitystreams::iri;
 use activitystreams::object::ObjectExt;
@@ -31,7 +31,7 @@ struct Args {
 
 
 #[tokio::main]
-async fn main() -> Result<(), AnyError> {
+async fn main() -> Result<(), DeliveryError> {
   let db_uri = env::var("DATABASE_URL").expect("DATABASE_URL is not set");
 
   let pool = PgPoolOptions::new()

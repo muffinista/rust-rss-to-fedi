@@ -10,6 +10,8 @@ use crate::routes::enclosures::*;
 
 use crate::utils::path_to_url;
 
+use crate::DeliveryError;
+
 use activitystreams::activity::*;
 use activitystreams::object::ApObject;
 use activitystreams::object::Document;
@@ -27,9 +29,7 @@ use crate::activitystreams::Hashtag;
 use fang::AsyncRunnable;
 use fang::AsyncQueueable;
 
-use crate::tasks::{DeliverMessage};
-
-use anyhow::Error as AnyError;
+use crate::tasks::DeliverMessage;
 
 use activitystreams::{
   security,
@@ -246,7 +246,7 @@ impl Item {
   ///
   /// generate an AP version of this item
   ///
-  pub async fn to_activity_pub(&self, feed: &Feed, pool: &PgPool) -> Result<ApObject<Create>, AnyError> {    
+  pub async fn to_activity_pub(&self, feed: &Feed, pool: &PgPool) -> Result<ApObject<Create>, DeliveryError> {    
     let mut note: ApObject<Note> = ApObject::new(Note::new());
 
     let feed_url = feed.ap_url();
@@ -407,7 +407,7 @@ impl Item {
   ///
   /// deliver this item to any followers of the parent feed
   ///
-  pub async fn deliver(&self, feed: &Feed, pool: &PgPool, queue: &mut dyn AsyncQueueable) -> Result<(), AnyError> {
+  pub async fn deliver(&self, feed: &Feed, pool: &PgPool, queue: &mut dyn AsyncQueueable) -> Result<(), DeliveryError> {
     let message = self.to_activity_pub(feed, pool).await.unwrap();
     let item_publicity = match &feed.status_publicity {
       Some(value) => value.as_str(),
