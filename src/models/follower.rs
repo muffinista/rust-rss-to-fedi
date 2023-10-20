@@ -1,8 +1,8 @@
 use sqlx::postgres::PgPool;
 
-use anyhow::Error as AnyError;
-
 use crate::models::Actor;
+use crate::DeliveryError;
+
 use chrono::Utc;
 
 ///
@@ -33,7 +33,7 @@ impl Follower {
   ///
   /// Ping the actor's profile data to get their inbox
   ///
-  pub async fn find_inbox(&self, pool: &PgPool) -> Result<Option<String>, AnyError> {
+  pub async fn find_inbox(&self, pool: &PgPool) -> Result<Option<String>, DeliveryError> {
     let actor = Actor::find_or_fetch(&self.actor.to_string(), pool).await;
     match actor {
       Ok(actor) => {

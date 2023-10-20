@@ -61,4 +61,9 @@ impl AsyncRunnable for RefreshFeed {
     u32::pow(2, attempt)
   }
 
+  // If `uniq` is set to true and the task is already in the storage, it won't be inserted again
+  // The existing record will be returned for for any insertions operaiton
+  fn uniq(&self) -> bool {
+    true
+  }
 }

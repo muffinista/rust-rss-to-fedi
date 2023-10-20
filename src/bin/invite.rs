@@ -6,12 +6,11 @@ use std::env;
 use rustypub::models::Actor;
 use rustypub::models::Feed;
 use rustypub::services::mailer::deliver_to_inbox;
+use rustypub::DeliveryError;
 
 use url::Url;
 
 use clap::Parser;
-
-use anyhow::Error as AnyError;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -23,7 +22,7 @@ struct Args {
 
 
 #[tokio::main]
-async fn main() -> Result<(), AnyError> {
+async fn main() -> Result<(), DeliveryError> {
   let db_uri = env::var("DATABASE_URL").expect("DATABASE_URL is not set");
 
   let pool = PgPoolOptions::new()

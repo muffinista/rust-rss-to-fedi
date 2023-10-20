@@ -1,6 +1,3 @@
-use anyhow::{anyhow};
-use anyhow::Error as AnyError;
-
 use rocket::uri;
 use url::Url;
 
@@ -179,28 +176,28 @@ impl Feed {
   ///
   /// Get a count of how many items we have for this feed
   ///
-  pub async fn count(pool: &PgPool)  -> Result<i32, AnyError> {
+  pub async fn count(pool: &PgPool)  -> Result<i32, sqlx::Error> {
     let result = sqlx::query!("SELECT COUNT(1) AS tally FROM feeds")
       .fetch_one(pool)
       .await;
 
     match result {
       Ok(result) => Ok(result.tally.unwrap() as i32),
-      Err(why) => Err(why.into())
+      Err(why) => Err(why)
     }
   }
   
   ///
   /// Get a count of how many items we have for this feed
   ///
-  pub async fn count_for_user(user: &User, pool: &PgPool)  -> Result<i32, AnyError> {
+  pub async fn count_for_user(user: &User, pool: &PgPool)  -> Result<i32, sqlx::Error> {
     let result = sqlx::query!("SELECT COUNT(1) AS tally FROM feeds WHERE user_id = $1", user.id)
       .fetch_one(pool)
       .await;
 
     match result {
       Ok(result) => Ok(result.tally.unwrap() as i32),
-      Err(why) => Err(why.into())
+      Err(why) => Err(why)
     }
   }
   
@@ -458,14 +455,14 @@ impl Feed {
   ///
   /// Get a count of how many items we have for this feed
   ///
-  pub async fn entries_count(&self, pool: &PgPool)  -> Result<i32, AnyError> {
+  pub async fn entries_count(&self, pool: &PgPool)  -> Result<i32, sqlx::Error> {
     let result = sqlx::query!("SELECT COUNT(1) AS tally FROM items WHERE feed_id = $1", self.id)
       .fetch_one(pool)
       .await;
 
     match result {
       Ok(result) => Ok(result.tally.unwrap() as i32),
-      Err(why) => Err(why.into())
+      Err(why) => Err(why)
     }
   }
 
@@ -539,7 +536,7 @@ impl Feed {
   ///
   /// grab new data for this feed, and deliver any new entries to followers
   ///
-  pub async fn refresh(&mut self, pool: &PgPool, queue: &mut dyn AsyncQueueable) -> Result<(), AnyError> {
+  pub async fn refresh(&mut self, pool: &PgPool, queue: &mut dyn AsyncQueueable) -> Result<(), DeliveryError> {
     // skip processing for admin accounts
     if self.is_admin() {
       self.mark_fresh(pool).await?;
@@ -563,7 +560,7 @@ impl Feed {
       Err(why) => {
         // we mark as fresh even though this failed so we don't get stuck on bad feeds
         // @todo mark as erroring
-        Err(anyhow!(why.to_string()))
+        Err(DeliveryError::FeedError(why))
       }
     }
   }
@@ -708,7 +705,7 @@ impl Feed {
   ///
   /// Generate valid ActivityPub data for this feed
   ///
-  pub fn to_activity_pub(&self) -> Result<String, AnyError> {
+  pub fn to_activity_pub(&self) -> Result<String, DeliveryError> {
     let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
     let feed_url = self.ap_url();
     let mut svc = Ext1::new(
@@ -1023,7 +1020,7 @@ impl Feed {
   ///
   /// generate an AP message to this user with a link to this feed
   ///
-  pub async fn link_to_feed_message(&self, actor: &Actor) -> Result<ApObject<Create>, AnyError> {
+  pub async fn link_to_feed_message(&self, actor: &Actor) -> Result<ApObject<Create>, DeliveryError> {
     let mut reply: SensitiveNote = SensitiveNote::new();
 
     let my_url = self.permalink_url();
@@ -1080,14 +1077,14 @@ impl Feed {
   ///
   /// figure out how many people are following the feed
   ///
-  pub async fn follower_count(&self, pool: &PgPool)  -> Result<i32, AnyError>{
+  pub async fn follower_count(&self, pool: &PgPool)  -> Result<i32, sqlx::Error>{
     let result = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = $1", self.id)
       .fetch_one(pool)
       .await;
 
     match result {
       Ok(result) => Ok(result.tally.unwrap() as i32),
-      Err(why) => Err(why.into())
+      Err(why) => Err(why)
     }
   }
 
@@ -1103,7 +1100,7 @@ impl Feed {
   ///
   /// generate AP data to represent follower information
   ///
-  pub async fn followers(&self, pool: &PgPool)  -> Result<ApObject<OrderedCollection>, AnyError> {
+  pub async fn followers(&self, pool: &PgPool)  -> Result<ApObject<OrderedCollection>, DeliveryError> {
     let count = self.follower_count(pool).await?;
     let total_pages = (count / PER_PAGE) + 1;
 
@@ -1131,7 +1128,7 @@ impl Feed {
   ///
   /// generate actual AP page of followes 
   ///
-  pub async fn followers_paged(&self, page: i32, pool: &PgPool)  -> Result<ApObject<OrderedCollectionPage>, AnyError> {
+  pub async fn followers_paged(&self, page: i32, pool: &PgPool)  -> Result<ApObject<OrderedCollectionPage>, DeliveryError> {
     let count = self.follower_count(pool).await?;
     let total_pages:i32 = (count / PER_PAGE) + 1;
     let mut collection: ApObject<OrderedCollectionPage> = ApObject::new(OrderedCollectionPage::new());
@@ -1180,7 +1177,7 @@ impl Feed {
   ///
   /// generate AP data to represent outbox information
   ///
-  pub async fn outbox(&self, pool: &PgPool)  -> Result<ApObject<OrderedCollection>, AnyError> {
+  pub async fn outbox(&self, pool: &PgPool)  -> Result<ApObject<OrderedCollection>, DeliveryError> {
     let count = if self.show_statuses_in_outbox() {
       self.entries_count(pool).await?
     } else {
@@ -1217,7 +1214,7 @@ impl Feed {
   ///
   /// generate actual AP page of follows 
   ///
-  pub async fn outbox_paged(&self, page: i32, pool: &PgPool)  -> Result<ApObject<OrderedCollectionPage>, AnyError>{
+  pub async fn outbox_paged(&self, page: i32, pool: &PgPool)  -> Result<ApObject<OrderedCollectionPage>, DeliveryError>{
     let count = if self.show_statuses_in_outbox() {
       self.entries_count(pool).await?
     } else {
@@ -1281,7 +1278,7 @@ mod test {
   use chrono::Utc;
 
   use crate::models::Feed;
-  use crate::models::feed::AnyError;
+  use crate::models::feed::DeliveryError;
   use crate::models::feed::AcceptedActivity;
   use crate::models::Item;
   use crate::models::Enclosure;
@@ -1797,7 +1794,7 @@ mod test {
 
 
   #[sqlx::test]
-  async fn test_outbox(pool: PgPool) -> Result<(), AnyError> {
+  async fn test_outbox(pool: PgPool) -> Result<(), DeliveryError> {
     let feed:Feed = real_feed(&pool).await?;
 
     for _i in 0..4 {
@@ -1819,7 +1816,7 @@ mod test {
   }
 
   #[sqlx::test]
-  async fn test_outbox_direct_status(pool: PgPool) -> Result<(), AnyError> {
+  async fn test_outbox_direct_status(pool: PgPool) -> Result<(), DeliveryError> {
     let mut feed:Feed = real_feed(&pool).await?;
     feed.status_publicity = Some("direct".to_string());
 
@@ -1845,7 +1842,7 @@ mod test {
   }
 
   #[sqlx::test]
-  async fn test_outbox_paged(pool: PgPool) -> Result<(), AnyError> {
+  async fn test_outbox_paged(pool: PgPool) -> Result<(), DeliveryError> {
     let feed:Feed = real_feed(&pool).await?;
 
     for _i in 1..35 {
@@ -1875,7 +1872,7 @@ mod test {
   
   
   #[sqlx::test]
-  async fn test_outbox_paged_direct_status(pool: PgPool) -> Result<(), AnyError> {
+  async fn test_outbox_paged_direct_status(pool: PgPool) -> Result<(), DeliveryError> {
     let mut feed:Feed = real_feed(&pool).await?;
     feed.status_publicity = Some("direct".to_string());
 

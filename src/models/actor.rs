@@ -1,6 +1,3 @@
-use anyhow::{anyhow};
-use anyhow::Error as AnyError;
-
 use url::Url;
 
 use sqlx::postgres::PgPool;
@@ -15,6 +12,7 @@ use openssl::{
   sign,
 };
 
+use crate::DeliveryError;
 use crate::models::BlockedDomain;
 
 ///
@@ -50,7 +48,7 @@ impl Actor {
   ///
   /// Query the DB for the actor with the given URL. If not found, fetch the data and cache it
   ///
-  pub async fn find_or_fetch(url: &str, pool: &PgPool) -> Result<Option<Actor>, AnyError> {
+  pub async fn find_or_fetch(url: &str, pool: &PgPool) -> Result<Option<Actor>, DeliveryError> {
     let mut clean_url = Url::parse(url).unwrap();
     clean_url.set_fragment(None);
 
@@ -121,14 +119,14 @@ impl Actor {
   ///
   /// Fetch the remote actor data and store it
   ///
-  pub async fn fetch(url: &String, pool: &PgPool) -> Result<(), AnyError> {
+  pub async fn fetch(url: &String, pool: &PgPool) -> Result<(), DeliveryError> {
     log::info!("FETCH ACTOR: {url:}");
     let resp = crate::services::mailer::admin_fetch_object(url, pool).await;
 
     match resp {
       Ok(resp) => {
         if resp.is_none() {
-          return Err(anyhow!("User not found"))
+          return Err(DeliveryError::Error(String::from("User not found")))
         }
 
         let resp = resp.unwrap();
@@ -142,7 +140,7 @@ impl Actor {
           let username: String = if data["preferredUsername"].is_string() {
             data["preferredUsername"].as_str().unwrap().to_string()
           } else {
-            return Err(anyhow!("User has no preferredUsername"))
+            return Err(DeliveryError::Error(String::from("User has no preferredUsername")))
           };
 
           let inbox = if data["inbox"].is_string() {
@@ -169,7 +167,7 @@ impl Actor {
             match resp {
               Ok(resp) => {
                 if resp.is_none() {
-                  return Err(anyhow!("User not found"))
+                  return Err(DeliveryError::Error(String::from("User not found")))
                 }
         
                 let resp = resp.unwrap();
@@ -186,7 +184,7 @@ impl Actor {
           } else {
             log::info!("data has neither????");
 
-            return Err(anyhow!("User not found"))
+            return Err(DeliveryError::Error(String::from("User not found")))
           };
 
           log::info!("actor create: {inbox:}");
@@ -198,7 +196,7 @@ impl Actor {
                         pool
           ).await?;
         } else {
-          return Err(anyhow!("User not found"))
+          return Err(DeliveryError::Error(String::from("User not found")))
         }
       },
       Err(why) => {
@@ -266,7 +264,7 @@ impl Actor {
   ///
   /// Given a message payload and a signature, confirm that they came from this Actor
   ///
-  pub fn verify_signature(&self, payload: &str, signature: &[u8]) -> Result<bool, AnyError> {
+  pub fn verify_signature(&self, payload: &str, signature: &[u8]) -> Result<bool, DeliveryError> {
     let key = PKey::from_rsa(Rsa::public_key_from_pem(self.public_key.as_ref()).unwrap()).unwrap();
     let mut verifier = sign::Verifier::new(MessageDigest::sha256(), &key)?;
     verifier.update(payload.as_bytes())?;

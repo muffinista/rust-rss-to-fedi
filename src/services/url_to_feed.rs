@@ -1,10 +1,8 @@
-use anyhow::{anyhow};
-use anyhow::Error as AnyError;
-
 
 use feed_rs::parser;
 use scraper::{Html, Selector};
 
+use crate::DeliveryError;
 use crate::utils::http::*;
 
 pub fn is_valid_feed(data:&String) -> bool {
@@ -28,7 +26,7 @@ pub fn is_valid_feed(data:&String) -> bool {
 /// given a URL, determine if it's a valid feed, or try and find a feed
 /// from any HTML returned
 ///
-pub async fn url_to_feed_url(url:&String) -> Result<Option<String>, AnyError>{
+pub async fn url_to_feed_url(url:&String) -> Result<Option<String>, DeliveryError> {
   let client = http_client();
   let heads = generate_request_headers();
 
@@ -44,7 +42,7 @@ pub async fn url_to_feed_url(url:&String) -> Result<Option<String>, AnyError>{
   // let res = reqwest::get(url).await;
   if let Err(err) = res {
     log::info!("Feed test: get failed {url:} -> {err:}");
-    return Err(anyhow!(err.to_string()))
+    return Err(DeliveryError::Error(err.to_string()))
   }
 
   let contents = &res.unwrap().text().await;
@@ -73,7 +71,7 @@ pub async fn url_to_feed_url(url:&String) -> Result<Option<String>, AnyError>{
     },
     Err(err) => {
       log::info!("Feed test: {url:} -> {err:}");
-      Err(anyhow!(err.to_string()))
+      Err(DeliveryError::Error(err.to_string()))
     }
   }
 }
