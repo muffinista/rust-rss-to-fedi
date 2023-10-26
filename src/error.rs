@@ -20,7 +20,7 @@ pub enum DeliveryError {
 
 impl std::fmt::Display for DeliveryError {
   fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
-    write!(f, "An Error Occurred, Please Try Again!") // user-facing output
+    write!(f, "{}", self) // user-facing output
   }
 }
 
