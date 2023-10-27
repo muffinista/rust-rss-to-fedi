@@ -20,19 +20,13 @@ pub enum DeliveryError {
 
 impl std::fmt::Display for DeliveryError {
   fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
-    write!(f, "{}", self) // user-facing output
+    write!(f, "{:?}", self) // user-facing output
   }
 }
 
 impl From<&str> for DeliveryError {
   fn from(error: &str) ->  Self {
       DeliveryError::Error(String::from(error))
-  }
-}
-
-impl From<DeliveryError> for FangError {
-  fn from(error: DeliveryError) ->  Self {
-      FangError { description: format!("{error:?}") }
   }
 }
 
@@ -85,4 +79,21 @@ impl From<FeedError> for DeliveryError {
   }
 }
 
+impl From<DeliveryError> for FangError {
+  fn from(error: DeliveryError) ->  Self {
+      FangError { description: format!("{error:?}") }
+  }
+}
 
+
+#[cfg(test)]
+mod test {
+  use super::DeliveryError;
+
+  #[test]
+  fn test_delivery_error_from_string() {
+    let err = DeliveryError::Error(String::from("Boooo"));
+    let output = err.to_string();
+    assert_eq!(output, String::from("Error(\"Boooo\")"));
+  }
+}
