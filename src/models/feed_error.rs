@@ -30,3 +30,15 @@ impl From<sqlx::Error> for FeedError {
   }
 }
 
+
+#[cfg(test)]
+mod test {
+  use super::FeedError;
+
+  #[test]
+  fn test_feed_error() {
+    let err = FeedError { message: String::from("Boooo") };
+
+    assert_eq!(err.message, String::from("Boooo"));
+  }
+}

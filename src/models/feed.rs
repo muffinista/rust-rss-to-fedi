@@ -1602,9 +1602,9 @@ mod test {
     assert!(result.tally.unwrap() == 0);
 
     let activity_result = feed.handle_activity(&pool, &act).await;
-
     match activity_result {
       Ok(_result) => {
+
         let result2 = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = $1 AND actor = $2", feed.id, actor)
         .fetch_one(&pool)
         .await

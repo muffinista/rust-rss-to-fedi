@@ -1321,10 +1321,11 @@ dependencies = [
 
 [[package]]
 name = "http-signature-normalization-reqwest"
-version = "0.8.0"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3c382c69a07b21accae86298d520579403af6479b1cd1c389e3ee11f01d48627"
+checksum = "10cfb84663420ec12c4422820bfdf5e8e5e57467892587f43ac432e73ebce880"
 dependencies = [
+ "async-trait",
  "base64 0.13.1",
  "http-signature-normalization",
  "httpdate",
