@@ -4,7 +4,7 @@ use sqlx::postgres::PgPool;
 use crate::models::User;
 
 use rocket::request::{self, FromRequest, Request};
-use rocket::outcome::{Outcome};
+use rocket::outcome::Outcome;
 
 
 fn user_to_outcome(user: Result<Option<User>, sqlx::Error>) -> request::Outcome<User, std::convert::Infallible> {
@@ -46,7 +46,7 @@ impl<'r> FromRequest<'r> for User {
         user_to_outcome(user)
       },
       None => {
-        log::info!("No cookie to check");
+        // log::info!("No cookie to check");
         return Outcome::Forward(())
       }
     }

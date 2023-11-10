@@ -167,7 +167,11 @@ pub async fn update_feed(user: User, username: &str, db: &State<PgPool>, form: F
 /// Take a potential URL/name for a feed and check if they are valid
 ///
 #[post("/test-feed", data = "<form>")]
-pub async fn test_feed(_user: User, db: &State<PgPool>, form: Json<FeedForm>) -> Result<Json<FeedLookup>, Status> {
+pub async fn test_feed(user: Option<User>, db: &State<PgPool>, form: Json<FeedForm>) -> Result<Json<FeedLookup>, Status> {
+  if user.is_none() {
+    return Err(Status::Unauthorized)
+  }
+
   // check if feed name is already in use
   let feed_exists = Feed::exists_by_name(&form.name, db).await;
 
@@ -500,6 +504,25 @@ mod test {
 
     let body = response.into_string().await.unwrap();
     assert!(body.contains(r#"{"src":"https://muffinlabs.com/","url":"http://muffinlabs.com/atom.xml","error":null}"#));
+
+    Ok(())
+  }
+
+
+  #[sqlx::test]
+  async fn test_test_feed_not_logged_in(pool: PgPool) -> sqlx::Result<()> {
+    let server: Rocket<Build> = build_test_server(pool).await;
+    let client = Client::tracked(server).await.unwrap();
+    
+    let url: String = "https://muffinlabs.com/".to_string();
+    let name: String = "testfeed".to_string();
+
+    let json = format!(r#"{{"name":"{}","url": "{}"}}"#, name, url).to_string();
+    
+    let post = client.post(uri!(super::test_feed())).body(json);
+    let response = post.dispatch().await;
+
+    assert_eq!(response.status(), Status::Unauthorized);
 
     Ok(())
   }

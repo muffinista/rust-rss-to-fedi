@@ -37,7 +37,9 @@ pub fn fake_user() -> User {
     access_token: Some("at".to_string()), 
     username: Some("username".to_string()),
     created_at: Utc::now(), 
-    updated_at: Utc::now() 
+    updated_at: Utc::now() ,
+    access_token_updated_at: Utc::now(),
+    login_token_updated_at: Utc::now(),
   }
 }
 

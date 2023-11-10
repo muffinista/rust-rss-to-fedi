@@ -1,7 +1,7 @@
 use sqlx::postgres::PgPool;
 use rand::{distributions::Alphanumeric, Rng};
 
-use chrono::Utc;
+use chrono::{Duration, Utc};
 
 use crate::models::Actor;
 use crate::models::Feed;
@@ -21,7 +21,9 @@ pub struct User {
   pub admin: bool,
 
   pub created_at: chrono::DateTime::<Utc>,
-  pub updated_at: chrono::DateTime::<Utc>
+  pub updated_at: chrono::DateTime::<Utc>,
+  pub login_token_updated_at: chrono::DateTime::<Utc>,
+  pub access_token_updated_at: chrono::DateTime::<Utc>,
 }
 
 impl PartialEq for User {
@@ -102,22 +104,37 @@ impl User {
     }
   }
   
-  
+  pub fn needs_new_access_token(&self) -> bool {
+    if self.access_token.is_none() {
+      return true;
+    }
+
+    let now = Utc::now();
+    let diff = now.signed_duration_since(self.access_token_updated_at);
+    println!("Total time: {}", diff.num_minutes());
+
+    diff > Duration::hours(24)
+  }
+
   ///
   /// generate and apply access token to the current object
   ///
   pub async fn apply_access_token(&self, pool: &PgPool) -> Result<String, sqlx::Error> {
-    let token = User::generate_access_token();
-    log::info!("generate token: {token:}");
-
-    let query_check = sqlx::query!(
-      "UPDATE users SET access_token = $1 WHERE id = $2", token, self.id)
-      .execute(pool)
-      .await;
-      
-    match query_check {
-      Ok(_q) => Ok(token),
-      Err(why) => Err(why)
+    if self.needs_new_access_token() {
+      let token = User::generate_access_token();
+      // log::info!("generate token: {token:}");
+  
+      let query_check = sqlx::query!(
+        "UPDATE users SET access_token = $1, access_token_updated_at = NOW() WHERE id = $2", token, self.id)
+        .execute(pool)
+        .await;
+        
+      match query_check {
+        Ok(_q) => Ok(token),
+        Err(why) => Err(why)
+      }  
+    } else {
+      Ok(self.access_token.clone().unwrap())
     }
   }
 
@@ -307,6 +324,20 @@ mod test {
     let bad_token = format!("dfdfs{}fdsdf", access_token);
     let no_user = User::find_by_access(&bad_token, &pool).await;
     assert_eq!(false, no_user.unwrap().is_some());
+    
+    Ok(())
+  }
+
+  #[sqlx::test]
+  async fn test_doesnt_regenerate_access_token_too_soon(pool: PgPool) -> sqlx::Result<()> {
+    let email:String = "foo@bar.com".to_string();
+    let user = User::find_or_create_by_email(&email, &pool).await?;
+    let access_token = user.apply_access_token(&pool).await.unwrap().to_string();
+
+    let user_2 = User::find_or_create_by_email(&email, &pool).await?;
+    let access_token_2 = user_2.apply_access_token(&pool).await.unwrap().to_string();
+
+    assert_eq!(access_token, access_token_2);
     
     Ok(())
   }

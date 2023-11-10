@@ -47,6 +47,16 @@
         "ordinal": 8,
         "name": "admin",
         "type_info": "Bool"
+      },
+      {
+        "ordinal": 9,
+        "name": "login_token_updated_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 10,
+        "name": "access_token_updated_at",
+        "type_info": "Timestamptz"
       }
     ],
     "parameters": {
@@ -61,6 +71,8 @@
       false,
       false,
       true,
+      false,
+      false,
       false
     ]
   },

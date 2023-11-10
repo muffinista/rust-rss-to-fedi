@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE users SET access_token = $1 WHERE id = $2",
+  "query": "UPDATE users SET access_token = $1, access_token_updated_at = NOW() WHERE id = $2",
   "describe": {
     "columns": [],
     "parameters": {
@@ -11,5 +11,5 @@
     },
     "nullable": []
   },
-  "hash": "a13d57ab0ca926d9afa5b08dbec4972da4ffca239d4d7a640d00aad4c2fde00a"
+  "hash": "8ecd23ae9eb6c033df94780359d39ffb15fd6d73a9553e709b49062ca818c0ad"
 }
