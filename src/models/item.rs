@@ -1,3 +1,4 @@
+use activitystreams::primitives::RdfLangString;
 use sqlx::postgres::PgPool;
 use serde::{Serialize};
 use feed_rs::model::Entry;
@@ -61,6 +62,7 @@ pub struct Item {
   pub title: Option<String>,
   pub content: Option<String>,
   pub url: Option<String>,
+  pub language: Option<String>,
   
   pub created_at: chrono::DateTime::<Utc>,
   pub updated_at: chrono::DateTime::<Utc>
@@ -154,14 +156,15 @@ impl Item {
 
 
     let item_id = sqlx::query!("INSERT INTO items 
-                                (feed_id, guid, title, content, url, created_at, updated_at)
-                                VALUES($1, $2, $3, $4, $5, $6, $7)
+                                (feed_id, guid, title, content, url, language, created_at, updated_at)
+                                VALUES($1, $2, $3, $4, $5, $6, $7, $8)
                                 RETURNING id",
                                feed.id,
                                entry.id,
                                title,
                                body,
                                item_url,
+                               entry.language,
                                published_at,
                                now
     )
@@ -242,7 +245,13 @@ impl Item {
     render("ap/feed-item", &context).unwrap()
   }
 
-  
+  pub fn language(&self, feed: &Feed) -> String {
+    match &self.language {
+      Some(l) => l.to_string(),
+      None => feed.language()
+    }
+  }
+
   ///
   /// generate an AP version of this item
   ///
@@ -253,9 +262,14 @@ impl Item {
     let item_url = format!("{}/items/{}", feed_url, self.id);
     let ts = OffsetDateTime::from_unix_timestamp(self.created_at.timestamp()).unwrap();
 
+    let content = self.to_html(feed.hashtag.clone()).await;
+
     note
       .set_attributed_to(iri!(feed_url))
-      .set_content(self.to_html(feed.hashtag.clone()).await)
+      .set_content(RdfLangString {
+        value: content.into(),
+        language: self.language(feed).into(),
+    })
       .set_url(iri!(feed_url))
       .set_id(iri!(item_url))
       .set_published(ts);
@@ -607,6 +621,7 @@ mod test {
         println!("{:?}", result);
         assert!(s.contains("Hello!"));
         assert!(s.contains("<p>Hey!</p>"));
+        assert!(s.contains(r#"@language":"en","@value":"#));
 
         Ok(())
       },
@@ -629,6 +644,8 @@ mod test {
         let v: Value = serde_json::from_str(&s).unwrap();
         assert_eq!(v["to"], "https://www.w3.org/ns/activitystreams#Public");
         assert!(v["cc"][0].to_string().contains("/followers"));
+        assert!(s.contains(r#"@language":"en","@value":"#));
+        assert!(s.contains(r#"@language":"en","@value":"#));
 
         Ok(())
       },
@@ -650,6 +667,7 @@ mod test {
         let v: Value = serde_json::from_str(&s).unwrap();
         assert!(v["to"].to_string().contains("/followers"));
         assert_eq!(v["cc"][0], "https://www.w3.org/ns/activitystreams#Public");
+        assert!(s.contains(r#"@language":"en","@value":"#));
 
         Ok(())
       },
@@ -673,6 +691,7 @@ mod test {
         let v: Value = serde_json::from_str(&s).unwrap();
         assert!(v["to"].to_string().contains("/followers"));
         assert_eq!(v["cc"][0], Null);
+        assert!(s.contains(r#"@language":"en","@value":"#));
 
         Ok(())
       },
@@ -692,6 +711,7 @@ mod test {
         let s = serde_json::to_string(&result).unwrap();
         println!("{:}", s);
         assert!(s.contains("#hashy"));
+        assert!(s.contains(r#"@language":"en","@value":"#));
 
         Ok(())
       },
@@ -713,6 +733,7 @@ mod test {
         
         assert!(s.contains("/enclosures/"));
         assert!(s.contains("audio/mpeg"));
+        assert!(s.contains(r#"@language":"en","@value":"#));
 
         Ok(())
       },
@@ -802,6 +823,7 @@ mod test {
     assert_eq!("How I maintain botsin.space", item.title.unwrap());
     assert!(item.content.unwrap().contains("been meaning to write up some notes"));
     assert_eq!("http://muffinlabs.com/2022/09/10/how-i-maintain-botsin-space/", item.url.unwrap());
+    assert_eq!(item.language.expect("No language!"), "en-us");
 
     Ok(())
   }

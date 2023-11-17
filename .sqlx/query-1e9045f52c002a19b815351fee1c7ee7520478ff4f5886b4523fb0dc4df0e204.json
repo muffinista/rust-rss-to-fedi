@@ -42,6 +42,11 @@
         "ordinal": 7,
         "name": "updated_at",
         "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 8,
+        "name": "language",
+        "type_info": "Varchar"
       }
     ],
     "parameters": {
@@ -57,7 +62,8 @@
       true,
       true,
       false,
-      false
+      false,
+      true
     ]
   },
   "hash": "1e9045f52c002a19b815351fee1c7ee7520478ff4f5886b4523fb0dc4df0e204"
