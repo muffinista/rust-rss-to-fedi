@@ -1,0 +1,33 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE feeds\n      SET url = $1,\n          name = $2,\n          private_key = $3,\n          public_key = $4,\n          image_url = $5,\n          icon_url = $6,\n          title = $7,\n          description = $8,\n          site_url = $9,\n          error = $10,\n          updated_at = $11,\n          hashtag = $12,\n          content_warning = $13,\n          status_publicity = $14,\n          admin = $15,\n          listed = $16,\n          error_count = $17,\n          tweaked_profile_data = $18,\n          language = $19\n      WHERE id = $20",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Timestamptz",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Bool",
+        "Bool",
+        "Int4",
+        "Bool",
+        "Varchar",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3302f8d13e49dde2542e62aff4f31710335057a2e3e3366ebdab61d003267b59"
+}

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO items \n                                (feed_id, guid, title, content, url, created_at, updated_at)\n                                VALUES($1, $2, $3, $4, $5, $6, $7)\n                                RETURNING id",
+  "query": "INSERT INTO items \n                                (feed_id, guid, title, content, url, language, created_at, updated_at)\n                                VALUES($1, $2, $3, $4, $5, $6, $7, $8)\n                                RETURNING id",
   "describe": {
     "columns": [
       {
@@ -16,6 +16,7 @@
         "Varchar",
         "Varchar",
         "Varchar",
+        "Varchar",
         "Timestamptz",
         "Timestamptz"
       ]
@@ -24,5 +25,5 @@
       false
     ]
   },
-  "hash": "f618094cfe3f1cd0595e01df8de59b3eae9901c98f29ed469a3be07029a33894"
+  "hash": "6d7b99fa8d3c1c6d72646c421c8af46c8cd1047d4bb7651d220788159b430e94"
 }

@@ -112,6 +112,7 @@ pub fn fake_feed() -> Feed {
     updated_at: Utc::now(),
     refreshed_at: Utc::now(),
     last_post_at: None,
+    language: None,
     error: None,
     error_count: 0,
     tweaked_profile_data: false
@@ -137,7 +138,8 @@ pub fn fake_item() -> Item {
     content: Some("Hey!".to_string()),
     url: Some("http://google.com".to_string()),
     created_at: Utc::now(),
-    updated_at: Utc::now()
+    updated_at: Utc::now(),
+    language: None
   }
 }
 

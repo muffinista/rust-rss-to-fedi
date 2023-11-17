@@ -23,7 +23,7 @@ use activitystreams::{
 
 
 use sqlx::postgres::PgPool;
-use serde::{Serialize};
+use serde::Serialize;
 
 use reqwest;
 use feed_rs::parser;
@@ -98,6 +98,8 @@ pub struct Feed {
   pub updated_at: chrono::DateTime::<Utc>,
   pub refreshed_at: chrono::DateTime::<Utc>,
   pub last_post_at: Option<chrono::DateTime::<Utc>>,
+
+  pub language: Option<String>,
 
   pub error: Option<String>,
   pub error_count: i32
@@ -323,8 +325,9 @@ impl Feed {
           admin = $15,
           listed = $16,
           error_count = $17,
-          tweaked_profile_data = $18
-      WHERE id = $19",
+          tweaked_profile_data = $18,
+          language = $19
+      WHERE id = $20",
       self.url,
       self.name,
       self.private_key,
@@ -343,6 +346,7 @@ impl Feed {
       self.listed,
       self.error_count,
       self.tweaked_profile_data,
+      self.language,
       self.id
     ).execute(pool)
       .await?;
@@ -368,6 +372,16 @@ impl Feed {
       .await?;
     
     old_feed   
+  }
+
+  ///
+  /// If specified, return the language. Otherwise, default to english
+  /// 
+  pub fn language(&self) -> String {
+    match &self.language {
+      Some(l) => l.to_string(),
+      None => String::from("en")
+    }
   }
 
 
@@ -615,6 +629,9 @@ impl Feed {
         }
         if data.logo.is_some() {
           self.image_url = Some(data.logo.as_ref().unwrap().uri.clone());
+        }
+        if data.language.is_some() {
+          self.language = Some(sanitize_str(&DEFAULT, &data.language.as_ref().unwrap()).unwrap());
         }
 
         // parse out a likely site link
@@ -1401,7 +1418,7 @@ mod test {
   }
 
   #[sqlx::test]
-  async fn test_parse_from_data(pool: PgPool) -> sqlx::Result<()> {
+  async fn test_parse_atom_from_data(pool: PgPool) -> sqlx::Result<()> {
     use std::fs;
     let mut feed:Feed = real_feed(&pool).await?;
 
@@ -1413,6 +1430,25 @@ mod test {
 
     let feed2 = Feed::find(feed.id, &pool).await?;
     assert_eq!(feed2.title, Some("muffinlabs.com".to_string()));
+    assert_eq!(feed2.language, Some("es".to_string()));
+
+    Ok(())
+  }
+ 
+  #[sqlx::test]
+  async fn test_parse_rss_from_data(pool: PgPool) -> sqlx::Result<()> {
+    use std::fs;
+    let mut feed:Feed = real_feed(&pool).await?;
+
+    let path = "fixtures/test_rss.xml";
+    let data = fs::read_to_string(path).unwrap();
+
+    let result = feed.parse_from_data(data, &pool).await.unwrap();
+    assert_eq!(result.len(), 1);
+
+    let feed2 = Feed::find(feed.id, &pool).await?;
+    assert_eq!(feed2.title, Some("Latest Movie Trailers".to_string()));
+    assert_eq!(feed2.language, Some("en-us".to_string()));
 
     Ok(())
   }
@@ -1668,7 +1704,6 @@ mod test {
     let message = feed.generate_login_message(Some(&act), &dest_actor, &pool).await.unwrap();
 
     let s = serde_json::to_string(&message).unwrap();
-    println!("{}", s);
 
     assert!(s.contains(r#"sensitive":true"#));
 
