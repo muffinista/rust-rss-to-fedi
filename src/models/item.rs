@@ -262,14 +262,17 @@ impl Item {
     let item_url = format!("{}/items/{}", feed_url, self.id);
     let ts = OffsetDateTime::from_unix_timestamp(self.created_at.timestamp()).unwrap();
 
-    let content = self.to_html(feed.hashtag.clone()).await;
+    // let content = self.to_html(feed.hashtag.clone()).await;
 
+    //   .set_content(RdfLangString {
+    //     value: content.into(),
+    //     language: self.language(feed).into(),
+    // })
+
+    
     note
       .set_attributed_to(iri!(feed_url))
-      .set_content(RdfLangString {
-        value: content.into(),
-        language: self.language(feed).into(),
-    })
+      .set_content(self.to_html(feed.hashtag.clone()).await)
       .set_url(iri!(feed_url))
       .set_id(iri!(item_url))
       .set_published(ts);
