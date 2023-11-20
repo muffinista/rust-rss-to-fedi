@@ -61,7 +61,7 @@ pub async fn attempt_login(db: &State<PgPool>, cookies: &CookieJar<'_>, login_to
 }
 #[get("/user/logout")]
 pub async fn do_logout(cookies: &CookieJar<'_>) -> Result<Redirect, Status> {
-  cookies.remove_private(Cookie::named("access_token"));
+  cookies.remove_private(Cookie::from("access_token"));
   Ok(Redirect::to("/"))
 }
 

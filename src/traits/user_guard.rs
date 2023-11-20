@@ -5,6 +5,7 @@ use crate::models::User;
 
 use rocket::request::{self, FromRequest, Request};
 use rocket::outcome::Outcome;
+use rocket::http::Status;
 
 
 fn user_to_outcome(user: Result<Option<User>, sqlx::Error>) -> request::Outcome<User, std::convert::Infallible> {
@@ -14,12 +15,12 @@ fn user_to_outcome(user: Result<Option<User>, sqlx::Error>) -> request::Outcome<
         Outcome::Success(existing_user)
       }
       else {
-        Outcome::Forward(())
+        Outcome::Forward(Status::Unauthorized)
       }
     },
     Err(why) => {
       log::info!("ERR: {why:?}");
-      Outcome::Forward(())
+      Outcome::Forward(rocket::http::Status { code: 500 })
     }
   }
 }
@@ -47,7 +48,7 @@ impl<'r> FromRequest<'r> for User {
       },
       None => {
         // log::info!("No cookie to check");
-        return Outcome::Forward(())
+        return Outcome::Forward(Status::Unauthorized)
       }
     }
   }
