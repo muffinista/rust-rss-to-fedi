@@ -1,6 +1,4 @@
-use activitystreams::{
-  iri_string::types::IriString,
-};
+use activitystreams::iri_string::types::IriString;
 
 use openssl::{pkey::PKey, rsa::Rsa};
 

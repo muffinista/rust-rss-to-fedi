@@ -1,16 +1,15 @@
-use activitystreams::primitives::RdfLangString;
 use sqlx::postgres::PgPool;
-use serde::{Serialize};
+use serde::Serialize;
 use feed_rs::model::Entry;
 
 use crate::models::Actor;
 use crate::models::Enclosure;
 use crate::models::Feed;
+use crate::traits::content_map::*;
 
 use crate::routes::enclosures::*;
 
 use crate::utils::path_to_url;
-
 use crate::DeliveryError;
 
 use activitystreams::activity::*;
@@ -46,9 +45,9 @@ use chrono::Utc;
 use rocket::uri;
 
 use std::env;
+use std::collections::HashMap;
 
 use activitystreams::mime::Mime;
-
 
 
 ///
@@ -256,23 +255,18 @@ impl Item {
   /// generate an AP version of this item
   ///
   pub async fn to_activity_pub(&self, feed: &Feed, pool: &PgPool) -> Result<ApObject<Create>, DeliveryError> {    
-    let mut note: ApObject<Note> = ApObject::new(Note::new());
 
     let feed_url = feed.ap_url();
     let item_url = format!("{}/items/{}", feed_url, self.id);
     let ts = OffsetDateTime::from_unix_timestamp(self.created_at.timestamp()).unwrap();
 
-    // let content = self.to_html(feed.hashtag.clone()).await;
+    let content = self.to_html(feed.hashtag.clone()).await;
 
-    //   .set_content(RdfLangString {
-    //     value: content.into(),
-    //     language: self.language(feed).into(),
-    // })
+    let mut note: ContentMapNote = ContentMapNote::new();
 
-    
     note
       .set_attributed_to(iri!(feed_url))
-      .set_content(self.to_html(feed.hashtag.clone()).await)
+      .set_content_language_and_value(self.language(feed), content)
       .set_url(iri!(feed_url))
       .set_id(iri!(item_url))
       .set_published(ts);
@@ -621,11 +615,7 @@ mod test {
       Ok(result) => {
         let s = serde_json::to_string(&result).unwrap();
         
-        println!("{:?}", result);
-        assert!(s.contains("Hello!"));
-        assert!(s.contains("<p>Hey!</p>"));
-        assert!(s.contains(r#"@language":"en","@value":"#));
-
+        assert!(s.contains(r#"contentMap":{"en":"<a href=\"http:&#x2F;&#x2F;google.com\">Hello!</a><p>Hey!</p>"#));
         Ok(())
       },
       Err(why) => Err(why.to_string())
@@ -643,12 +633,11 @@ mod test {
     match result {
       Ok(result) => {
         let s = serde_json::to_string(&result).unwrap();
-       
+
         let v: Value = serde_json::from_str(&s).unwrap();
         assert_eq!(v["to"], "https://www.w3.org/ns/activitystreams#Public");
         assert!(v["cc"][0].to_string().contains("/followers"));
-        assert!(s.contains(r#"@language":"en","@value":"#));
-        assert!(s.contains(r#"@language":"en","@value":"#));
+        assert!(s.contains(r#"contentMap":{"en":"<a href=\"http:&#x2F;&#x2F;google.com\">Hello!</a><p>Hey!</p>"#));
 
         Ok(())
       },
@@ -670,7 +659,7 @@ mod test {
         let v: Value = serde_json::from_str(&s).unwrap();
         assert!(v["to"].to_string().contains("/followers"));
         assert_eq!(v["cc"][0], "https://www.w3.org/ns/activitystreams#Public");
-        assert!(s.contains(r#"@language":"en","@value":"#));
+        assert!(s.contains(r#"contentMap":{"en":"<a href=\"http:&#x2F;&#x2F;google.com\">Hello!</a><p>Hey!</p>"#));
 
         Ok(())
       },
@@ -694,7 +683,7 @@ mod test {
         let v: Value = serde_json::from_str(&s).unwrap();
         assert!(v["to"].to_string().contains("/followers"));
         assert_eq!(v["cc"][0], Null);
-        assert!(s.contains(r#"@language":"en","@value":"#));
+        assert!(s.contains(r#"contentMap":{"en":"<a href=\"http:&#x2F;&#x2F;google.com\">Hello!</a><p>Hey!</p>"#));
 
         Ok(())
       },
@@ -714,7 +703,7 @@ mod test {
         let s = serde_json::to_string(&result).unwrap();
         println!("{:}", s);
         assert!(s.contains("#hashy"));
-        assert!(s.contains(r#"@language":"en","@value":"#));
+        assert!(s.contains(r#"contentMap":{"en":"<a href=\"http:&#x2F;&#x2F;google.com\">Hello!</a><p>Hey!</p>"#));
 
         Ok(())
       },
@@ -736,7 +725,6 @@ mod test {
         
         assert!(s.contains("/enclosures/"));
         assert!(s.contains("audio/mpeg"));
-        assert!(s.contains(r#"@language":"en","@value":"#));
 
         Ok(())
       },
