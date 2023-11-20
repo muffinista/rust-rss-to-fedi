@@ -152,7 +152,7 @@ mod test {
     let req = client.get(uri!(super::index_admin(Some(1))));
     let response = req.dispatch().await;
 
-    assert_eq!(response.status(), Status::NotFound);
+    assert_eq!(response.status(), Status::Unauthorized);
   }
 
   #[sqlx::test]

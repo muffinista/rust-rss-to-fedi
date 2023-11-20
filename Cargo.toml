@@ -16,7 +16,7 @@ native-tls = { version = "~0.2.11", features = ["vendored"] }
 openssl = { version = "~0.10.55", features = ["vendored"] }
 openssl-sys = "~0.9.78"
 dotenvy = "0.15"
-rocket = { version = "0.5.0-rc.3", features = ["json", "secrets"] }
+rocket = { version = "0.5.0", features = ["json", "secrets"] }
 rocket_dyn_templates = { version = "0.1.0-rc.3", features = ["tera"] }
 sqlx = { version = "~0.7.1", features = ["chrono", "macros", "migrate", "postgres", "runtime-tokio-rustls"] }
 serde = {version = "~1.0", features = ["derive"] }
