@@ -4,7 +4,7 @@ use url::Url;
 use rand::{thread_rng, Rng};
 use rand::distributions::Alphanumeric;
 
-use activitystreams_ext::{Ext1};
+use activitystreams_ext::Ext1;
 
 use activitystreams::{
   activity::*,
@@ -18,9 +18,9 @@ use activitystreams::{
   link::Mention,
   object::ApObject,
   object::*,
+  primitives::OneOrMany,
   time::OffsetDateTime
 };
-
 
 use sqlx::postgres::PgPool;
 use serde::Serialize;
@@ -56,6 +56,8 @@ use crate::utils::http::*;
 
 use crate::services::mailer::*;
 
+use crate::traits::property_value::schema_property_context;
+
 use crate::routes::feeds::*;
 use crate::routes::ap::inbox::*;
 use crate::routes::ap::outbox::*;
@@ -64,8 +66,6 @@ use crate::routes::login::*;
 use crate::PER_PAGE;
 
 use crate::traits::sensitive::CanBeSensitiveExt;
-
-
 
 ///
 /// The is the model for a feed. Most of the data we hold onto here is from attributes
@@ -111,7 +111,10 @@ impl PartialEq for Feed {
   }
 }
 
+// pub struct PropertyValue {
+//   pub String kind,
 
+// }
 
 ///
 /// This is a list of activity types that we want to handle
@@ -742,12 +745,14 @@ impl Feed {
     svc
       .set_context(context())
       .add_context(security())
+      .add_context(schema_property_context()?)
       .set_id(iri!(path_to_url(&uri!(render_feed(&self.name)))))
       .set_name(self.display_name().clone())
       .set_preferred_username(self.name.clone())
       .set_inbox(iri!(path_to_url(&uri!(user_inbox(&self.name)))))
       .set_outbox(iri!(path_to_url(&uri!(render_feed_outbox(&self.name, None::<i32>)))))
       .set_followers(iri!(self.followers_url()));
+
 
     if self.is_admin() {
       svc.set_summary(format!("Admin account for {instance_domain}"));
