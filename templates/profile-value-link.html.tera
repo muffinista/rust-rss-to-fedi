@@ -1,1 +1,1 @@
-<a href="{{ url | safe }}" target="_blank" rel="nofollow noopener noreferrerner" translate="no">{{ title }}</a>
+<a href="{{ url | safe }}" target="_blank" rel="nofollow noopener noreferrer" translate="no">{{ title }}</a>
