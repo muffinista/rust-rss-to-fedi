@@ -11,12 +11,12 @@ use std::collections::HashMap;
 
 pub type ContentMapValues = HashMap<String, String>;
 
+#[allow(non_snake_case)]
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ContentMap<Inner> {
   // note: i had this named content_map but the camelCase rename wasn't catching for some reason
   // and i didn't want to deal
-  #[allow(non_snake_case)]
   contentMap: ContentMapValues,
   pub inner: Inner,
 }

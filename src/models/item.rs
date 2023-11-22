@@ -15,7 +15,6 @@ use crate::DeliveryError;
 use activitystreams::activity::*;
 use activitystreams::object::ApObject;
 use activitystreams::object::Document;
-use activitystreams::object::Note;
 use activitystreams::iri;
 use activitystreams::base::BaseExt;
 use activitystreams::base::ExtendsExt;
@@ -45,7 +44,6 @@ use chrono::Utc;
 use rocket::uri;
 
 use std::env;
-use std::collections::HashMap;
 
 use activitystreams::mime::Mime;
 

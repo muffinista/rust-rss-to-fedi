@@ -298,10 +298,13 @@ pub async fn render_feed(username: &str, db: &State<PgPool>) -> Result<ActivityJ
     Ok(feed_lookup) => {
       match feed_lookup {
         Some(feed) => {
-          let ap = feed.to_activity_pub();
+          let ap = feed.to_activity_pub(db).await;
           match ap {
             Ok(ap) => Ok(ActivityJsonContentType(ap)),
-            Err(_why) => Err(Status::NotFound)
+            Err(why) => {
+              log::info!("{:?}", why);
+              Err(Status::NotFound)
+            }
           }
         },
         None => Err(Status::NotFound)
