@@ -13,7 +13,7 @@ default-run = "server"
 activitystreams = "0.7.0-alpha.25"
 activitystreams-ext = "0.1.0-alpha.3"
 native-tls = { version = "~0.2.11", features = ["vendored"] }
-openssl = { version = "~0.10.55", features = ["vendored"] }
+openssl = { version = "~0.10.60", features = ["vendored"] }
 openssl-sys = "~0.9.78"
 dotenvy = "0.15"
 rocket = { version = "0.5.0", features = ["json", "secrets"] }
@@ -63,11 +63,11 @@ features = [
 
 [dev-dependencies]
 native-tls = { version = "~0.2.11", features = ["vendored"] }
-openssl = { version = "~0.10.55", features = ["vendored"] }
+openssl = { version = "~0.10.60", features = ["vendored"] }
 openssl-sys = "~0.9.78"
 mockito = "1.0.0"
 
 [build-dependencies]
 native-tls = { version = "~0.2.11", features = ["vendored"] }
-openssl = { version = "~0.10.55", features = ["vendored"] }
+openssl = { version = "~0.10.60", features = ["vendored"] }
 openssl-sys = "~0.9.78"
