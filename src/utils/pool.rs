@@ -29,7 +29,8 @@ fn connect_options() -> PgConnectOptions {
   let db_uri = env::var("DATABASE_URL").expect("DATABASE_URL is not set");
   PgConnectOptions::from_str(&db_uri)
     .expect("failed to parse DATABASE_URL")
-    .log_statements(LevelFilter::Error)
+    .disable_statement_logging()
+    //.log_statements(LevelFilter::Error)
     .log_slow_statements(LevelFilter::Info, Duration::from_millis(200))
     .clone()
 }
