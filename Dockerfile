@@ -1,29 +1,33 @@
-# syntax=docker/dockerfile:experimental
+FROM messense/rust-musl-cross:x86_64-musl AS builder
 
-FROM rustlang/rust:nightly
+# use nightly to build
+RUN rustup update nightly && \
+    rustup override set nightly && \
+    rustup target add --toolchain nightly x86_64-unknown-linux-musl
 
+# install sqlx
 ENV SQLX_OFFLINE true
-RUN cargo install sqlx-cli --no-default-features --features rustls,postgres
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    cargo install sqlx-cli --no-default-features --features rustls,postgres
 
+WORKDIR /home/rust/src
+COPY . .
+
+# generate binaries and drop them in build
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    cargo install --locked --path . --root /build/
+
+# build the final image
+FROM debian:buster-slim
+RUN apt-get update & apt-get install -y extra-runtime-dependencies & rm -rf /var/lib/apt/lists/*
+
+
+COPY --from=builder /build/bin/* /usr/local/bin/
+COPY --from=builder /root/.cargo/bin/sqlx /usr/local/bin/sqlx
+
+# we still need all the templates, migrations, etc.
 WORKDIR /app
+COPY . .
 
-# create a minimal program so cargo can fetch/build deps
-# without building the entire app
-RUN mkdir -p src/bin && echo "fn main() {}" > src/bin/server.rs
+CMD ["server"]
 
-COPY Cargo.toml Cargo.lock .
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    cargo build -r
-
-COPY Rocket.toml Rocket.toml
-COPY .sqlx .sqlx
-COPY src src/
-COPY migrations migrations/
-COPY assets assets/
-COPY fixtures fixtures/
-COPY templates templates/
-
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    cargo build -r
-
-CMD ["target/release/server"]
