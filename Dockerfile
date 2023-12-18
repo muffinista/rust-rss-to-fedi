@@ -19,8 +19,9 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
 
 # build the final image
 FROM debian:buster-slim
-RUN apt-get update & apt-get install -y extra-runtime-dependencies & rm -rf /var/lib/apt/lists/*
-
+RUN apt-get update && \
+    apt-get install -y ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /build/bin/* /usr/local/bin/
 COPY --from=builder /root/.cargo/bin/sqlx /usr/local/bin/sqlx
