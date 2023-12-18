@@ -26,7 +26,7 @@ COPY --from=builder /build/bin/* /usr/local/bin/
 COPY --from=builder /root/.cargo/bin/sqlx /usr/local/bin/sqlx
 
 # we still need all the templates, migrations, etc.
-WORKDIR /app
+WORKDIR /home/rust/src
 COPY . .
 
 CMD ["server"]
