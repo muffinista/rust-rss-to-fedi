@@ -525,15 +525,17 @@ impl Feed {
   pub async fn feed_to_entries(&self, data: feed_rs::model::Feed, pool: &PgPool) -> Result<Vec<Item>, sqlx::Error> {
     let mut result: Vec<Item> = Vec::new();
     for entry in data.entries.iter() {
-      let exists = Item::exists_by_guid(&entry.id, self, pool).await.unwrap();
+      if entry.published.is_none() || entry.published >= self.last_post_at {
+        let exists = Item::exists_by_guid(&entry.id, self, pool).await.unwrap();
 
-      // only create new items
-      if ! exists {
-        let item = Item::create_from_entry(entry, self, pool).await;
-        match item {
-          Ok(item) => result.push(item),
-          Err(why) => return Err(why)
-        };
+        // only create new items
+        if ! exists {
+          let item = Item::create_from_entry(entry, self, pool).await;
+          match item {
+            Ok(item) => result.push(item),
+            Err(why) => return Err(why)
+          };
+        }
       }
     }
 
