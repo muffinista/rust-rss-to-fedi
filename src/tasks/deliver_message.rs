@@ -44,17 +44,6 @@ impl AsyncRunnable for DeliverMessage {
         deliver_to_inbox(dest_url, &feed.ap_url(), &feed.private_key, &message_object).await?;
 
         Ok(())
-
-        // match result {
-        //   Ok(_result) => {
-        //     log::info!("DeliverMessage: delivery to {dest_url:} succeeded!");
-        //     Ok(())
-        //   },
-        //   Err(why) => {
-        //     log::info!("DeliverMessage: delivery to {dest_url:} failed: {why:}");
-        //     Err(FangError { description: why.to_string() })
-        //   }
-        // }    
       },
       Err(why) => {
         log::info!("DeliverMessage failed: {why:}");
