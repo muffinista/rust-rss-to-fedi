@@ -1,5 +1,4 @@
 use activitystreams::{
-  object::ApObject,
   object::*,
 };
 

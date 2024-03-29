@@ -9,15 +9,15 @@ use activitystreams_ext::Ext1;
 use activitystreams::{
   activity::*,
   actor::{ApActor, ApActorExt, Service},
-  base::AnyBase,
+  base::{AnyBase, BaseExt, ExtendsExt},
+  collection::{CollectionExt, CollectionPageExt},
   iri,
   iri_string::types::IriString,
-  prelude::*,
+  link::LinkExt,
   security,
   context,
   collection::{OrderedCollection, OrderedCollectionPage},
   link::Mention,
-  object::ApObject,
   object::*,
   time::OffsetDateTime
 };
@@ -25,10 +25,9 @@ use activitystreams::{
 use sqlx::postgres::PgPool;
 use serde::Serialize;
 
-use reqwest;
 use feed_rs::parser;
 
-use chrono::{Duration, Utc, prelude::*};
+use chrono::{Duration, Utc, TimeZone};
 
 use crate::utils::templates::{Context, render};
 
@@ -1337,8 +1336,6 @@ mod test {
   use crate::routes::feeds::*;
   use crate::routes::ap::outbox::*;
 
-
-  use mockito;
 
   #[sqlx::test]
   async fn test_create(pool: PgPool) -> sqlx::Result<()> {

@@ -57,8 +57,6 @@ mod test {
   use crate::models::Follower;
   use crate::utils::test_helpers::{fake_feed, fake_follower};
 
-  use mockito;
-
   #[sqlx::test]
   async fn test_find_inbox(pool: PgPool) -> Result<(), String> {
     let mut server = mockito::Server::new_async().await;

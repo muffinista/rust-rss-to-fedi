@@ -6,7 +6,6 @@ use activitystreams::{
 };
 
 use serde_json::json;
-use std::convert::TryFrom;
 
 use crate::utils::templates::{Context, render};
 

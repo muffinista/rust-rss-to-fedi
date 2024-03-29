@@ -518,8 +518,6 @@ mod test {
 
   use crate::utils::queue::create_queue;
 
-  use mockito;
-
   use serde_json::Value;
 
   #[sqlx::test]

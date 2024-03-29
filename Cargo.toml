@@ -64,7 +64,7 @@ features = [
 native-tls = { version = "~0.2.11", features = ["vendored"] }
 openssl = { version = "~0.10.60", features = ["vendored"] }
 openssl-sys = "~0.9.101"
-mockito = "~1.0.0"
+mockito = "~1.4.0"
 
 [build-dependencies]
 native-tls = { version = "~0.2.11", features = ["vendored"] }

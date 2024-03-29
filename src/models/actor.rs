@@ -275,7 +275,6 @@ impl Actor {
 #[cfg(test)]
 mod test {
   use sqlx::postgres::PgPool;
-  use mockito;
   use std::fs;
 
   use crate::models::actor::Actor;

@@ -1,5 +1,11 @@
 
-use http_signature_normalization_reqwest::{prelude::*};
+use http_signature_normalization_reqwest::{
+  Config,
+  DefaultSpawner,
+  Sign,
+  digest::SignExt
+};
+
 use reqwest::Request;
 use reqwest_middleware::RequestBuilder;
 use reqwest::header::HeaderValue;

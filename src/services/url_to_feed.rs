@@ -79,7 +79,6 @@ pub async fn url_to_feed_url(url:&String) -> Result<Option<String>, DeliveryErro
 
 #[cfg(test)]
 mod test {
-  use mockito;
   use std::fs;
 
   use crate::services::url_to_feed::url_to_feed_url;
