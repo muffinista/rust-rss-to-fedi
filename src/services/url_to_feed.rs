@@ -27,7 +27,7 @@ pub fn is_valid_feed(data:&String) -> bool {
 /// from any HTML returned
 ///
 pub async fn url_to_feed_url(url:&String) -> Result<Option<String>, DeliveryError> {
-  let client = http_client();
+  let client = http_client()?;
   let heads = generate_request_headers();
 
   // let client = reqwest::Client::new();

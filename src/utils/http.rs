@@ -4,7 +4,7 @@ use reqwest::header::{HeaderValue, HeaderMap};
 
 use httpdate::fmt_http_date;
 
-use std::time::SystemTime;
+use std::time::{Duration, SystemTime};
 use std::env;
 
 static BASE_USER_AGENT: &str = concat!(
@@ -35,11 +35,16 @@ pub fn generate_request_headers() -> HeaderMap {
   headers
 }
 
-pub fn http_client() -> reqwest_middleware::ClientWithMiddleware {
+pub fn http_client() -> Result<reqwest_middleware::ClientWithMiddleware, reqwest::Error> {
+  let request_timeout = Duration::from_secs(15);
+    let base_client = reqwest::Client::builder()
+        .timeout(request_timeout)
+        .build()?;
+
   // Retry up to 3 times with increasing intervals between attempts.
   let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
 
-  ClientBuilder::new(reqwest::Client::new())
+  Ok(ClientBuilder::new(base_client)
     .with(RetryTransientMiddleware::new_with_policy(retry_policy))
-    .build()
+    .build())
 }
