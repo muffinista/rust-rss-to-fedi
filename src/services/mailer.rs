@@ -97,7 +97,7 @@ pub async fn fetch_object(url: &str, key_id: Option<&str>, private_key: Option<&
 /// deliver a payload to an inbox
 ///
 pub async fn deliver_to_inbox<T: Serialize + ?Sized>(inbox: &Url, key_id: &str, private_key: &str, json: &T) -> Result<(), DeliveryError> {
-  let client = http_client();
+  let client = http_client()?;
   let mut heads = generate_request_headers();
   let payload = serde_json::to_vec(json).unwrap();
   // let printable_payload = String::from_utf8(payload.clone()).unwrap();
