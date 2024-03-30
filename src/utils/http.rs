@@ -36,7 +36,7 @@ pub fn generate_request_headers() -> HeaderMap {
 }
 
 pub fn http_client() -> Result<reqwest_middleware::ClientWithMiddleware, reqwest::Error> {
-  let request_timeout = Duration::from_secs(15);
+  let request_timeout = Duration::from_secs(30);
     let base_client = reqwest::Client::builder()
         .timeout(request_timeout)
         .build()?;
