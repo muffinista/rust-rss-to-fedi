@@ -17,28 +17,23 @@ openssl = { version = "~0.10.60", features = ["vendored"] }
 openssl-sys = "~0.9.78"
 dotenvy = "~0.15"
 rocket = { version = "~0.5.0", features = ["json", "secrets"] }
-rocket_dyn_templates = { version = "~0.1.0", features = ["tera"] }
 sqlx = { version = "~0.7.1", features = ["chrono", "macros", "migrate", "postgres", "runtime-tokio-rustls"] }
 serde = {version = "~1.0", features = ["derive"] }
 rand = { version = "~0.8.5" }
-feed-rs = "~1.4"
-reqwest = { version = "~0.11", features = ["json"] }
-http-signature-normalization-reqwest = { version = "0.10.0", default-features = false, features = ["sha-2", "digest", "middleware", "default-spawner"] }
+feed-rs = "2.0.0"
 iri-string = "~0.7.0"
 
-tokio = "~1.37"
+tokio = "1.38.0"
 webfinger = { version = "~0.5.1", features = ["async", "async-trait"] }
 async-trait = {version = "*"}
 serde_json = "~1.0.89"
-reqwest-middleware = "~0.2.0"
-httpdate = "~1.0.2"
+httpdate = { version = "~1.0.2" }
 url = "~2.5"
 sha2 = "~0.10"
 base64 = "~0.22.0"
 chrono = { version = "~0.4", features = ["serde"] }
 scraper = "~0.19"
 sanitize_html = "~0.8.0"
-reqwest-retry = "0.3.0"
 md-5 = "~0.10.5"
 
 fang = { version = "~0.10.4" , features = ["asynk", "derive-error"], default-features = false }
@@ -46,6 +41,27 @@ env_logger = "~0.11.0"
 log = "~0.4.17"
 clap = { version = "~4.5", features = ["derive"] }
 glob = "~0.3.1"
+
+
+[dependencies.rocket_dyn_templates]
+version = "0.2.0"
+features = ["tera"]
+
+[dependencies.reqwest]
+version = "0.12.4"
+features = ["json"]
+
+[dependencies.reqwest-middleware]
+version = "0.3.1"
+features = ["json"]
+
+[dependencies.reqwest-retry]
+version = "0.5.0"
+
+[dependencies.http-signature-normalization-reqwest]
+version = "0.12.0"
+default-features = false
+features = ["sha-2", "digest", "middleware", "default-spawner"]
 
 
 # https://cosmichorror.dev/posts/speeding-up-sqlx-compile-times/
