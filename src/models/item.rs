@@ -187,7 +187,7 @@ impl Item {
           let url = Some(content.url.as_ref().unwrap().as_str());
     
           let content_type = if content.content_type.is_some() {
-            Some(content.content_type.as_ref().unwrap().essence_str())
+            Some(content.content_type.as_ref().unwrap().essence().to_string())
           } else {
             None
           };
