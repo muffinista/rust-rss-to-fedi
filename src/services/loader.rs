@@ -29,7 +29,8 @@ pub async fn update_stale_feeds(pool: &PgPool, queue: &mut dyn AsyncQueueable) -
       let description = format!("{err:?}");
 
       Err(FangError { description })
-  }  }
+		}
+  }
 }
 
 

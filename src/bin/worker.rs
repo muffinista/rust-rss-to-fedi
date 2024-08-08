@@ -10,6 +10,7 @@ use fang::AsyncRunnable;
 use fang::NoTls;
 
 use rustypub::tasks::UpdateStaleFeeds;
+use rustypub::tasks::DeleteOldMessages;
 
 use std::time::Duration;
 
@@ -48,6 +49,12 @@ async fn main() {
   let task = UpdateStaleFeeds {};
   queue
     .schedule_task(&task as &dyn AsyncRunnable)
+    .await
+    .unwrap();
+
+  let cleanup_task = DeleteOldMessages {};
+  queue
+    .schedule_task(&cleanup_task as &dyn AsyncRunnable)
     .await
     .unwrap();
 

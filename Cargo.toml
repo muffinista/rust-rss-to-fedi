@@ -17,10 +17,10 @@ openssl = { version = "~0.10.66", features = ["vendored"] }
 openssl-sys = "~0.9.78"
 dotenvy = "~0.15"
 rocket = { version = "~0.5.0", features = ["json", "secrets"] }
-sqlx = { version = "~0.7.1", features = ["chrono", "macros", "migrate", "postgres", "runtime-tokio-rustls"] }
+sqlx = { version = "~0.8.0", features = ["chrono", "macros", "migrate", "postgres", "runtime-tokio-rustls"] }
 serde = {version = "~1.0", features = ["derive"] }
 rand = { version = "~0.8.5" }
-feed-rs = "2.0.0"
+feed-rs = "2.1.0"
 iri-string = "~0.7.0"
 
 tokio = "1.38.0"
@@ -32,7 +32,7 @@ url = "~2.5"
 sha2 = "~0.10"
 base64 = "~0.22.0"
 chrono = { version = "~0.4", features = ["serde"] }
-scraper = "~0.19"
+scraper = "~0.20"
 sanitize_html = "~0.8.0"
 md-5 = "~0.10.5"
 
@@ -56,7 +56,7 @@ version = "0.3.1"
 features = ["json"]
 
 [dependencies.reqwest-retry]
-version = "0.5.0"
+version = "0.6.0"
 
 [dependencies.http-signature-normalization-reqwest]
 version = "0.12.0"
@@ -69,7 +69,7 @@ features = ["sha-2", "digest", "middleware", "default-spawner"]
 opt-level = 3
 
 [dependencies.uuid]
-version = "~1.8.0"
+version = "~1.10.0"
 features = [
     "v4",                # Lets you generate random UUIDs
     "fast-rng",          # Use a faster (but still sufficiently random) RNG
@@ -80,7 +80,7 @@ features = [
 native-tls = { version = "~0.2.11", features = ["vendored"] }
 openssl = { version = "~0.10.66", features = ["vendored"] }
 openssl-sys = "~0.9.101"
-mockito = "~1.4.0"
+mockito = "~1.5.0"
 
 [build-dependencies]
 native-tls = { version = "~0.2.11", features = ["vendored"] }
