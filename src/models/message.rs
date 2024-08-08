@@ -1,7 +1,6 @@
 use sqlx::postgres::PgPool;
 
-use chrono::Utc;
-
+use chrono::{Duration, Utc};
 
 ///
 /// Model for an incoming message
@@ -42,6 +41,55 @@ impl Message {
       .await?;
 
     Ok(())
+  }
 
+  pub async fn cleanup(pool: &PgPool, age:i64, limit: i64) -> Result<(), sqlx::Error> {
+    let age = Utc::now() - Duration::seconds(age);
+      
+			sqlx::query!("DELETE FROM messages WHERE id IN (select id FROM messages WHERE created_at <= $1 ORDER BY created_at LIMIT $2)", age, limit)
+					.execute(pool)
+          .await?;
+
+			Ok(())
+
+
+  }
+
+}
+
+
+#[cfg(test)]
+mod test {
+		use sqlx::postgres::PgPool;
+		use chrono::{Duration, Utc};
+		use crate::models::Message;
+
+  #[sqlx::test]
+  async fn test_cleanup(pool: PgPool) -> Result<(), String> {
+			let old = Utc::now() - Duration::seconds(10000);
+			
+			sqlx::query!("INSERT INTO messages (username, text, handled, created_at, updated_at) VALUES('test', 'test', true, $1, $2)", old, old)
+          .execute(&pool)
+          .await
+          .unwrap();
+
+      
+      let result = sqlx::query!("SELECT COUNT(1) AS tally FROM messages")
+          .fetch_one(&pool)
+          .await
+      .unwrap();
+
+			assert!(result.tally.unwrap() == 1);
+
+			Message::cleanup(&pool, 100, 10000).await.unwrap();
+			
+			let post_result = sqlx::query!("SELECT COUNT(1) AS tally FROM messages")
+					.fetch_one(&pool)
+					.await
+					.unwrap();
+			
+			assert!(post_result.tally.unwrap() == 0);
+      
+			Ok(())
   }
 }

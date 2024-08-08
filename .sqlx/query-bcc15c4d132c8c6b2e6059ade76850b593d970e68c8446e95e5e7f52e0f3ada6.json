@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM messages WHERE id IN (select id FROM messages WHERE created_at <= $1 ORDER BY created_at LIMIT $2)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "bcc15c4d132c8c6b2e6059ade76850b593d970e68c8446e95e5e7f52e0f3ada6"
+}
