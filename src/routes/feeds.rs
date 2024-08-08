@@ -506,7 +506,7 @@ mod test {
     assert_eq!(response.status(), Status::Ok);
 
     let body = response.into_string().await.unwrap();
-    assert!(body.contains(r#"{"src":"https://muffinlabs.com/","url":"http://muffinlabs.com/atom.xml","error":null}"#));
+    assert!(body.contains(r#"{"src":"https://muffinlabs.com/","url":"https://muffinlabs.com/atom.xml","error":null}"#));
 
     Ok(())
   }
