@@ -109,7 +109,7 @@ impl Item {
   }
 
   pub async fn for_feed(feed: &Feed, limit: i64, pool: &PgPool) -> Result<Vec<Item>, sqlx::Error> {
-    sqlx::query_as!(Item, "SELECT * FROM items WHERE feed_id = $1 ORDER by created_at DESC, id ASC LIMIT $2", feed.id, limit)
+    sqlx::query_as!(Item, "SELECT * FROM items WHERE feed_id = $1 ORDER by created_at DESC LIMIT $2", feed.id, limit)
     .fetch_all(pool)
     .await
   }

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT * FROM items WHERE feed_id = $1 ORDER by created_at DESC, id ASC LIMIT $2",
+  "query": "SELECT * FROM items WHERE feed_id = $1 ORDER by created_at DESC LIMIT $2",
   "describe": {
     "columns": [
       {
@@ -67,5 +67,5 @@
       true
     ]
   },
-  "hash": "127d18d1e252038d0e8382bc6c03ff37ebbe97719d24d26f262513f0ac988ff9"
+  "hash": "798e88fc55d48982a4b33a78545d00e77ac13e3a698c7e95f413657b9e230aae"
 }
