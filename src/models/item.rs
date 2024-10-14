@@ -611,7 +611,7 @@ mod test {
       Ok(result) => {
         let s = serde_json::to_string(&result).unwrap();
         
-        assert!(s.contains(r#"contentMap":{"en":"<a href=\"http:&#x2F;&#x2F;google.com\">Hello!</a><p>Hey!</p>"#));
+        assert!(s.contains(r#"contentMap":{"en":"<a href=\"http:&#x2F;&#x2F;google.com\">Hello!</a><br />\n\n<p>Hey!</p>"#));
         Ok(())
       },
       Err(why) => Err(why.to_string())
@@ -633,7 +633,7 @@ mod test {
         let v: Value = serde_json::from_str(&s).unwrap();
         assert_eq!(v["to"], "https://www.w3.org/ns/activitystreams#Public");
         assert!(v["cc"][0].to_string().contains("/followers"));
-        assert!(s.contains(r#"contentMap":{"en":"<a href=\"http:&#x2F;&#x2F;google.com\">Hello!</a><p>Hey!</p>"#));
+        assert!(s.contains(r#"contentMap":{"en":"<a href=\"http:&#x2F;&#x2F;google.com\">Hello!</a><br />\n\n<p>Hey!</p>"#));
 
         Ok(())
       },
@@ -655,7 +655,7 @@ mod test {
         let v: Value = serde_json::from_str(&s).unwrap();
         assert!(v["to"].to_string().contains("/followers"));
         assert_eq!(v["cc"][0], "https://www.w3.org/ns/activitystreams#Public");
-        assert!(s.contains(r#"contentMap":{"en":"<a href=\"http:&#x2F;&#x2F;google.com\">Hello!</a><p>Hey!</p>"#));
+        assert!(s.contains(r#"contentMap":{"en":"<a href=\"http:&#x2F;&#x2F;google.com\">Hello!</a><br />\n\n<p>Hey!</p>"#));
 
         Ok(())
       },
@@ -679,7 +679,7 @@ mod test {
         let v: Value = serde_json::from_str(&s).unwrap();
         assert!(v["to"].to_string().contains("/followers"));
         assert_eq!(v["cc"][0], Null);
-        assert!(s.contains(r#"contentMap":{"en":"<a href=\"http:&#x2F;&#x2F;google.com\">Hello!</a><p>Hey!</p>"#));
+        assert!(s.contains(r#"contentMap":{"en":"<a href=\"http:&#x2F;&#x2F;google.com\">Hello!</a><br />\n\n<p>Hey!</p>"#));
 
         Ok(())
       },
@@ -699,7 +699,7 @@ mod test {
         let s = serde_json::to_string(&result).unwrap();
         println!("{:}", s);
         assert!(s.contains("#hashy"));
-        assert!(s.contains(r#"contentMap":{"en":"<a href=\"http:&#x2F;&#x2F;google.com\">Hello!</a><p>Hey!</p>"#));
+        assert!(s.contains(r#"contentMap":{"en":"<a href=\"http:&#x2F;&#x2F;google.com\">Hello!</a><br />\n\n<p>Hey!</p>"#));
 
         Ok(())
       },
