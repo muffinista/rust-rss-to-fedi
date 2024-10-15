@@ -9,12 +9,16 @@ use fang::asynk::async_worker_pool::AsyncWorkerPool;
 use fang::AsyncRunnable;
 use fang::NoTls;
 
-use rustypub::tasks::UpdateStaleFeeds;
-use rustypub::tasks::DeleteOldMessages;
+use rustypub::{
+  tasks::{
+    UpdateStaleFeeds,
+    DeleteOldMessages,
+    DeleteBadActors
+  },
+  utils::queue::create_queue
+};
 
 use std::time::Duration;
-
-use rustypub::utils::queue::create_queue;
 
 
 #[tokio::main]
@@ -58,6 +62,12 @@ async fn main() {
     .await
     .unwrap();
 
+  let cleanup_actors_task = DeleteBadActors {};
+  queue
+    .schedule_task(&cleanup_actors_task as &dyn AsyncRunnable)
+    .await
+    .unwrap();
+    
   loop {
     sleep(Duration::from_secs(2)).await;
   }
