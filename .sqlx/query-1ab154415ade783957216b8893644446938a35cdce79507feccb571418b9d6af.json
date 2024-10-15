@@ -47,6 +47,11 @@
         "ordinal": 8,
         "name": "username",
         "type_info": "Varchar"
+      },
+      {
+        "ordinal": 9,
+        "name": "error_count",
+        "type_info": "Int4"
       }
     ],
     "parameters": {
@@ -59,6 +64,7 @@
     "nullable": [
       false,
       true,
+      false,
       false,
       false,
       false,

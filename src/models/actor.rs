@@ -35,7 +35,9 @@ pub struct Actor {
   pub refreshed_at: chrono::DateTime::<Utc>,
 
   pub error: Option<String>,
-  pub username: String
+  pub username: String,
+
+  pub error_count:i32
 }
 
 impl PartialEq for Actor {
@@ -115,6 +117,15 @@ impl Actor {
       Err(why) => Err(why)
     }
   }
+
+  pub async fn log_error(url: &String, pool: &PgPool) -> Result<(), sqlx::Error> {
+    sqlx::query!("UPDATE actors SET error_count = error_count + 1 WHERE url = $1 OR inbox_url = $1", url)
+      .execute(pool)
+      .await?;
+    
+    Ok(())
+  }
+
 
   ///
   /// Fetch the remote actor data and store it

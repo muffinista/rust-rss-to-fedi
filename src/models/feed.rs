@@ -863,7 +863,14 @@ impl Feed {
     accept.set_context(context());
 
     // deliver to the user
-    deliver_to_inbox(&Url::parse(&inbox)?, &self.ap_url(), &self.private_key, &accept).await
+    let result = deliver_to_inbox(&Url::parse(&inbox)?, &self.ap_url(), &self.private_key, &accept).await;
+
+    if result.is_err() {
+      Actor::log_error(&inbox, pool).await?;
+    }
+
+    result
+
   }
 
   ///
@@ -929,6 +936,10 @@ impl Feed {
 
         // send the message!
         let result = deliver_to_inbox(&Url::parse(&dest_actor.inbox_url)?, &my_url, &self.private_key, &message).await;
+    
+        if result.is_err() {
+          Actor::log_error(&dest_actor.inbox_url, pool).await?;
+        }
     
         match result {
           Ok(result) => log::info!("sent! {result:?}"),

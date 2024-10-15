@@ -3,10 +3,14 @@ use rand::{distributions::Alphanumeric, Rng};
 
 use chrono::{Duration, Utc};
 
-use crate::models::Actor;
-use crate::models::Feed;
-use crate::services::mailer::deliver_to_inbox;
-use crate::DeliveryError;
+use crate:: {
+  models:: {
+    Actor,
+    Feed
+  },
+  services::mailer::deliver_to_inbox,
+  DeliveryError
+};
 
 use url::Url;
 
@@ -264,17 +268,21 @@ impl User {
         log::info!("{msg}");
     
         let feed_ap_url = feed.ap_url();
+        let inbox = &Url::parse(&dest_actor.inbox_url)?;
     
         let result = deliver_to_inbox(
-          &Url::parse(&dest_actor.inbox_url)?,
+          inbox,
           &feed_ap_url,
           &feed.private_key,
           &message).await;
     
         match result {
           Ok(result) => log::info!("sent! {result:?}"),
-          Err(why) => log::info!("failure! {why:?}")
-        }    
+          Err(why) => {
+            Actor::log_error(&inbox.to_string(), pool).await?;
+            log::info!("failure! {why:?}")
+          }
+        }
       },
       Err(why) => {
         log::info!("couldnt find actor: {why:?}");

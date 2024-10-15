@@ -7,11 +7,16 @@ use fang::FangError;
 
 use url::Url;
 
-use crate::services::mailer::*;
-use crate::models::Feed;
+use crate:: {
+  services::mailer::*,
+  models:: {
+    Actor,
+    Feed
+  },
+  utils::pool::db_pool
+};
 
-use crate::utils::pool::db_pool;
-use serde_json::{Value};
+use serde_json::Value;
 
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "fang::serde")]
@@ -41,7 +46,11 @@ impl AsyncRunnable for DeliverMessage {
         // is serializable to reqwest, since right now we can't manage deserializable objects
         // with fang
         let message_object:Value = serde_json::from_str(&self.message).unwrap();
-        deliver_to_inbox(dest_url, &feed.ap_url(), &feed.private_key, &message_object).await?;
+        let result = deliver_to_inbox(dest_url, &feed.ap_url(), &feed.private_key, &message_object).await;
+
+        if result.is_err() {
+          let _ = Actor::log_error(&dest_url.to_string(), &pool).await;
+        }
 
         Ok(())
       },

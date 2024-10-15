@@ -48,7 +48,7 @@ version = "0.2.0"
 features = ["tera"]
 
 [dependencies.reqwest]
-version = "0.12.4"
+version = "~0.12.8"
 features = ["json"]
 
 [dependencies.reqwest-middleware]

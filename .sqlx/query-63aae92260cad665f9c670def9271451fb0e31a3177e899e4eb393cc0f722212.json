@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE actors SET error_count = error_count + 1 WHERE url = $1 OR inbox_url = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "63aae92260cad665f9c670def9271451fb0e31a3177e899e4eb393cc0f722212"
+}
