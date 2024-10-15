@@ -57,11 +57,6 @@ pub async fn url_to_feed_url(url:&String) -> Result<Option<String>, DeliveryErro
       // otherwise, parse and look for a link to a feed
       let document = Html::parse_document(contents);
 
-      // <link rel="alternate" type="application/rss+xml"
-      // title="muffinlabs feed"
-      // href="http://muffinlabs.com/atom.xml" />
-      // <link rel="alternate" type="application/rss+xml" href="https://secretbroadcast.net/feed.rss" />
-
       let selector = Selector::parse(r#"link[rel="alternate"][href]"#).unwrap();
       let link = document.select(&selector).next();
       match link {

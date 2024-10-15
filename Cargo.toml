@@ -17,13 +17,13 @@ openssl = { version = "~0.10.66", features = ["vendored"] }
 openssl-sys = "~0.9.78"
 dotenvy = "~0.15"
 rocket = { version = "~0.5.0", features = ["json", "secrets"] }
-sqlx = { version = "~0.8.0", features = ["chrono", "macros", "migrate", "postgres", "runtime-tokio-rustls"] }
+sqlx = { version = "~0.8.2", features = ["chrono", "macros", "migrate", "postgres", "runtime-tokio-rustls"] }
 serde = {version = "~1.0", features = ["derive"] }
 rand = { version = "~0.8.5" }
-feed-rs = "2.1.0"
-iri-string = "~0.7.0"
+feed-rs = "~2.1.1"
+iri-string = "~0.7.7"
 
-tokio = "1.38.0"
+tokio = "~1.40.0"
 webfinger = { version = "~0.5.1", features = ["async", "async-trait"] }
 async-trait = {version = "*"}
 serde_json = "~1.0.89"
@@ -48,7 +48,7 @@ version = "0.2.0"
 features = ["tera"]
 
 [dependencies.reqwest]
-version = "0.12.4"
+version = "~0.12.8"
 features = ["json"]
 
 [dependencies.reqwest-middleware]

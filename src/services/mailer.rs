@@ -12,10 +12,13 @@ use reqwest::header::HeaderValue;
 
 use sqlx::postgres::PgPool;
 
-use crate::error::DeliveryError;
-
-use crate::utils::http::*;
-use crate::models::Feed;
+use crate:: {
+  error::DeliveryError,
+  utils::http::*,
+  models:: {
+    Feed
+  }
+};
 
 use openssl::{
   hash::MessageDigest,
@@ -136,10 +139,13 @@ pub async fn deliver_to_inbox<T: Serialize + ?Sized>(inbox: &Url, key_id: &str, 
       } else {
         let status = response.status().to_string();
         let text = response.text().await.unwrap();
+
         Err(DeliveryError::Error(format!("{status:} {text:}")))
       }
     },
-    Err(why) => Err(DeliveryError::HttpMiddlewareError(why))
+			Err(why) => {
+        Err(DeliveryError::HttpMiddlewareError(why))
+			}
   }
 }
 
