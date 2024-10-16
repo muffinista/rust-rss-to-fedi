@@ -17,11 +17,7 @@ pub async fn index_logged_in(user: User, page: Option<i32>, db: &State<PgPool>) 
   let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
   let signups_enabled = Setting::value_or(&"signups_enabled".to_string(), &"true".to_string(), db).await.unwrap();
 
-  let page: i32 = if let Some(page) = page {
-    page
-  } else {
-    1
-  };
+  let page: i32 = page.unwrap_or(1);
 
   let feeds = Feed::paged_for_user(&user, page, db).await.unwrap();
   let count = Feed::count_for_user(&user, db).await.unwrap();

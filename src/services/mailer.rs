@@ -15,9 +15,7 @@ use sqlx::postgres::PgPool;
 use crate:: {
   error::DeliveryError,
   utils::http::*,
-  models:: {
-    Feed
-  }
+  models:: Feed
 };
 
 use openssl::{

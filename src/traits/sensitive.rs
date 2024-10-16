@@ -52,7 +52,7 @@ impl<Inner> markers::Actor for CanBeSensitive<Inner> where Inner: markers::Actor
 
 /// If we want to easily access getters and setters for internal types, we'll need to forward
 /// those, too.
-
+///
 /// Forward for base methods
 ///
 /// This allows us to access methods related to `context`, `id`, `kind`, `name`,
@@ -94,7 +94,7 @@ Inner: AsObject,
 
 /// If we want to be able to extend from our own type, we'll need to forward some
 /// implementations, and create some traits
-
+///
 /// Make it easy for downstreams to get an Unparsed
 impl<Inner> UnparsedMut for CanBeSensitive<Inner>
 where

@@ -31,11 +31,7 @@ pub async fn index_admin(user: User, page: Option<i32>, db: &State<PgPool>) -> R
   }
 
   let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
-  let page: i32 = if let Some(page) = page {
-    page
-  } else {
-    1
-  };
+  let page: i32 = page.unwrap_or(1);
 
   let feeds = Feed::paged(page, db).await.unwrap();
   let signups_enabled = Setting::value_or(&"signups_enabled".to_string(), &"true".to_string(), db).await.unwrap();
