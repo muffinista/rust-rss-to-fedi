@@ -15,7 +15,7 @@ use crate::models::Message;
 use rocket::serde::json::Json;
 
 use rocket::request::{self, FromRequest, Request};
-use rocket::outcome::{Outcome};
+use rocket::outcome::Outcome;
 
 use chrono::{Duration, NaiveDateTime, Utc};
 

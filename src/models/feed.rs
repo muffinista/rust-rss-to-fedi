@@ -31,7 +31,10 @@ use chrono::{Duration, Utc, TimeZone};
 
 use crate::utils::templates::{Context, render};
 
-use std::env;
+use std::{
+  env,
+  str::FromStr
+};
 
 use md5::{Md5, Digest};
 
@@ -141,6 +144,16 @@ pub type AcceptedActivity = ActorAndObject<AcceptedTypes>;
 ///
 pub type ExtendedService = Ext1<ApActor<Service>, PublicKey>;
 
+const MAX_FEED_ERROR_COUNT: i32 = 10;
+
+pub fn feed_max_error_count() -> i32 {
+  match env::var_os("FEED_ERROR_COUNT") {
+    Some(val) => {
+      i32::from_str(&val.into_string().expect("Something went wrong setting the feed error count")).unwrap()
+    }
+    None => MAX_FEED_ERROR_COUNT
+  }
+}
 
 impl Feed {
   pub async fn find(id: i32, pool: &PgPool) -> Result<Feed, sqlx::Error> {
@@ -561,25 +574,31 @@ impl Feed {
       self.mark_fresh(pool).await?;
       return Ok(())
     }
+  
+    if self.error_count > feed_max_error_count() {
+      log::info!("Feed {} {} has too many errors {}, skipping", self.id, self.url, self.error_count);
+      Ok(())
+    } else {
 
-    let items = self.parse(pool).await;
-    match items {
-      Ok(items) => {
-        if !items.is_empty() {
-          log::info!("delivering {} items", items.len());
-          for item in items {
-            item.deliver(self, pool, queue).await?;
-          }  
+      let items = self.parse(pool).await;
+      match items {
+        Ok(items) => {
+          if !items.is_empty() {
+            log::info!("delivering {} items", items.len());
+            for item in items {
+              item.deliver(self, pool, queue).await?;
+            }  
+          }
+  
+          self.mark_valid(pool).await?;
+  
+          Ok(())
+        },
+        Err(why) => {
+          // we mark as fresh even though this failed so we don't get stuck on bad feeds
+          // @todo mark as erroring
+          Err(DeliveryError::FeedError(why))
         }
-
-        self.mark_valid(pool).await?;
-
-        Ok(())
-      },
-      Err(why) => {
-        // we mark as fresh even though this failed so we don't get stuck on bad feeds
-        // @todo mark as erroring
-        Err(DeliveryError::FeedError(why))
       }
     }
   }
