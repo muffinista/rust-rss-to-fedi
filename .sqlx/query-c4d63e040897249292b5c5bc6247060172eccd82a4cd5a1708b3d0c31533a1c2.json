@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM followers WHERE id IN (SELECT followers.id from followers inner join actors on followers.actor = actors.url where actors.error_count > $1)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c4d63e040897249292b5c5bc6247060172eccd82a4cd5a1708b3d0c31533a1c2"
+}

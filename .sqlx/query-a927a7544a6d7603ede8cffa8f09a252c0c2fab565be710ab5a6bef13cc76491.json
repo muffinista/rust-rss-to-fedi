@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM actors WHERE error_count > $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a927a7544a6d7603ede8cffa8f09a252c0c2fab565be710ab5a6bef13cc76491"
+}
