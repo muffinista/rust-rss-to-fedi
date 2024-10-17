@@ -429,7 +429,7 @@ impl Item {
       let user = feed.user(pool).await?;
 
       if user.actor_url.is_none() {
-        log::info!("Refusing to send because owner doesn't have an address");
+        log::debug!("Refusing to send because owner doesn't have an address");
         return Ok(());
       }
 
@@ -455,7 +455,7 @@ impl Item {
           targeted.add_tag(mention.into_any_base()?);
               
           let msg = serde_json::to_string(&targeted).unwrap();
-          log::info!("DM {msg}");
+          log::debug!("DM {msg}");
     
           let task = DeliverMessage { feed_id: feed.id, actor_url: dest_url, message: msg };
           let _result = queue
@@ -464,7 +464,7 @@ impl Item {
             .unwrap();
         },
         Err(why) => {
-          log::info!("couldnt find actor: {why:?}");
+          log::debug!("couldnt find actor: {why:?}");
           return Err(why);
         }
       }    
@@ -485,7 +485,7 @@ impl Item {
               targeted.set_many_tos(vec![iri!(inbox)]);
                 
               let msg = serde_json::to_string(&targeted).unwrap();
-              log::info!("{msg}");     
+              log::debug!("{msg}");     
       
               let task = DeliverMessage { feed_id: feed.id, actor_url: inbox, message: msg };
               let _result = queue

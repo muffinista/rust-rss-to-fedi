@@ -131,7 +131,7 @@ impl Actor {
   /// Fetch the remote actor data and store it
   ///
   pub async fn fetch(url: &String, pool: &PgPool) -> Result<(), DeliveryError> {
-    log::info!("FETCH ACTOR: {url:}");
+    log::debug!("FETCH ACTOR: {url:}");
     let resp = crate::services::mailer::admin_fetch_object(url, pool).await;
 
     match resp {
@@ -141,7 +141,7 @@ impl Actor {
         }
 
         let resp = resp.unwrap();
-        log::info!("ACTOR: {url:} -> {resp:}");
+        log::debug!("ACTOR: {url:} -> {resp:}");
 
         let data:Value = serde_json::from_str(&resp).unwrap();
 
@@ -155,18 +155,18 @@ impl Actor {
           };
 
           let inbox = if data["inbox"].is_string() {
-            log::info!("data has inbox key");
+            // log::info!("data has inbox key");
             data["inbox"].as_str().unwrap().to_string()
           } else if data["actor"].is_string() {
-            log::info!("data has actor key");
+            // log::info!("data has actor key");
             data["actor"].as_str().unwrap().to_string()
           } else if data["publicKey"]["owner"].is_string() {
-            log::info!("data has owner key");
+            // log::info!("data has owner key");
 
             // https://docs.gotosocial.org/en/latest/federation/federating_with_gotosocial/
             let owner_url = data["publicKey"]["owner"].as_str().unwrap();
 
-            log::info!("FETCH ACTOR OWNER: {owner_url:}");
+            log::debug!("FETCH ACTOR OWNER: {owner_url:}");
 
 
             // Remote servers federating with GoToSocial should extract the
@@ -182,7 +182,7 @@ impl Actor {
                 }
         
                 let resp = resp.unwrap();
-                log::info!("ACTOR: {url:} -> {resp:}");
+                log::debug!("ACTOR: {url:} -> {resp:}");
         
                 let data:Value = serde_json::from_str(&resp).unwrap();       
                 data["inbox"].as_str().unwrap().to_string()
@@ -193,12 +193,12 @@ impl Actor {
               }
             }
           } else {
-            log::info!("data has neither????");
+            log::debug!("data has neither????");
 
             return Err(DeliveryError::Error(String::from("User not found")))
           };
 
-          log::info!("actor create: {inbox:}");
+          log::debug!("actor create: {inbox:}");
           Actor::create(&data["id"].as_str().unwrap().to_string(),
                         &inbox,
                         &data["publicKey"]["id"].as_str().unwrap().to_string(),

@@ -101,10 +101,8 @@ pub async fn deliver_to_inbox<T: Serialize + ?Sized>(inbox: &Url, key_id: &str, 
   let client = http_client()?;
   let mut heads = generate_request_headers();
   let payload = serde_json::to_vec(json).unwrap();
-  // let printable_payload = String::from_utf8(payload.clone()).unwrap();
 
   log::info!("deliver to {inbox:}");
-  // log::info!("message {printable_payload:}");
 
   // ensure we're sending proper content-type
   heads.insert(
@@ -126,8 +124,7 @@ pub async fn deliver_to_inbox<T: Serialize + ?Sized>(inbox: &Url, key_id: &str, 
   )
     .await?;
 
-  log::info!("{:?}", request);
-  println!("{request:?}");
+  log::debug!("{:?}", request);
 
   let response = client.execute(request).await;
   match response {

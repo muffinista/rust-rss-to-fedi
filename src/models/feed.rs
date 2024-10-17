@@ -898,7 +898,7 @@ impl Feed {
   ///
   pub async fn incoming_message(&self, pool: &PgPool, actor_url: &str, activity: &AcceptedActivity) -> Result<(), DeliveryError> {
 
-    log::info!("ACTOR: {actor_url:}");
+    log::debug!("ACTOR: {actor_url:}");
 
     // THIS GETS THE CONTENT OF THE STATUS and is clearly
     // a bit of a hack, but it's hard to get the content of the
@@ -910,7 +910,7 @@ impl Feed {
     } 
 
     let s = serde_json::to_string(&obj.unwrap()).unwrap();
-    log::info!("MESSAGE: {s:}");
+    log::debug!("MESSAGE: {s:}");
 
 
     let note: ApObject<Note> = serde_json::from_str(&s).unwrap();
@@ -932,7 +932,7 @@ impl Feed {
 
     // check for the word 'help' in the beginning of the message
     if matches.is_empty() || matches.first().unwrap().0 > 100 {
-      log::info!("User didn't ask for help in the beginning of the message");
+      log::debug!("User didn't ask for help in the beginning of the message");
       return Ok(());      
     }
 
@@ -949,7 +949,7 @@ impl Feed {
         // generate a login message for this user
         let message = self.generate_login_message(Some(activity), &dest_actor, pool).await?;
         let msg = serde_json::to_string(&message).unwrap();
-        log::info!("{msg}");
+        log::debug!("{msg}");
     
         let my_url = self.ap_url();
 
@@ -961,12 +961,12 @@ impl Feed {
         }
     
         match result {
-          Ok(result) => log::info!("sent! {result:?}"),
-          Err(why) => log::info!("failure! {why:?}")
+          Ok(result) => log::debug!("sent! {result:?}"),
+          Err(why) => log::debug!("failure! {why:?}")
         }    
       },
       Err(why) => {
-        log::info!("couldnt find actor: {why:?}");
+        log::debug!("couldnt find actor: {why:?}");
       }
     }
 
@@ -1073,7 +1073,7 @@ impl Feed {
   ///
   pub async fn handle_activity(&self, pool: &PgPool, activity: &AcceptedActivity)  -> Result<(), DeliveryError> {
     let s = serde_json::to_string(&activity).unwrap();
-    log::info!("{s:}");
+    log::debug!("{s:}");
 
     let (actor, _object, act) = activity.clone().into_parts();
 

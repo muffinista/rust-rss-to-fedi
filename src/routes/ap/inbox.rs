@@ -56,7 +56,7 @@ impl<'r> FromRequest<'r> for SignatureValidity {
     let pool = request.rocket().state::<PgPool>().unwrap();
     let sig_header = request.headers().get_one("Signature");
     if sig_header.is_none() {
-      log::info!("no header!");
+      // log::info!("no header!");
       return Outcome::Success(SignatureValidity::Absent);
     }
     let sig_header = sig_header.unwrap();
@@ -78,7 +78,7 @@ impl<'r> FromRequest<'r> for SignatureValidity {
 
     if signature.is_none() || headers.is_none() {
       // missing part of the header
-      log::info!("missing signature/header!");
+      // log::info!("missing signature/header!");
       return Outcome::Success(SignatureValidity::Invalid);
     }
 
@@ -106,7 +106,7 @@ impl<'r> FromRequest<'r> for SignatureValidity {
     match sender {
       Ok(sender) => {
         if sender.is_none() {
-          log::info!("unable to find sender!");
+          // log::info!("unable to find sender!");
           return Outcome::Success(SignatureValidity::InvalidActor(String::from(key_id)));
         }
 
@@ -117,7 +117,7 @@ impl<'r> FromRequest<'r> for SignatureValidity {
           .verify_signature(&signature_verification_payload, &general_purpose::STANDARD.decode(signature).unwrap_or_default())
           .unwrap_or(false)
         {
-          log::info!("unable to verify signature!");
+          // log::info!("unable to verify signature!");
           return Outcome::Success(SignatureValidity::InvalidSignature(String::from(key_id)));
         }
 
@@ -156,8 +156,8 @@ impl<'r> FromRequest<'r> for SignatureValidity {
           return Outcome::Success(SignatureValidity::Outdated(String::from(key_id)));
         }
       },
-      Err(why) => {
-        log::info!("fetch failure? {why:?}");
+      Err(_why) => {
+        // log::info!("fetch failure? {why:?}");
         Outcome::Success(SignatureValidity::Invalid)
       }        
     }
@@ -179,7 +179,7 @@ impl<'r> FromRequest<'r> for SignatureValidity {
 #[post("/feed/<username>/inbox", data="<activity>")]
 pub async fn user_inbox(digest: Option<SignatureValidity>, username: &str, activity: Json<AcceptedActivity>, db: &State<PgPool>) -> Result<(), Status> {
   let msg = serde_json::to_string(activity.deref()).unwrap();
-  log::info!("{:}", msg);
+  // log::info!("{:}", msg);
 
   // get the actor from headers and check if the signature is valid
   let (actor, error) = if env::var("DISABLE_SIGNATURE_CHECKS").is_ok() {
@@ -200,7 +200,7 @@ pub async fn user_inbox(digest: Option<SignatureValidity>, username: &str, activ
   if env::var("DISABLE_SIGNATURE_CHECKS").is_ok() {
     log::info!("Skipping signature check because DISABLE_SIGNATURE_CHECKS is set");
   } else if digest.is_none() || !digest.clone().unwrap().is_secure() {
-    log::info!("digest failure {digest:?}");
+    log::debug!("digest failure {digest:?}");
 
     let _log_result = Message::log(&username.to_string(), &msg, actor.cloned(), error, false, db).await;
 

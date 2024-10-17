@@ -89,7 +89,7 @@ impl User {
   /// Find user by access token
   ///
   pub async fn find_by_access(token: &String, pool: &PgPool) -> Result<Option<User>, sqlx::Error> {
-    log::info!("Find user: {token:}");
+    log::debug!("Find user: {token:}");
     sqlx::query_as!(User, "SELECT * FROM users WHERE access_token = $1", token)
       .fetch_optional(pool)
       .await
@@ -265,7 +265,7 @@ impl User {
 
         let message = feed.link_to_feed_message(&dest_actor).await?;
         let msg = serde_json::to_string(&message).unwrap();
-        log::info!("{msg}");
+        log::debug!("{msg}");
     
         let feed_ap_url = feed.ap_url();
         let inbox = &Url::parse(&dest_actor.inbox_url)?;
@@ -277,7 +277,7 @@ impl User {
           &message).await;
     
         match result {
-          Ok(result) => log::info!("sent! {result:?}"),
+          Ok(result) => log::debug!("sent! {result:?}"),
           Err(why) => {
             Actor::log_error(&inbox.to_string(), pool).await?;
             log::info!("failure! {why:?}")
@@ -285,7 +285,7 @@ impl User {
         }
       },
       Err(why) => {
-        log::info!("couldnt find actor: {why:?}");
+        log::debug!("couldnt find actor: {why:?}");
       }
     }
 

@@ -19,7 +19,7 @@ fn user_to_outcome(user: Result<Option<User>, sqlx::Error>) -> request::Outcome<
       }
     },
     Err(why) => {
-      log::info!("ERR: {why:?}");
+      log::debug!("ERR: {why:?}");
       Outcome::Forward(rocket::http::Status { code: 500 })
     }
   }

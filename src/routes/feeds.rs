@@ -99,7 +99,7 @@ pub async fn add_feed(user: User, db: &State<PgPool>, form: Form<FeedForm>) -> R
       
             let notify = user.send_link_to_feed(&feed, db).await;
             match notify {
-              Ok(_notify) => log::info!("user notified!"),
+              Ok(_notify) => log::debug!("user notified!"),
               Err(why) => log::info!("something went wrong with notification: {why:?}")
             }
       
