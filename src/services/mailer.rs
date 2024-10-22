@@ -103,6 +103,7 @@ pub async fn deliver_to_inbox<T: Serialize + ?Sized>(inbox: &Url, key_id: &str, 
   let payload = serde_json::to_vec(json).unwrap();
 
   log::info!("deliver to {inbox:}");
+  println!("deliver to {inbox:}");
 
   // ensure we're sending proper content-type
   heads.insert(

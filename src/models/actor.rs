@@ -145,8 +145,6 @@ impl Actor {
 
         let data:Value = serde_json::from_str(&resp).unwrap();
 
-        // {"@context":["https://w3id.org/security/v1","https://www.w3.org/ns/activitystreams"],"id":"https://gotosocial.biff.colinlabs.com/users/muffinista","preferredUsername":"muffinista","publicKey":{"id":"https://gotosocial.biff.colinlabs.com/users/muffinista/main-key","owner":"https://gotosocial.biff.colinlabs.com/users/muffinista","publicKeyPem":"-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArzi69UwtYB4zTxMXrVJc\npjIoIElyARQU9099BmeXJFLXusRlGlmy02ZKMdrGL5FxdevjmK8P23qVFxYZ0Zzf\nqVvFVuz28hR7ilTF0f5X1thhoaclpoZufQYTKnLXkHlWxigWRiU52MMN8J+5i6Rx\nlEKvQUQddyN3HP5n7GuKnM0Mi7wsaiRdafR111CR2QCADU10eoD20aQgK/TsxFix\nI2SAkeTDcVhZPBnNj8PGTW7QITQCU2QlPET/ePnD9uXrrhFHe5giRKaPr0CcxxsB\nVjPzjpzi4gz/smOsFdfo1z9p2ryHj0rI5guLo79igBhXX1bGW0qWUONDVKkIplrQ\nHQIDAQAB\n-----END PUBLIC KEY-----\n"},"type":"Person"}
-
         if data["id"].is_string() && data["publicKey"].is_object() {
           let username: String = if data["preferredUsername"].is_string() {
             data["preferredUsername"].as_str().unwrap().to_string()
@@ -199,6 +197,7 @@ impl Actor {
           };
 
           log::debug!("actor create: {inbox:}");
+          println!("actor create: {inbox:}");
           Actor::create(&data["id"].as_str().unwrap().to_string(),
                         &inbox,
                         &data["publicKey"]["id"].as_str().unwrap().to_string(),

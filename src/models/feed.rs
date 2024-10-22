@@ -898,27 +898,25 @@ impl Feed {
   ///
   pub async fn incoming_message(&self, pool: &PgPool, actor_url: &str, activity: &AcceptedActivity) -> Result<(), DeliveryError> {
 
-    log::debug!("ACTOR: {actor_url:}");
-
-    // THIS GETS THE CONTENT OF THE STATUS and is clearly
-    // a bit of a hack, but it's hard to get the content of the
-    // note to not end up in an unparsed bit of modelling anyway 
-    // @todo figure out the polite way to do this
+    // pull the Note out of the Activity
     let obj = activity.object();
     if obj.is_err() {
       return Err(DeliveryError::Error("Something went wrong".to_string()));
-    } 
+    }
+    let obj = obj.unwrap();
+    let note: Option<Note> = obj.as_one().unwrap().clone().extend().unwrap();
 
-    let s = serde_json::to_string(&obj.unwrap()).unwrap();
-    log::debug!("MESSAGE: {s:}");
+    if ! note.is_some() {
+      return Ok(())
+    }
+    let note = note.unwrap();
+    let content = note.content();
 
-
-    let note: ApObject<Note> = serde_json::from_str(&s).unwrap();
-    let content = note.content().unwrap();
+    if ! content.is_some() {
+      return Ok(())
+    }
+    let content = content.unwrap();
     let message = content.as_single_xsd_string();
-
-    // let message = activity.object()?.as_single_base();
-    // println!("MESSAGE: {:?}", message);
 
     // ignore messages that aren't to admin feed
     if ! self.is_admin() || message.is_none() {
@@ -926,8 +924,6 @@ impl Feed {
     }
 
     let clean_message = sanitize_str(&DEFAULT, message.unwrap()).unwrap().to_lowercase();
-
-    // println!("MESSAGE: {clean_message:}");
     let matches: Vec<_> = clean_message.match_indices("help").collect();
 
     // check for the word 'help' in the beginning of the message
@@ -1713,6 +1709,7 @@ mod test {
     }
   }
 
+ 
   #[sqlx::test]
   async fn test_unfollow(pool: PgPool) -> Result<(), String> {
     let actor = "https://activitypub.pizza/users/colin".to_string();
@@ -1746,6 +1743,124 @@ mod test {
     Ok(())
   }
 
+  
+  #[sqlx::test]
+  async fn test_help(pool: PgPool) -> Result<(), String> {
+    let mut server = mockito::Server::new_async().await;
+    let actor = format!("{}/users/muffinista", &server.url());
+
+    let admin_feed:Feed = real_feed(&pool).await.unwrap();
+    admin_feed.mark_admin(&pool).await.unwrap();
+
+    let admin_url = &admin_feed.ap_url();
+
+    let json = format!(r#"{{
+      "actor": "{actor}",
+      "object": {{
+          "id": "{actor}/statuses/113351263027388676",
+          "type": "Note",
+          "inReplyToAtomUri": "{actor}/statuses/113351161612620968",
+          "sensitive": false,
+          "directMessage": true,
+          "inReplyTo": "{actor}/statuses/113351161612620968",
+          "attachment": [],
+          "tag": [
+              {{
+                  "href": "{admin_url}",
+                  "name": "@admin@feedsin.space",
+                  "type": "Mention"
+              }}
+          ],
+          "summary": null,
+          "contentMap": {{
+              "en": "<p><span class=\"h-card\" translate=\"no\"><a href=\"{admin_url}\" class=\"u-url mention\">@<span>admin</span></a></span> help!!!!</p>"
+          }},
+          "atomUri": "{actor}/statuses/113351263027388676",
+          "cc": [],
+          "content": "<p><span class=\"h-card\" translate=\"no\"><a href=\"{admin_url}\" class=\"u-url mention\">@<span>admin</span></a></span> help!!!!</p>",
+          "to": [
+              "{admin_url}"
+          ],
+          "shares": {{
+              "id": "{actor}/statuses/113351263027388676/shares",
+              "totalItems": 0,
+              "type": "Collection"
+          }},
+          "replies": {{
+              "first": {{
+                  "items": [],
+                  "next": "{actor}/statuses/113351263027388676/replies?only_other_accounts=true&page=true",
+                  "partOf": "{actor}/statuses/113351263027388676/replies",
+                  "type": "CollectionPage"
+              }},
+              "id": "{actor}/statuses/113351263027388676/replies",
+              "type": "Collection"
+          }},
+          "likes": {{
+              "id": "{actor}/statuses/113351263027388676/likes",
+              "totalItems": 0,
+              "type": "Collection"
+          }},
+          "published": "2024-10-22T13:16:52Z",
+          "url": "https://muffin.industries/@colin/113351263027388676",
+          "attributedTo": "{actor}",
+          "conversation": "tag:muffin.industries,2024-10-22:objectId=672404:objectType=Conversation"
+      }},
+      "published": "2024-10-22T13:16:52Z",
+      "to": [
+          "{admin_url}"
+      ],
+      "cc": [],
+      "@context": [
+          "https://www.w3.org/ns/activitystreams",
+          {{
+              "votersCount": "toot:votersCount",
+              "ostatus": "http://ostatus.org#",
+              "toot": "http://joinmastodon.org/ns#",
+              "sensitive": "as:sensitive",
+              "atomUri": "ostatus:atomUri",
+              "conversation": "ostatus:conversation",
+              "inReplyToAtomUri": "ostatus:inReplyToAtomUri",
+              "litepub": "http://litepub.social/ns#",
+              "directMessage": "litepub:directMessage"
+          }}
+      ],
+      "id": "{actor}/statuses/113351263027388676/activity",
+      "type": "Create"
+  }}
+    "#);
+
+    let act:AcceptedActivity = serde_json::from_str(&json).unwrap();
+
+    let path = "fixtures/helper.json";
+    let data = fs::read_to_string(path).unwrap().replace("SERVER_URL", &server.url());
+
+    let _m = server.mock("GET", "/users/muffinista")
+      .with_status(200)
+      .with_header("Accept", "application/activity+json")
+      .with_body(data)
+      .create_async()
+      .await;
+
+    let m2 = server.mock("POST", "/users/muffinista/inbox")
+      .with_status(202)
+      .create_async()
+      .await;
+
+
+    let feed:Feed = Feed::find(admin_feed.id, &pool).await.unwrap();
+
+    let activity_result = feed.handle_activity(&pool, &act).await;
+    match activity_result {
+      Ok(_result) => {
+        m2.assert();
+        Ok(())
+      },
+
+      Err(why) => Err(why.to_string())
+    }
+  }
+
 
   #[sqlx::test]
   async fn test_generate_login_message(pool: PgPool) -> Result<(), String> {
@@ -1776,7 +1891,6 @@ mod test {
     let message = feed.generate_login_message(None, &dest_actor, &pool).await.unwrap();
 
     let s = serde_json::to_string(&message).unwrap();
-    println!("{}", s);
 
     assert!(s.contains(r#"sensitive":true"#));
 
