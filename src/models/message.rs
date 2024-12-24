@@ -46,13 +46,11 @@ impl Message {
   pub async fn cleanup(pool: &PgPool, age:i64, limit: i64) -> Result<(), sqlx::Error> {
     let age = Utc::now() - Duration::seconds(age);
       
-			sqlx::query!("DELETE FROM messages WHERE id IN (select id FROM messages WHERE created_at <= $1 ORDER BY created_at LIMIT $2)", age, limit)
-					.execute(pool)
-          .await?;
+    sqlx::query!("DELETE FROM messages WHERE id IN (select id FROM messages WHERE created_at <= $1 ORDER BY created_at LIMIT $2)", age, limit)
+        .execute(pool)
+        .await?;
 
-			Ok(())
-
-
+    Ok(())
   }
 
 }

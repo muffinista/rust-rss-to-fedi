@@ -40,7 +40,7 @@ use crate::utils::templates::{Context, render};
 use sanitize_html::sanitize_str;
 use sanitize_html::rules::predefined::RELAXED;
 
-use chrono::Utc;
+use chrono::{Duration, Utc};
 use rocket::uri;
 
 use std::env;
@@ -502,6 +502,16 @@ impl Item {
       }
       Ok(())
     }
+  }
+
+  pub async fn cleanup(pool: &PgPool, age:i64, limit: i64) -> Result<(), sqlx::Error> {
+    let age = Utc::now() - Duration::days(age);
+      
+    sqlx::query!("DELETE FROM items WHERE id IN (select id FROM items WHERE created_at <= $1 ORDER BY created_at LIMIT $2)", age, limit)
+        .execute(pool)
+        .await?;
+
+    Ok(())
   }
 }
 

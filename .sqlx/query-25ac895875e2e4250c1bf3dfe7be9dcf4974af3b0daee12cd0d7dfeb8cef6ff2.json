@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM items WHERE id IN (select id FROM items WHERE created_at <= $1 ORDER BY created_at LIMIT $2)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "25ac895875e2e4250c1bf3dfe7be9dcf4974af3b0daee12cd0d7dfeb8cef6ff2"
+}

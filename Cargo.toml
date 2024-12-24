@@ -18,21 +18,21 @@ openssl-sys = "~0.9.78"
 dotenvy = "~0.15"
 rocket = { version = "~0.5.0", features = ["json", "secrets"] }
 sqlx = { version = "~0.8.2", features = ["chrono", "macros", "migrate", "postgres", "runtime-tokio-rustls"] }
-serde = {version = "~1.0", features = ["derive"] }
+serde = {version = "~1.0.214", features = ["derive"] }
 rand = { version = "~0.8.5" }
 feed-rs = "~2.1.1"
 iri-string = "~0.7.7"
 
-tokio = "~1.40.0"
+tokio = "~1.41.0"
 webfinger = { version = "~0.5.1", features = ["async", "async-trait"] }
 async-trait = {version = "*"}
-serde_json = "~1.0.89"
+serde_json = "~1.0.132"
 httpdate = { version = "~1.0.2" }
 url = "~2.5"
 sha2 = "~0.10"
 base64 = "~0.22.0"
 chrono = { version = "~0.4", features = ["serde"] }
-scraper = "~0.20"
+scraper = "~0.21"
 sanitize_html = "~0.8.0"
 md-5 = "~0.10.5"
 
@@ -48,7 +48,7 @@ version = "0.2.0"
 features = ["tera"]
 
 [dependencies.reqwest]
-version = "~0.12.8"
+version = "~0.12.9"
 features = ["json"]
 
 [dependencies.reqwest-middleware]
@@ -69,7 +69,7 @@ features = ["sha-2", "digest", "middleware", "default-spawner"]
 opt-level = 3
 
 [dependencies.uuid]
-version = "~1.10.0"
+version = "~1.11.0"
 features = [
     "v4",                # Lets you generate random UUIDs
     "fast-rng",          # Use a faster (but still sufficiently random) RNG
