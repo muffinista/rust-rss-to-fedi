@@ -1,4 +1,4 @@
-{% extends "default" %}
+{% extends "default.html.tera" %}
 {% block title %}Feed admin!{% endblock title %}
 
 {% block content %}
@@ -27,7 +27,7 @@
 
     Total feeds: {{total}} 
 
-    {% include "feeds" %}
+    {% include "feeds.html.tera" %}
 
   </section>
 {% endblock content %}

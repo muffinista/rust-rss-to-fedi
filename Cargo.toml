@@ -12,20 +12,22 @@ default-run = "server"
 [dependencies]
 activitystreams = "0.7.0-alpha.25"
 activitystreams-ext = "0.1.0-alpha.3"
+futures-util = "~0.3.31"
 native-tls = { version = "~0.2.11", features = ["vendored"] }
 openssl = { version = "~0.10.66", features = ["vendored"] }
 openssl-sys = "~0.9.78"
 dotenvy = "~0.15"
-rocket = { version = "~0.5.0", features = ["json", "secrets"] }
+actix-web = "4"
+actix-session = { version = "0.10.1", features = ["cookie-session"] }
 sqlx = { version = "~0.8.2", features = ["chrono", "macros", "migrate", "postgres", "runtime-tokio-rustls"] }
 serde = {version = "~1.0.214", features = ["derive"] }
 rand = { version = "~0.8.5" }
 feed-rs = "~2.1.1"
 iri-string = "~0.7.7"
 
-tokio = "~1.41.0"
+tera = "1"
+tokio = { version = "~1.43.0", features = ["rt-multi-thread"] }
 webfinger = { version = "~0.5.1", features = ["async", "async-trait"] }
-async-trait = {version = "*"}
 serde_json = "~1.0.132"
 httpdate = { version = "~1.0.2" }
 url = "~2.5"
@@ -42,10 +44,11 @@ log = "~0.4.17"
 clap = { version = "~4.5", features = ["derive"] }
 glob = "~0.3.1"
 
-
-[dependencies.rocket_dyn_templates]
-version = "0.2.0"
-features = ["tera"]
+[dependencies.derive_more]
+# You can specify the types of derives that you need for less time spent
+# compiling. For the full list of features see this crate its `Cargo.toml`.
+version = "1"
+features = ["debug", "display", "error"]
 
 [dependencies.reqwest]
 version = "~0.12.9"

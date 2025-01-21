@@ -3,7 +3,7 @@ use sqlx::postgres::PgPool;
 
 use chrono::Utc;
 
-use crate::models::Item;
+use crate::{models::Item, utils::path_to_url};
 
 
 ///
@@ -56,6 +56,10 @@ impl Enclosure {
 
   pub fn filename(&self) -> String {
     format!("{:}", self.id)   
+  }
+
+  pub fn url(&self, feed_name:&String) -> String {
+    path_to_url(&format!("/feed/{}/items/{}/enclosures/{}", feed_name, self.id, self.filename()))
   }
 }
 

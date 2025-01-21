@@ -1,4 +1,4 @@
-{% extends "default" %}
+{% extends "default.html.tera" %}
 {% block title %}Feed for {{feed.name}}{% endblock title %}
 
 {% block meta %}

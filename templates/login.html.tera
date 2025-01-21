@@ -1,4 +1,0 @@
-<form method="post" action="/login">
-  Email: <input type="text" name="email" required />
-  <button type="submit">go</button>
-</form>

@@ -40,6 +40,9 @@ async fn main() -> Result<(), DeliveryError> {
 
   let dest_url = args.dest_url;
 
+  let tera =
+    tera::Tera::new("templates/**/*").expect("Parsing error while loading template folder");
+
   let feed = Feed::for_admin(&pool).await?;
 
   let dest_actor = Actor::find_or_fetch(&dest_url, &pool).await;
@@ -62,7 +65,7 @@ async fn main() -> Result<(), DeliveryError> {
       let inbox = &dest_actor.inbox_url;
       println!("{dest_url:} -> {inbox:}");
 
-      let message = feed.generate_login_message(None, &dest_actor, &pool).await.unwrap();
+      let message = feed.generate_login_message(None, &dest_actor, &pool, &tera).await.unwrap();
 
       let msg = serde_json::to_string(&message).unwrap();
       println!("{msg}");

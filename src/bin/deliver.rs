@@ -52,8 +52,10 @@ async fn main() -> Result<(), DeliveryError> {
 
   let item = Item::find(item_id, &pool).await?;
   let feed = Feed::for_item(item_id, &pool).await?;
+  let tera =
+    tera::Tera::new("templates/**/*").expect("Parsing error while loading template folder");
 
-  let mut message = item.to_activity_pub(&feed, &pool).await.unwrap();
+  let mut message = item.to_activity_pub(&feed, &pool, &tera).await.unwrap();
 
   let dest_actor = Actor::find_or_fetch(&dest_url, &pool).await;
 

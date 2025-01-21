@@ -1,4 +1,5 @@
-{% extends "default" %}
+{% extends "default.html.tera" %}
+
 {% block title %}{{ instance_domain }}{% endblock title %}
 {% block meta %}<meta name="description" content="A service to load RSS feeds into the Fediverse" />{% endblock meta %}
 
@@ -7,12 +8,12 @@
   {% if logged_in %}
     <section class="feeds">
       <h1>Your feeds</h1>
-      {% include "feeds" %}
+      {% include "feeds.html.tera" %}
     </section>
   
-    {% include "add-feed" %}
+    {% include "add-feed.html.tera" %}
   {% else %}
-    {% include "help" %}
+    {% include "help.html.tera" %}
   {% endif %}
   
 {% endblock content %}

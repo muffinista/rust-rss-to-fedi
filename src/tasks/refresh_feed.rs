@@ -27,11 +27,13 @@ impl RefreshFeed {
 impl AsyncRunnable for RefreshFeed {
   async fn run(&self, queue: &mut dyn AsyncQueueable) -> Result<(), FangError> {
     let pool = db_pool().await;
+    let tera =
+    tera::Tera::new("templates/**/*").expect("Parsing error while loading template folder");
 
     let feed = Feed::find(self.id, &pool).await;
     match feed {
       Ok(mut feed) => {
-        let result = feed.refresh(&pool, queue).await;
+        let result = feed.refresh(&pool, &tera, queue).await;
         match result {
           Ok(_result) => { 
             log::info!("RefreshFeed: Done refreshing feed {:}", feed.url);

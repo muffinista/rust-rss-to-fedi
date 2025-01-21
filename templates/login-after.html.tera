@@ -1,4 +1,4 @@
-{% extends "default" %}
+{% extends "default.html.tera" %}
 {% block title %}Login{% endblock title %}
 
 {% block content %}

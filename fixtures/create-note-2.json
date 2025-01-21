@@ -1,0 +1,33 @@
+    {
+      "actor": "https://feedsin.space/feed/nytus",
+      "object": {
+          "id": "{}/feed/nytus/items/1283",
+          "type": "Note",
+          "content": "content goes here",
+          "attributedTo": "https://feedsin.space/feed/nytus",
+          "published": "2023-03-07T17:54:08Z",
+          "url": "https://feedsin.space/feed/nytus",
+          "attachment": [
+              {
+                  "summary": "Joseph Zucchero in 2008. His restaurant Mr. Beef was used as the filming location for the popular FX television series “The Bear.”",
+                  "type": "Document",
+                  "url": "https://feedsin.space/feed/nytus/items/1283/enclosures/576"
+              }
+          ],
+          "tag": [
+              {
+                  "href": "https://mastodon.social/tags/news",
+                  "name": "news",
+                  "type": "Hashtag"
+              }
+          ],
+          "to": "https://feedsin.space/feed/nytus/followers",
+          "summary": ""
+      },
+      "@context": [
+          "https://www.w3.org/ns/activitystreams",
+          "as:Hashtag",
+          "https://w3id.org/security/v1"
+      ],
+      "type": "Create"
+    }

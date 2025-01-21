@@ -53,6 +53,8 @@ impl Follower {
 mod test {
   use std::fs;
   use sqlx::postgres::PgPool;
+
+  use crate::ACTIVITY_JSON;
   use crate::models::Feed;
   use crate::models::Follower;
   use crate::utils::test_helpers::{fake_feed, fake_follower};
@@ -69,7 +71,7 @@ mod test {
 
     let m = server.mock("GET", "/users/muffinista")
       .with_status(200)
-      .with_header("Accept", "application/activity+json")
+      .with_header("Accept", ACTIVITY_JSON)
       .with_body(data)
       .create_async()
       .await;

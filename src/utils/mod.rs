@@ -8,6 +8,8 @@ pub mod templates;
 
 pub use urls::*;
 
+pub mod signature_check;
+
 
 #[cfg(test)]
 pub mod test_helpers;

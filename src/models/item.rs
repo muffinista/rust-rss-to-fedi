@@ -1,15 +1,14 @@
 use sqlx::postgres::PgPool;
 use serde::Serialize;
 use feed_rs::model::Entry;
+use tera::Context;
 
 use crate::models::Actor;
 use crate::models::Enclosure;
 use crate::models::Feed;
 use crate::traits::content_map::*;
 
-use crate::routes::enclosures::*;
 
-use crate::utils::path_to_url;
 use crate::DeliveryError;
 
 use activitystreams::activity::*;
@@ -35,13 +34,12 @@ use activitystreams::{
   context
 };
 
-use crate::utils::templates::{Context, render};
+use crate::utils::templates::render;
 
 use sanitize_html::sanitize_str;
 use sanitize_html::rules::predefined::RELAXED;
 
 use chrono::{Duration, Utc};
-use rocket::uri;
 
 use std::env;
 
@@ -219,7 +217,7 @@ impl Item {
   /// generate an HTML-ish version of this item suitable
   /// for adding to an AP message
   ///
-  pub async fn to_html(&self, hashtag: Option<String>) -> String {
+  pub async fn to_html(&self, hashtag: Option<String>, tera: &tera::Tera) -> String {
     let mut context = Context::new();
     context.insert("title", &self.title);
     context.insert("body", &self.content);
@@ -239,7 +237,7 @@ impl Item {
       }
     };
    
-    render("ap/feed-item", &context).unwrap()
+    render("ap/feed-item.html.tera", tera, &context).unwrap()
   }
 
   pub fn language(&self, feed: &Feed) -> String {
@@ -252,13 +250,12 @@ impl Item {
   ///
   /// generate an AP version of this item
   ///
-  pub async fn to_activity_pub(&self, feed: &Feed, pool: &PgPool) -> Result<ApObject<Create>, DeliveryError> {    
-
+  pub async fn to_activity_pub(&self, feed: &Feed, pool: &PgPool, tera: &tera::Tera) -> Result<ApObject<Create>, DeliveryError> {    
     let feed_url = feed.ap_url();
     let item_url = format!("{}/items/{}", feed_url, self.id);
     let ts = OffsetDateTime::from_unix_timestamp(self.created_at.timestamp()).unwrap();
 
-    let content = self.to_html(feed.hashtag.clone()).await;
+    let content = self.to_html(feed.hashtag.clone(), tera).await;
 
     let mut note: ContentMapNote = ContentMapNote::new();
 
@@ -336,10 +333,7 @@ impl Item {
     for enclosure in enclosures {
       let mut attachment = Document::new();
 
-      let filename = enclosure.filename();
-      let enclosure_url = path_to_url(&uri!(show_enclosure(&feed.name, self.id, filename)));
-      
-      attachment.set_url(iri!(&enclosure_url));
+      attachment.set_url(iri!(&enclosure.url(&feed.name)));
 
       if enclosure.content_type.is_some() {
         let content_type: &String = &enclosure.content_type.clone().unwrap();
@@ -416,8 +410,8 @@ impl Item {
   ///
   /// deliver this item to any followers of the parent feed
   ///
-  pub async fn deliver(&self, feed: &Feed, pool: &PgPool, queue: &mut dyn AsyncQueueable) -> Result<(), DeliveryError> {
-    let message = self.to_activity_pub(feed, pool).await.unwrap();
+  pub async fn deliver(&self, feed: &Feed, pool: &PgPool, tera: &tera::Tera, queue: &mut dyn AsyncQueueable) -> Result<(), DeliveryError> {
+    let message = self.to_activity_pub(feed, pool, tera).await.unwrap();
     let item_publicity = match &feed.status_publicity {
       Some(value) => value.as_str(),
       None => "unlisted"
@@ -524,7 +518,7 @@ mod test {
   use crate::models::Feed;
   use crate::models::Item;
   use crate::models::Actor;
-  use crate::utils::test_helpers::{real_item, real_feed, fake_item, real_item_with_enclosure};
+  use crate::utils::test_helpers::{real_item, real_feed, fake_item, real_item_with_enclosure, test_tera};
 
   use crate::utils::queue::create_queue;
 
@@ -600,7 +594,9 @@ mod test {
   async fn test_to_html() -> Result<(), String> {
     let item: Item = fake_item();
 
-    let result = item.to_html(Some("hashytime".to_string())).await;
+    let tera = test_tera();
+
+    let result = item.to_html(Some("hashytime".to_string()), &tera).await;
 
     println!("{:}", result);
 
@@ -615,13 +611,14 @@ mod test {
   async fn test_to_activity_pub(pool: PgPool) -> Result<(), String> {
     let feed: Feed = real_feed(&pool).await.unwrap();
     let item: Item = fake_item();
+    let tera = test_tera();
 
-    let result = item.to_activity_pub(&feed, &pool).await;
+    let result = item.to_activity_pub(&feed, &pool, &tera).await;
     match result {
       Ok(result) => {
         let s = serde_json::to_string(&result).unwrap();
         
-        assert!(s.contains(r#"contentMap":{"en":"<a href=\"http:&#x2F;&#x2F;google.com\">Hello!</a><br />\n\n<p>Hey!</p>"#));
+        assert!(s.contains(r#"contentMap":{"en":"<a href=\"http://google.com\">Hello!</a><br />\n\n<p>Hey!</p>"#));
         Ok(())
       },
       Err(why) => Err(why.to_string())
@@ -633,9 +630,10 @@ mod test {
   async fn test_to_activity_pub_publicity_public(pool: PgPool) -> Result<(), String> {
     let mut feed: Feed = real_feed(&pool).await.unwrap();
     let item: Item = fake_item();
+    let tera = test_tera();
 
     feed.status_publicity = Some("public".to_string());
-    let result = item.to_activity_pub(&feed, &pool).await;
+    let result = item.to_activity_pub(&feed, &pool, &tera).await;
     match result {
       Ok(result) => {
         let s = serde_json::to_string(&result).unwrap();
@@ -643,7 +641,7 @@ mod test {
         let v: Value = serde_json::from_str(&s).unwrap();
         assert_eq!(v["to"], "https://www.w3.org/ns/activitystreams#Public");
         assert!(v["cc"][0].to_string().contains("/followers"));
-        assert!(s.contains(r#"contentMap":{"en":"<a href=\"http:&#x2F;&#x2F;google.com\">Hello!</a><br />\n\n<p>Hey!</p>"#));
+        assert!(s.contains(r#"contentMap":{"en":"<a href=\"http://google.com\">Hello!</a><br />\n\n<p>Hey!</p>"#));
 
         Ok(())
       },
@@ -655,9 +653,10 @@ mod test {
   async fn test_to_activity_pub_publicity_unlisted(pool: PgPool) -> Result<(), String> {
     let mut feed: Feed = real_feed(&pool).await.unwrap();
     let item: Item = fake_item();
+    let tera = test_tera();
 
     feed.status_publicity = Some("unlisted".to_string());
-    let result = item.to_activity_pub(&feed, &pool).await;
+    let result = item.to_activity_pub(&feed, &pool, &tera).await;
     match result {
       Ok(result) => {
         let s = serde_json::to_string(&result).unwrap();
@@ -665,7 +664,7 @@ mod test {
         let v: Value = serde_json::from_str(&s).unwrap();
         assert!(v["to"].to_string().contains("/followers"));
         assert_eq!(v["cc"][0], "https://www.w3.org/ns/activitystreams#Public");
-        assert!(s.contains(r#"contentMap":{"en":"<a href=\"http:&#x2F;&#x2F;google.com\">Hello!</a><br />\n\n<p>Hey!</p>"#));
+        assert!(s.contains(r#"contentMap":{"en":"<a href=\"http://google.com\">Hello!</a><br />\n\n<p>Hey!</p>"#));
 
         Ok(())
       },
@@ -675,21 +674,23 @@ mod test {
 
   #[sqlx::test]
   async fn test_to_activity_pub_publicity_followers(pool: PgPool) -> Result<(), String> {
-    use rocket::serde::json::Value::Null;
+    use serde_json::Value::Null;
     
     let mut feed: Feed = real_feed(&pool).await.unwrap();
     let item: Item = fake_item();
+    let tera = test_tera();
 
     feed.status_publicity = Some("followers".to_string());
-    let result = item.to_activity_pub(&feed, &pool).await;
+    let result = item.to_activity_pub(&feed, &pool, &tera).await;
     match result {
       Ok(result) => {
         let s = serde_json::to_string(&result).unwrap();
+        println!("{}", s);
        
         let v: Value = serde_json::from_str(&s).unwrap();
         assert!(v["to"].to_string().contains("/followers"));
         assert_eq!(v["cc"][0], Null);
-        assert!(s.contains(r#"contentMap":{"en":"<a href=\"http:&#x2F;&#x2F;google.com\">Hello!</a><br />\n\n<p>Hey!</p>"#));
+        assert!(s.contains(r#"contentMap":{"en":"<a href=\"http://google.com\">Hello!</a><br />\n\n<p>Hey!</p>"#));
 
         Ok(())
       },
@@ -701,15 +702,16 @@ mod test {
   async fn test_to_activity_pub_with_hashtag(pool: PgPool) -> Result<(), String> {
     let mut feed: Feed = real_feed(&pool).await.unwrap();
     let item: Item = fake_item();
+    let tera = test_tera();
 
     feed.hashtag = Some("hashy".to_string());
-    let result = item.to_activity_pub(&feed, &pool).await;
+    let result = item.to_activity_pub(&feed, &pool, &tera).await;
     match result {
       Ok(result) => {
         let s = serde_json::to_string(&result).unwrap();
         println!("{:}", s);
         assert!(s.contains("#hashy"));
-        assert!(s.contains(r#"contentMap":{"en":"<a href=\"http:&#x2F;&#x2F;google.com\">Hello!</a><br />\n\n<p>Hey!</p>"#));
+        assert!(s.contains(r#"contentMap":{"en":"<a href=\"http://google.com\">Hello!</a><br />\n\n<p>Hey!</p>"#));
 
         Ok(())
       },
@@ -721,8 +723,9 @@ mod test {
   async fn test_to_activity_pub_with_enclosure(pool: PgPool) -> Result<(), String> {
     let feed: Feed = real_feed(&pool).await.unwrap();
     let item: Item = real_item_with_enclosure(&feed, &pool).await.unwrap();
+    let tera = test_tera();
 
-    let result = item.to_activity_pub(&feed, &pool).await;
+    let result = item.to_activity_pub(&feed, &pool, &tera).await;
     match result {
       Ok(result) => {
         let s = serde_json::to_string(&result).unwrap();
@@ -789,12 +792,13 @@ mod test {
 
     queue.connect(NoTls).await.unwrap();
 
+    let tera = test_tera();
 
     feed.status_publicity = Some("unlisted".to_string());
-    assert!(item.deliver(&feed, &pool, &mut queue).await.is_ok());
+    assert!(item.deliver(&feed, &pool, &tera, &mut queue).await.is_ok());
 
     feed.status_publicity = Some("public".to_string());
-    assert!(item.deliver(&feed, &pool, &mut queue).await.is_ok());
+    assert!(item.deliver(&feed, &pool, &tera, &mut queue).await.is_ok());
 
     // skip for now @todo fix this
     // feed.status_publicity = Some("direct".to_string());

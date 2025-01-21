@@ -25,8 +25,6 @@ use std::time::Duration;
 async fn main() {
   env_logger::init();
 
-  rustypub::utils::templates::init_templating();
-
   let worker_count = match env::var_os("WORKER_COUNT") {
     Some(val) => {
       u32::from_str(&val.into_string().expect("Something went wrong setting the worker count")).unwrap()

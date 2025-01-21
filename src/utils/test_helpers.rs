@@ -8,23 +8,28 @@ use crate::models::Actor;
 use crate::models::Enclosure;
 use crate::utils::keys::generate_key;
 
-use crate::server::build_server;
-
 use chrono::Utc;
 use uuid::Uuid;
 
-use rocket::uri;
-use rocket::{Rocket, Build};
-
-
-pub async fn build_test_server(pool: PgPool) -> Rocket<Build> {
-  build_server(pool).await
+#[macro_export]
+macro_rules! build_test_server {
+  ($pool:expr) => {{
+    let tera =
+      tera::Tera::new("templates/**/*").expect("Parsing error while loading template folder");
+    let secret_key = crate::routes::configure::get_secret_key();    
+    actix_web::App::new()
+      .wrap(SessionMiddleware::new(CookieSessionStore::default(), secret_key.clone()))
+      .app_data(actix_web::web::Data::new($pool.clone()))
+      .app_data(actix_web::web::Data::new(tera.clone()))
+      .configure(|cfg| crate::routes::configure::apply(cfg))
+  }}
 }
 
-pub async fn login_user(client: &rocket::local::asynchronous::Client, user: &User) {
-  // login the user
-  let post = client.get(uri!(crate::routes::login::attempt_login(&user.login_token)));
-  post.dispatch().await;
+#[macro_export]
+macro_rules! assert_content_type {
+  ($res:expr, $type:expr) => {
+    assert_eq!($res.headers().get("content-type").expect("missing content type!"), $type);
+  }
 }
 
 pub fn fake_user() -> User {
@@ -205,3 +210,6 @@ pub async fn real_enclosure(item: &Item, pool: &PgPool) -> sqlx::Result<Enclosur
   Enclosure::find(enclosure_id, &pool).await
 }
 
+pub fn test_tera() -> tera::Tera {
+  tera::Tera::new("templates/**/*").expect("Parsing error while loading template folder")
+}

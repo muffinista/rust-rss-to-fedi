@@ -287,6 +287,7 @@ mod test {
   use sqlx::postgres::PgPool;
   use std::fs;
 
+  use crate::ACTIVITY_JSON;
   use crate::models::actor::Actor;
   use crate::utils::test_helpers::real_actor;
 
@@ -298,7 +299,7 @@ mod test {
 
     let m = server.mock("GET", "/users/muffinista")
       .with_status(200)
-      .with_header("Accept", "application/activity+json")
+      .with_header("Accept", ACTIVITY_JSON)
       .with_body(data)
       .create_async()
       .await;
@@ -335,7 +336,7 @@ mod test {
 
     let m = server.mock("GET", "/users/muffinista")
       .with_status(200)
-      .with_header("Accept", "application/activity+json")
+      .with_header("Accept", ACTIVITY_JSON)
       .with_body(data)
       .create_async()
       .await;
@@ -366,14 +367,14 @@ mod test {
 
     let m = server.mock("GET", "/users/muffinista/main-key")
       .with_status(200)
-      .with_header("Accept", "application/activity+json")
+      .with_header("Accept", ACTIVITY_JSON)
       .with_body(data)
       .create_async()
       .await;
 
     let m2 = server.mock("GET", "/users/muffinista")
       .with_status(200)
-      .with_header("Accept", "application/activity+json")
+      .with_header("Accept", ACTIVITY_JSON)
       .with_body(full_data)
       .create_async()
       .await;

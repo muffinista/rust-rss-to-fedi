@@ -1,17 +1,16 @@
-use rocket::get;
-use rocket::State;
-use rocket::http::Status;
-use rocket::http::ContentType;
+use actix_web::{get, web, web::Json, Responder};
 
 use sqlx::postgres::PgPool;
 use serde_json::json;
 
+use crate::models::feed_error::AppError;
 use crate::models::NodeInfo;
 use std::env;
 
 
 #[get("/nodeinfo/2.0")]
-pub async fn nodeinfo(db: &State<PgPool>) -> Result<(ContentType, String), Status> {
+pub async fn nodeinfo(db: web::Data<PgPool>) -> Result<impl Responder, AppError> {
+  let db = db.as_ref();
   let data = NodeInfo::current(db).await;
 
   if data.is_ok() {
@@ -42,35 +41,31 @@ pub async fn nodeinfo(db: &State<PgPool>) -> Result<(ContentType, String), Statu
       "metadata": {}
     });
 
-    Ok((ContentType::JSON, results.to_string()))
+    Ok(Json(results))
   } else {
-    Err(Status::NotFound)
+    Err(AppError::NotFound)
   }
 }
 
 #[cfg(test)]
 mod test {
-  use rocket::local::asynchronous::Client;
-  use rocket::http::Status;
-  use rocket::uri;
-  use rocket::{Rocket, Build};
+  use actix_web::test;
+  use actix_session::{SessionMiddleware, storage::CookieSessionStore};
   use sqlx::postgres::PgPool;
   
-  use crate::utils::test_helpers::{build_test_server};
+  use crate::build_test_server;
 
   #[sqlx::test]
   async fn test_nodeinfo(pool: PgPool) {
-    let server:Rocket<Build> = build_test_server(pool).await;
-    let client = Client::tracked(server).await.unwrap();
+    let server = test::init_service(build_test_server!(pool)).await;
 
-    let req = client.get(uri!(super::nodeinfo));
-    let response = req.dispatch().await;
+    // Create request object
+    let req = test::TestRequest::with_uri("/nodeinfo/2.0").to_request();
 
-    assert_eq!(response.status(), Status::Ok);
-    let output = response.into_string().await;
-    match output {
-      Some(output) => assert!(output.contains("localPosts")),
-      None => panic!()
-    }
+    let res = test::call_service(&server, req).await;
+    assert!(res.status().is_success());
+    
+    let bytes = actix_web::body::to_bytes(res.into_body()).await.unwrap();
+    assert!(std::str::from_utf8(&bytes).unwrap().contains("localPosts"));
   }
 }

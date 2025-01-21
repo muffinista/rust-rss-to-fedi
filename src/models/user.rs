@@ -14,6 +14,8 @@ use crate:: {
 
 use url::Url;
 
+use super::feed_error::AppError;
+
 #[derive(Debug)]
 pub struct User {
   pub id: i32,
@@ -57,14 +59,17 @@ impl User {
   }
 
 
-  // ///
-  // /// Find user by email
-  // ///
-  // pub async fn find_by_email(email: &String, pool: &PgPool) -> Result<Option<User>, sqlx::Error> {
-  //   sqlx::query_as!(User, "SELECT * FROM users WHERE email = $1", email)
-  //   .fetch_optional(pool)
-  //   .await
-  // }
+  pub async fn from_session(session: &actix_session::Session, pool: &PgPool) -> Result<Option<User>, AppError> {
+    if let Some(access_token) = session.get::<String>("access_token")? {
+      let user = User::find_by_access(&access_token, pool).await;
+      match user {
+        Ok(user) => Ok(user),
+        Err(_why) => Err(AppError::InternalError)
+      }
+    } else {
+      Ok(None)
+    }
+  }
   
   ///
   /// Find user by email
@@ -253,7 +258,7 @@ impl User {
   }
 
 
-  pub async fn send_link_to_feed(&self, feed: &Feed, pool: &PgPool) -> Result<(), DeliveryError> {
+  pub async fn send_link_to_feed(&self, feed: &Feed, pool: &PgPool, tera: &tera::Tera) -> Result<(), DeliveryError> {
     let dest_actor = Actor::find_or_fetch(self.actor_url.as_ref().expect("No actor url!"), pool).await;
 
     match dest_actor {
@@ -263,7 +268,7 @@ impl User {
         }
         let dest_actor = dest_actor.unwrap();
 
-        let message = feed.link_to_feed_message(&dest_actor).await?;
+        let message = feed.link_to_feed_message(tera, &dest_actor).await?;
         let msg = serde_json::to_string(&message).unwrap();
         log::debug!("{msg}");
     

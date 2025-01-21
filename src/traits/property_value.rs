@@ -6,8 +6,9 @@ use activitystreams::{
 };
 
 use serde_json::json;
+use tera::Context;
 
-use crate::utils::templates::{Context, render};
+use crate::utils::templates::render;
 
 kind!(AttachmentType, PropertyValue);
 
@@ -21,7 +22,7 @@ pub fn schema_property_context() -> Result<AnyBase, serde_json::Error> {
   AnyBase::from_arbitrary_json(schema_property_context)  
 }
 
-pub fn to_profile_value_link(url: String, title: String) -> String {
+pub fn to_profile_value_link(tmpl: &tera::Tera, url: String, title: String) -> String {
   // here's what Mastodon does for links
   //   <<~HTML.squish.html_safe # rubocop:disable Rails/OutputSafety
   //   <a href="#{h(url)}" target="_blank" rel="#{rel.join(' ')}" translate="no"><span class="invisible">#{h(prefix)}</span><span class="#{cutoff ? 'ellipsis' : ''}">#{h(display_url)}</span><span class="invisible">#{h(suffix)}</span></a>
@@ -31,7 +32,7 @@ pub fn to_profile_value_link(url: String, title: String) -> String {
   template_context.insert("url", &url);
   template_context.insert("title", &title);
   
-  render("profile-value-link", &template_context).unwrap()
+  render("profile-value-link.html.tera", tmpl, &template_context).unwrap()
 }
 
 // this is mostly copied/modified from Link
