@@ -933,7 +933,6 @@ impl Feed {
       // pull the Note out of the Activity
       let checked_obj = activity.object();
       if checked_obj.is_err() {
-        println!("{:?}", checked_obj);
         return Err(DeliveryError::Error("Something went wrong".to_string()));
       }
       checked_obj.unwrap()
@@ -1106,7 +1105,6 @@ impl Feed {
   pub async fn handle_activity(&self, pool: &PgPool, tera: &tera::Tera, activity: &AcceptedActivity)  -> Result<(), DeliveryError> {
     let s = serde_json::to_string(&activity).unwrap();
     log::debug!("{s:}");
-    println!("{s:}");
     
 
     let (actor, _object, act) = activity.clone().into_parts();
@@ -1387,7 +1385,7 @@ mod test {
   use chrono::Utc;
 
 
-  use crate::ACTIVITY_JSON;
+  use crate::constants::ACTIVITY_JSON;
   use crate::models::Feed;
   use crate::models::feed::DeliveryError;
   use crate::models::feed::AcceptedActivity;
@@ -1947,11 +1945,8 @@ mod test {
     let message = feed.link_to_feed_message(&tera, &actor).await.unwrap();
 
     let s = serde_json::to_string(&message).unwrap();
-    println!("{:}", s);
 
     assert!(s.contains(r#"sensitive":true"#));
-
-
     Ok(())
   }
 
@@ -1973,7 +1968,6 @@ mod test {
     match result {
       Ok(result) => {
         let s = serde_json::to_string(&result).unwrap();
-        // println!("{:?}", s);
 
         assert!(s.contains("A list of followers"));
         Ok(())
@@ -2000,7 +1994,6 @@ mod test {
     match result {
       Ok(result) => {
         let s = serde_json::to_string(&result).unwrap();
-        // println!("{:?}", s);
         
         assert!(s.contains("OrderedCollectionPage"));
         assert!(s.contains("/colin11"));

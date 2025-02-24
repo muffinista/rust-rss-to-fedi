@@ -598,8 +598,6 @@ mod test {
 
     let result = item.to_html(Some("hashytime".to_string()), &tera).await;
 
-    println!("{:}", result);
-
     assert!(result.contains("Hello!"));
     assert!(result.contains("<p>Hey!</p>"));
     assert!(result.contains("hashytime"));
@@ -685,7 +683,6 @@ mod test {
     match result {
       Ok(result) => {
         let s = serde_json::to_string(&result).unwrap();
-        println!("{}", s);
        
         let v: Value = serde_json::from_str(&s).unwrap();
         assert!(v["to"].to_string().contains("/followers"));
@@ -709,7 +706,6 @@ mod test {
     match result {
       Ok(result) => {
         let s = serde_json::to_string(&result).unwrap();
-        println!("{:}", s);
         assert!(s.contains("#hashy"));
         assert!(s.contains(r#"contentMap":{"en":"<a href=\"http://google.com\">Hello!</a><br />\n\n<p>Hey!</p>"#));
 
@@ -729,8 +725,6 @@ mod test {
     match result {
       Ok(result) => {
         let s = serde_json::to_string(&result).unwrap();
-
-        println!("{:}", s);
         
         assert!(s.contains("/enclosures/"));
         assert!(s.contains("audio/mpeg"));

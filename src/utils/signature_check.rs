@@ -1,7 +1,7 @@
-use std::str::FromStr;
+use std::{collections::HashMap};
 
 use actix_web::{
-    http::header::{HeaderName, HeaderValue}, web, HttpRequest
+    http::header::HeaderMap, web, HttpRequest
 };
 use chrono::{Duration, NaiveDateTime, Utc};
 
@@ -31,16 +31,25 @@ const SIGNATURE_HEADER: &str = "Signature";
 const DATE_HEADER: &str = "date";
 
 
-      // .map(|header| (header, header_data.get(HeaderName::from_static(header))))
-      // .map(|(header, value)| format!("{}: {}", header.to_lowercase(), value.unwrap().to_str().expect("Invalid header!")))
-
-
-fn header_to_payload_snippet(name: &str, header: &HeaderValue) -> String {
-  format!("{}: {}", name.to_lowercase(), header.to_str().expect("Invalid header!"))
+fn header_to_payload_snippet(name: &str, header: &str) -> String {
+  format!("{}: {}", name.to_lowercase(), header)
 }
 
-pub async fn validate_request(request: &HttpRequest) -> Result<SignatureValidity, DeliveryError> {
+fn headers_to_hash(headers: &HeaderMap) -> HashMap<String, String> {
+  let mut values:HashMap<String, String> = HashMap::<String, String>::new();
 
+  for k in headers.keys() {
+    values.insert(
+      k.to_string(), 
+      String::from(headers.get(k).unwrap().to_str().unwrap())
+    );
+  }
+
+  values
+}
+
+
+pub async fn validate_request(request: &HttpRequest) -> Result<SignatureValidity, DeliveryError> {
   if !request.headers().contains_key(SIGNATURE_HEADER) {
     // log::info!("no header!");
     return Ok(SignatureValidity::Absent);
@@ -76,10 +85,11 @@ pub async fn validate_request(request: &HttpRequest) -> Result<SignatureValidity
     return Ok(SignatureValidity::Invalid)
   } 
   
-  let mut header_data = request.headers().clone();
-  if !header_data.contains_key("(request-target)") {
-    header_data.insert(HeaderName::from_static("(request-target)"),
-    HeaderValue::from_str(&format!("post {}", request.uri())).expect("Invalid request-target"));
+  // convert to a boring hashmap because the structure used by actix doesn't support
+  // non-standard headers like "(request-target)"
+  let mut header_data = headers_to_hash(&request.headers());
+  if !header_data.contains_key(crate::constants::REQUEST_TARGET) {
+    header_data.insert(String::from(crate::constants::REQUEST_TARGET),format!("post {}", request.uri()));
   }
 
   let signature = signature.expect("sign::verify_http_headers: unreachable");
@@ -89,16 +99,13 @@ pub async fn validate_request(request: &HttpRequest) -> Result<SignatureValidity
       .map(|val| val.into())
       .collect::<Vec<String>>();
 
-  // .expect("sign::verify_http_headers: unreachable")
   let signature_verification_payload = headers
       .iter()
-      .map(|header| header_to_payload_snippet(header, header_data.get(HeaderName::from_str(header).expect("Invalid header name!")).expect("Missing header!")))
+      .map(|header| header_to_payload_snippet(header, header_data.get(header).expect(&format!("Missing header! {:}", header))))
       .collect::<Vec<_>>()
       .join("\n");
-
   let key_id = key_id.expect("Missing key_id??");
   let sender = Actor::find_or_fetch(&key_id, pool).await;
-
   match sender {
     Ok(sender) => {
       if sender.is_none() {
@@ -106,7 +113,6 @@ pub async fn validate_request(request: &HttpRequest) -> Result<SignatureValidity
         Ok(SignatureValidity::InvalidActor(key_id))
       } else {
         let sender = sender.expect("Unable to load sender data!");
-
         // .verify_signature(&signature_verification_payload, &base64::decode(signature).unwrap_or_default())
         if !sender
           .verify_signature(&signature_verification_payload, &general_purpose::STANDARD.decode(signature).unwrap_or_default())

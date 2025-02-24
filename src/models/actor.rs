@@ -51,6 +51,7 @@ impl Actor {
   /// Query the DB for the actor with the given URL. If not found, fetch the data and cache it
   ///
   pub async fn find_or_fetch(url: &str, pool: &PgPool) -> Result<Option<Actor>, DeliveryError> {
+
     let mut clean_url = Url::parse(url).unwrap();
     clean_url.set_fragment(None);
 
@@ -166,7 +167,6 @@ impl Actor {
 
             log::debug!("FETCH ACTOR OWNER: {owner_url:}");
 
-
             // Remote servers federating with GoToSocial should extract the
             // public key from the publicKey field. Then, they should use the
             // owner field of the public key to further dereference the full
@@ -197,7 +197,6 @@ impl Actor {
           };
 
           log::debug!("actor create: {inbox:}");
-          println!("actor create: {inbox:}");
           Actor::create(&data["id"].as_str().unwrap().to_string(),
                         &inbox,
                         &data["publicKey"]["id"].as_str().unwrap().to_string(),
@@ -287,7 +286,7 @@ mod test {
   use sqlx::postgres::PgPool;
   use std::fs;
 
-  use crate::ACTIVITY_JSON;
+  use crate::constants::ACTIVITY_JSON;
   use crate::models::actor::Actor;
   use crate::utils::test_helpers::real_actor;
 

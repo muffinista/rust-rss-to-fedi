@@ -22,7 +22,7 @@ use crate::services::url_to_feed::url_to_feed_url;
 use crate::utils::queue::create_queue;
 use crate::utils::templates;
 use crate::tasks::RefreshFeed;
-use crate::ACTIVITY_JSON;
+use crate::constants::ACTIVITY_JSON;
 
 
 #[derive(Deserialize, Serialize)]
@@ -388,7 +388,7 @@ mod test {
 
   use chrono::Utc;
 
-  use crate::{build_test_server, ACTIVITY_JSON};
+  use crate::{build_test_server, constants::ACTIVITY_JSON};
   use crate::utils::test_helpers::{ real_user, real_feed, real_item};
   use crate::assert_content_type;
 
@@ -413,7 +413,6 @@ mod test {
     let bytes = actix_web::body::to_bytes(res.into_body()).await.unwrap();
     let body = std::str::from_utf8(&bytes).unwrap();
 
-    println!("{:}", body);
     assert!(body.contains(&format!("Feed for {}", feed.name)));
     assert!(body.contains(&"Posted at"));
 
@@ -441,7 +440,6 @@ mod test {
     let bytes = actix_web::body::to_bytes(res.into_body()).await.unwrap();
     let body = std::str::from_utf8(&bytes).unwrap();
 
-    println!("{:}", body);
     assert!(body.contains(&format!("Feed for {}", feed.name)));
     assert!(body.contains(&"No entries"));
 

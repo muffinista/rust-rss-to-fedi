@@ -16,7 +16,7 @@ use crate:: {
   error::DeliveryError,
   utils::http::*,
   models:: Feed,
-  ACTIVITY_JSON
+  constants::ACTIVITY_JSON
 };
 
 use openssl::{
@@ -32,6 +32,8 @@ use base64::{Engine as _, engine::general_purpose};
 
 use serde::Serialize;
 
+/// Sign a request for the given URL with the admin account credentials. This is
+/// used to fetch actor information from remote hosts
 pub async fn admin_fetch_object(url: &str, pool: &PgPool) -> Result<Option<String>, DeliveryError> {
   let admin_feed = Feed::for_admin(pool).await?;
 
@@ -43,7 +45,10 @@ pub async fn admin_fetch_object(url: &str, pool: &PgPool) -> Result<Option<Strin
   }
 }
 
-pub async fn signed_request_for(url: &str, key_id: &str, private_key: &str) -> Result<Request, DeliveryError> {
+///
+/// Sign a GET request for the given URL
+/// 
+async fn signed_request_for(url: &str, key_id: &str, private_key: &str) -> Result<Request, DeliveryError> {
   let config: http_signature_normalization_reqwest::Config<DefaultSpawner> = Config::default().mastodon_compat();
   let private_key = PKey::private_key_from_pem(private_key.as_bytes())?;
   let mut signer = Signer::new(MessageDigest::sha256(), &private_key)?;
@@ -83,7 +88,6 @@ pub async fn fetch_object(url: &str, key_id: Option<&str>, private_key: Option<&
       if !response.status().is_success() {
         return Ok(None)
       }
-
 
       let body = response
         .text()
@@ -147,7 +151,7 @@ pub async fn deliver_to_inbox<T: Serialize + ?Sized>(inbox: &Url, key_id: &str, 
   }
 }
 
-pub async fn sign_request(
+async fn sign_request(
   request_builder: RequestBuilder,
   key_id: String,
   private_key: String,

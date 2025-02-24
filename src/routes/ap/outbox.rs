@@ -7,7 +7,7 @@ use sqlx::postgres::PgPool;
 use crate::models::feed_error::AppError;
 use crate::models::Feed;
 use crate::routes::PageQuery;
-use crate::ACTIVITY_JSON;
+use crate::constants::ACTIVITY_JSON;
 
 
 ///  The outbox is discovered through the outbox property of an actor's profile.
@@ -73,12 +73,11 @@ mod test {
   use crate::build_test_server;
   use crate::assert_content_type;
   use crate::utils::test_helpers::real_feed;
-  use crate::ACTIVITY_JSON;
+  use crate::constants::ACTIVITY_JSON;
 
   #[sqlx::test]
   async fn test_render_feed_outbox(pool: PgPool) -> sqlx::Result<()> {
     let feed = real_feed(&pool).await.unwrap();
-println!("visit! {}",feed.outbox_url());
     let server = test::init_service(build_test_server!(pool)).await;
     // let req = test::TestRequest::with_uri(&feed.outbox_url()).to_request();
     let req = test::TestRequest::with_uri(&format!("/feed/{}/outbox", feed.name)).to_request();

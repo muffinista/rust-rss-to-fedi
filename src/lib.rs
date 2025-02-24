@@ -13,4 +13,7 @@ pub use error::DeliveryError;
 
 const PER_PAGE:i32 = 10i32;
 
-static ACTIVITY_JSON:&str = "application/activity+json";
+mod constants {
+  pub const REQUEST_TARGET: &'static str = "(request-target)";
+  pub const ACTIVITY_JSON: &'static str = "application/activity+json";
+}

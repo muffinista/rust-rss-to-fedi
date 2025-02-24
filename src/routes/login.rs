@@ -26,20 +26,16 @@ pub async fn attempt_login(session: Session, db: web::Data<PgPool>, path: web::P
             Ok(crate::utils::redirect_to("/"))
           },
           Err(why) => {
-            println!("session error!");
             log::info!("{why}");
             Ok(crate::utils::redirect_to(INDEX))
           }
         }
       }
       else {
-        println!("no user!");
         Ok(crate::utils::redirect_to(INDEX))
       } 
     },
     Err(why) => {
-      println!("error!");
-
       log::info!("{why}");
       Ok(crate::utils::redirect_to(INDEX))
 

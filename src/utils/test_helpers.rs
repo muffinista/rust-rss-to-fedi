@@ -1,3 +1,8 @@
+use std::future::Future;
+
+use mockito::Mock;
+use mockito::ServerGuard;
+use serde_json::json;
 use sqlx::postgres::PgPool;
 
 use crate::models::User;
@@ -64,7 +69,22 @@ pub async fn real_admin_user(pool: &PgPool) -> sqlx::Result<User> {
   Ok(user)
 }
 
-
+pub fn actor_json(actor_id: &str, server_url: &str, public_key: &str) -> serde_json::Value {
+  json!({
+    "id": actor_id,
+    "type": "Person",
+    "owner": format!("{}/actor", server_url),
+    "inbox": format!("{}/actor/inbox", server_url),
+    "outbox": format!("{}/actor/outbox", server_url),
+    "preferredUsername": "actor",
+    "name": "actor mcactor",
+    "publicKey": {
+        "id": format!("{}/actor#main-key", server_url),
+        "owner": format!("{}/actor", server_url),
+        "publicKeyPem": public_key
+    }
+  })
+}
 
 pub async fn real_actor(pool: &PgPool) -> sqlx::Result<Actor> {
   Actor::create(
@@ -212,4 +232,12 @@ pub async fn real_enclosure(item: &Item, pool: &PgPool) -> sqlx::Result<Enclosur
 
 pub fn test_tera() -> tera::Tera {
   tera::Tera::new("templates/**/*").expect("Parsing error while loading template folder")
+}
+
+pub fn mock_ap_action(object_server: &mut ServerGuard, path: &str, body: &str) -> impl Future<Output = Mock> {
+   object_server.mock("GET", path)
+    .with_status(200)
+    .with_header("Accept", crate::constants::ACTIVITY_JSON)
+    .with_body(body)
+    .create_async()
 }

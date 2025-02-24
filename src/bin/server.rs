@@ -35,42 +35,4 @@ pub async fn main() -> std::io::Result<()> {
     .await
     // .bind(config.get_app_url())?;
 
-//       crate::routes::index::index,
-//       crate::routes::index::index_logged_in,
-//       crate::routes::login::do_login,
-//       crate::routes::login::do_logout,
-//       crate::routes::login::login_result,
-//       crate::routes::login::attempt_login,
-//       crate::routes::enclosures::show_enclosure,
-//       crate::routes::feeds::add_feed,
-//       crate::routes::feeds::test_feed,
-//       crate::routes::feeds::update_feed,
-//       crate::routes::feeds::delete_feed,
-//       crate::routes::feeds::render_feed,
-//       crate::routes::feeds::render_feed_followers,
-//       crate::routes::feeds::show_feed,
-//       crate::routes::items::show_item,
-//       crate::routes::items::show_item_json,
-//       crate::routes::webfinger::lookup_webfinger,
-//       crate::routes::ap::inbox::user_inbox,
-//       crate::routes::ap::outbox::render_feed_outbox,
-//       crate::routes::admin::index_admin,
-//       crate::routes::admin::show_feed_admin,
-//       crate::routes::admin::update_settings_admin,
-//       crate::routes::admin::delete_feed_admin,
-//       crate::routes::well_known::host_meta,
-//       crate::routes::nodeinfo::nodeinfo
-
-
-  // println!("Listening on: {0}", config.get_app_url());
-
-  // let server = build_server(pool)
-  //   .await
-  //   .launch()
-  //   .await;
-
-  // match server {
-  //   Ok(_server) => Ok(()),
-  //   Err(why) => panic!("{}", why)
-  // }
 }

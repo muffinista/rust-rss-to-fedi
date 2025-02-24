@@ -120,7 +120,7 @@ impl User {
 
     let now = Utc::now();
     let diff = now.signed_duration_since(self.access_token_updated_at);
-    println!("Total time: {}", diff.num_minutes());
+    // println!("Total time: {}", diff.num_minutes());
 
     diff > Duration::hours(24)
   }

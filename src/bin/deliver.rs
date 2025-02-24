@@ -62,7 +62,6 @@ async fn main() -> Result<(), DeliveryError> {
   match dest_actor {
     Ok(dest_actor) => {
       if dest_actor.is_none() {
-        println!("Actor not found");
         return Ok(());
       }
 

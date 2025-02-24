@@ -10,7 +10,7 @@ use webfinger::*;
 
 use crate::models::feed_error::AppError;
 use crate::models::Feed;
-use crate::ACTIVITY_JSON;
+use crate::constants::ACTIVITY_JSON;
 
 
 ///

@@ -20,10 +20,6 @@ pub async fn index(session: Session,  query: web::Query<PageQuery>, tmpl: web::D
   let tmpl = tmpl.as_ref();
   let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
 
-  // log::debug!("hey!");
-  // let names= tmpl.get_template_names().collect::<Vec<_>>().join("\n");
-  // println!("hey!: {:}", names);
-
   let mut context = tera::Context::new();
   context.insert("instance_domain", &instance_domain);
 
@@ -54,7 +50,6 @@ pub async fn index(session: Session,  query: web::Query<PageQuery>, tmpl: web::D
   match body {
     Ok(body) => Ok(HttpResponse::build(actix_web::http::StatusCode::OK).body(body)),
     Err(why) => {
-      println!("{:?}", why);
       log::debug!("{:?}", why);
       Err(AppError::InternalError)
     }

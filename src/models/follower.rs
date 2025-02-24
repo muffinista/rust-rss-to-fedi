@@ -54,7 +54,7 @@ mod test {
   use std::fs;
   use sqlx::postgres::PgPool;
 
-  use crate::ACTIVITY_JSON;
+  use crate::constants::ACTIVITY_JSON;
   use crate::models::Feed;
   use crate::models::Follower;
   use crate::utils::test_helpers::{fake_feed, fake_follower};
