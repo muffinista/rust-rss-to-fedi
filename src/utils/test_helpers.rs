@@ -3,6 +3,7 @@ use std::future::Future;
 use mockito::Mock;
 use mockito::ServerGuard;
 use serde_json::json;
+use serde_json::Value;
 use sqlx::postgres::PgPool;
 
 use crate::models::User;
@@ -12,6 +13,17 @@ use crate::models::Item;
 use crate::models::Actor;
 use crate::models::Enclosure;
 use crate::utils::keys::generate_key;
+
+use std::collections::HashMap;
+use std::time::SystemTime;
+
+use actix_web::http::header::HeaderValue;
+use base64::engine::general_purpose;
+use base64::Engine;
+use httpdate::fmt_http_date;
+use openssl::hash::MessageDigest;
+use openssl::pkey::PKey;
+use openssl::sign::Signer;
 
 use chrono::Utc;
 use uuid::Uuid;
@@ -35,6 +47,62 @@ macro_rules! assert_content_type {
   ($res:expr, $type:expr) => {
     assert_eq!($res.headers().get("content-type").expect("missing content type!"), $type);
   }
+}
+
+#[macro_export]
+macro_rules! assert_accepted {
+  ($res:expr) => {
+    assert_eq!(actix_web::http::StatusCode::ACCEPTED, $res.status());
+  }
+}
+
+
+pub fn sign_test_request(req: &mut actix_http::Request, body: &str, actor_id: &str, private_key: &str) {
+  let sig_headers = vec![String::from(crate::constants::REQUEST_TARGET), String::from("host"), String::from("date"), String::from("digest")];
+  let path_and_query = req.path();
+  let method = req.method();
+  let request_target = format!("{} https://test.com{}", method.to_string().to_lowercase(), path_and_query);
+  
+  let date = fmt_http_date(SystemTime::now());
+  let mut values: HashMap<String, String> = HashMap::<String, String>::new();
+  values.insert(String::from(crate::constants::REQUEST_TARGET), request_target);
+  values.insert(String::from("host"), String::from("muffin.industries"));
+  values.insert(String::from("date"), date.clone());
+
+  let digest = crate::utils::string_to_digest_string(body);
+  values.insert(String::from("digest"),  digest.clone());
+
+  let signing_string = sig_headers
+      .iter()
+      .map(|h| {
+        let v = values.get(h).unwrap();
+        format!("{}: {}", h, v)
+      })
+      .collect::<Vec<_>>()
+      .join("\n");
+
+  let private_key = PKey::private_key_from_pem(private_key.as_bytes()).unwrap();
+  let mut signer = Signer::new(MessageDigest::sha256(), &private_key).unwrap();
+  signer.update(signing_string.as_bytes()).unwrap();
+  let signature_value = general_purpose::STANDARD.encode(signer.sign_to_vec().unwrap());
+
+  let key_id= format!("{}#main-key", actor_id);
+  let final_signature = format!("keyId=\"{}\",headers=\"(request-target) host date digest\",signature=\"{}\"",
+      key_id, signature_value);
+
+
+  req.headers_mut().append(actix_web::http::header::HeaderName::from_lowercase(b"host").unwrap(), HeaderValue::from_str(&"muffin.industries").unwrap());
+  req.headers_mut().append(actix_web::http::header::HeaderName::from_lowercase(b"date").unwrap(), HeaderValue::from_str(&date).unwrap());
+  req.headers_mut().append(actix_web::http::header::HeaderName::from_lowercase(b"digest").unwrap(), HeaderValue::from_str(&digest).unwrap());
+  req.headers_mut().append(actix_web::http::header::HeaderName::from_lowercase(b"signature").unwrap(), HeaderValue::from_str(&final_signature).unwrap());
+  
+}
+
+pub fn deformat_json_string(json: &str) -> String {
+  // this is very silly, but by converting/de-converting back to a string, we ensure that we
+  // use consistent spacing/formatting/etc when doing digest tests
+  let json: Value = serde_json::from_str(&json).unwrap();
+  serde_json::to_string(&json).unwrap()
 }
 
 pub fn fake_user() -> User {

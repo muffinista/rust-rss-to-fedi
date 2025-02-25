@@ -5,7 +5,6 @@ use actix_web::{web, App, HttpServer};
 
 use std::env;
 
-// use rustypub::server::build_server;
 use rustypub::utils::pool::db_pool;
 
 #[actix_web::main]

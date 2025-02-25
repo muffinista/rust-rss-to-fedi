@@ -53,7 +53,7 @@ async fn signed_request_for(url: &str, key_id: &str, private_key: &str) -> Resul
   let private_key = PKey::private_key_from_pem(private_key.as_bytes())?;
   let mut signer = Signer::new(MessageDigest::sha256(), &private_key)?;
 
-  Ok(reqwest::Client::new()
+  reqwest::Client::new()
     .get(url)
     .header("Accept", ACTIVITY_JSON)
     .header("User-Agent", user_agent())
@@ -61,7 +61,7 @@ async fn signed_request_for(url: &str, key_id: &str, private_key: &str) -> Resul
       signer.update(signing_string.as_bytes())?;
       
       Ok(general_purpose::STANDARD.encode(signer.sign_to_vec()?)) as Result<_, DeliveryError>
-    }).await?)
+    }).await
 }
 
 ///

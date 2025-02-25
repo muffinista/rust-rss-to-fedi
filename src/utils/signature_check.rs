@@ -1,4 +1,4 @@
-use std::{collections::HashMap};
+use std::{collections::HashMap, env};
 
 use actix_web::{
     http::header::HeaderMap, web, HttpRequest
@@ -49,7 +49,7 @@ fn headers_to_hash(headers: &HeaderMap) -> HashMap<String, String> {
 }
 
 
-pub async fn validate_request(request: &HttpRequest) -> Result<SignatureValidity, DeliveryError> {
+pub async fn validate_request(request: &HttpRequest, payload: &str) -> Result<SignatureValidity, DeliveryError> {
   if !request.headers().contains_key(SIGNATURE_HEADER) {
     // log::info!("no header!");
     return Ok(SignatureValidity::Absent);
@@ -58,7 +58,6 @@ pub async fn validate_request(request: &HttpRequest) -> Result<SignatureValidity
   let date = request.headers().get(DATE_HEADER);
   let sig = request.headers().get(SIGNATURE_HEADER).unwrap();
 
-  // let sig_header = request_headers.get("Signature").unwrap().to_str().expect("Invalid header!");
   let pool = request.app_data::<web::Data<PgPool>>().unwrap();
 
   // let sig_check = from_request( &headers.clone(), &pool, request.uri()).await;
@@ -66,7 +65,6 @@ pub async fn validate_request(request: &HttpRequest) -> Result<SignatureValidity
   let mut _algorithm = None;
   let mut header_list = None;
   let mut signature = None;
-//  let date = date.unwrap();
 
   let h = sig.to_str().unwrap();
   for part in h.split(',').by_ref() {
@@ -87,7 +85,7 @@ pub async fn validate_request(request: &HttpRequest) -> Result<SignatureValidity
   
   // convert to a boring hashmap because the structure used by actix doesn't support
   // non-standard headers like "(request-target)"
-  let mut header_data = headers_to_hash(&request.headers());
+  let mut header_data = headers_to_hash(request.headers());
   if !header_data.contains_key(crate::constants::REQUEST_TARGET) {
     header_data.insert(String::from(crate::constants::REQUEST_TARGET),format!("post {}", request.uri()));
   }
@@ -101,7 +99,7 @@ pub async fn validate_request(request: &HttpRequest) -> Result<SignatureValidity
 
   let signature_verification_payload = headers
       .iter()
-      .map(|header| header_to_payload_snippet(header, header_data.get(header).expect(&format!("Missing header! {:}", header))))
+      .map(|header| header_to_payload_snippet(header, header_data.get(header).unwrap_or_else(|| panic!("Missing header! {:}", header))))
       .collect::<Vec<_>>()
       .join("\n");
   let key_id = key_id.expect("Missing key_id??");
@@ -121,22 +119,20 @@ pub async fn validate_request(request: &HttpRequest) -> Result<SignatureValidity
           // log::info!("unable to verify signature!");
           Ok(SignatureValidity::InvalidSignature(key_id))
         } else {
-          // @todo digest check
-          // if !headers.contains(&"digest") {
-          //   // signature is valid, but body content is not verified
-          //   // return SignatureValidity::ValidNoDigest;
-          //   return Outcome::Forward(());
-          // }
-    
-          // let digest = request.headers().get_one("digest").unwrap_or("");
-          // let digest = request::Digest::from_header(digest);
-    
-          // @todo get/check digest of body content
-          // if !digest.map(|d| d.verify_header(data)).unwrap_or(false) {
-          //   // signature was valid, but body content does not match its digest
-          //   // return SignatureValidity::Invalid;
-          //   return Outcome::Forward(());
-          // }
+
+          if env::var("DISABLE_DIGEST_CHECKS").is_err() {
+            if !header_data.contains_key("digest") {
+              // signature is valid, but body content is not verified
+              return Ok(SignatureValidity::ValidNoDigest(key_id));
+            }
+      
+            let digest = header_data.get("digest").expect("missing digest??");          
+            let expected_digest = crate::utils::string_to_digest_string(payload);
+  
+            if *digest != expected_digest {
+              return Ok(SignatureValidity::Invalid);
+            }  
+          }
     
           if date.is_none() {
             Ok(SignatureValidity::Outdated(key_id))

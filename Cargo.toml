@@ -18,6 +18,7 @@ openssl = { version = "~0.10.71", features = ["vendored"] }
 openssl-sys = "~0.9.78"
 dotenvy = "~0.15"
 actix-web = "4"
+actix-http = "~3.9.0"
 actix-session = { version = "0.10.1", features = ["cookie-session"] }
 sqlx = { version = "~0.8.2", features = ["chrono", "macros", "migrate", "postgres", "runtime-tokio-rustls"] }
 serde = {version = "~1.0.214", features = ["derive"] }
