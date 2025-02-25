@@ -70,21 +70,17 @@ mod test {
   use actix_session::{SessionMiddleware, storage::CookieSessionStore};
   use sqlx::postgres::PgPool;
 
-  use crate::build_test_server;
-  use crate::assert_content_type;
+  use crate::{assert_ok_activity_json, build_test_server};
   use crate::utils::test_helpers::real_feed;
-  use crate::constants::ACTIVITY_JSON;
 
   #[sqlx::test]
   async fn test_render_feed_outbox(pool: PgPool) -> sqlx::Result<()> {
     let feed = real_feed(&pool).await.unwrap();
     let server = test::init_service(build_test_server!(pool)).await;
-    // let req = test::TestRequest::with_uri(&feed.outbox_url()).to_request();
     let req = test::TestRequest::with_uri(&format!("/feed/{}/outbox", feed.name)).to_request();
     let res = server.call(req).await.unwrap();
 
-    assert_eq!(res.status(), actix_web::http::StatusCode::OK);
-    assert_content_type!(res, ACTIVITY_JSON);
+    assert_ok_activity_json!(res);
 
     Ok(())
   }

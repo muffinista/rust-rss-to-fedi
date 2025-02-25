@@ -1,8 +1,16 @@
+use std::env;
+
 use crate::routes::*;
 use actix_web::web::*;
 
 pub fn get_secret_key() -> actix_web::cookie::Key {
-  actix_web::cookie::Key::generate()
+  if env::var("SESSION_KEY").is_err() {
+    println!("No SESSION_KEY set in environment!");
+    actix_web::cookie::Key::generate()
+  } else {
+    let key = env::var("SESSION_KEY").expect("SESSION_KEY is not set???");
+    actix_web::cookie::Key::from(key.as_bytes())
+  }
 }
 
 pub fn apply(cfg: &mut ServiceConfig) {

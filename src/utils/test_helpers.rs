@@ -45,7 +45,7 @@ macro_rules! build_test_server {
 #[macro_export]
 macro_rules! assert_content_type {
   ($res:expr, $type:expr) => {
-    assert_eq!($res.headers().get("content-type").expect("missing content type!"), $type);
+    assert_eq!($type, $res.headers().get("content-type").expect("missing content type!"));
   }
 }
 
@@ -53,6 +53,14 @@ macro_rules! assert_content_type {
 macro_rules! assert_accepted {
   ($res:expr) => {
     assert_eq!(actix_web::http::StatusCode::ACCEPTED, $res.status());
+  }
+}
+
+#[macro_export]
+macro_rules! assert_ok_activity_json {
+  ($res:expr) => {
+    assert_eq!(actix_web::http::StatusCode::OK, $res.status());
+    assert_eq!(crate::constants::ACTIVITY_JSON, $res.headers().get("content-type").expect("missing content type!"));
   }
 }
 

@@ -44,42 +44,6 @@ pub async fn show_item(path: web::Path<(String, i32)>, db: web::Data<PgPool>) ->
 }
 
 
-// #[get("/feed/{username}/items/{id}", format = "application/json", rank = 2)]
-// pub async fn show_item_json(username: &str, id: i32, db: web::Data<PgPool>, tmpl: web::Data<tera::Tera>) -> Result<impl Responder, AppError> {
-//   let tmpl = tmpl.as_ref();
-//   let db = db.as_ref();
-//   let lookup_feed = Feed::find_by_name(&username.to_string(), db).await;
-//   match lookup_feed {
-//     Ok(lookup_feed) => {
-//       if lookup_feed.is_some() {
-//         let feed = lookup_feed.unwrap();
-//         let item = Item::find_by_feed_and_id(&feed, id, db).await;
-//         match item {
-//           Ok(item) => {
-//             if item.is_some() {
-//               let item = item.unwrap();
-//               let message = item.to_activity_pub(&feed, db, &tmpl).await;
-//               match message {
-//                 Ok(result) => Ok(serde_json::to_string(&result).unwrap()),
-//                 Err(_why) => Err(AppError::InternalError)
-//               }
-//             } else {
-//               Err(AppError::NotFound)
-//             }
-
-//           },
-//           Err(_why) => Err(AppError::NotFound)
-//         }
-//       }
-//       else {
-//         Err(AppError::NotFound)
-//       }
-//     },
-//     Err(_why) => Err(AppError::NotFound)
-//   }
-// }
-
-
 #[cfg(test)]
 mod test {
   use actix_web::{test, dev::Service};
@@ -105,20 +69,4 @@ mod test {
 
     Ok(())
   }
-
-  // #[sqlx::test]
-  // async fn test_show_item_json(pool: PgPool) -> sqlx::Result<()> {
-  //   let feed: Feed = real_feed(&pool).await?;
-  //   let item: Item = real_item(&feed, &pool).await?;
-
-  //   let server = test::init_service(build_test_server!(pool)).await;
-  //   let req = test::TestRequest::with_uri(&format!("/feed/{}/items/{}", feed.name, item.id)).to_request();
-  //   let res = server.call(req).await.unwrap();
-
-  //   // let req = client.get(uri!(super::show_item_json(&feed.name, item.id))).header(Header::new("Accept", "application/json"));
-
-  //   assert_eq!(res.status(), actix_web::http::StatusCode::OK);
-
-  //   Ok(())
-  // }
 }

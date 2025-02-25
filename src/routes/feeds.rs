@@ -389,8 +389,8 @@ mod test {
   use chrono::Utc;
 
   use crate::{build_test_server, constants::ACTIVITY_JSON};
-  use crate::utils::test_helpers::{ real_user, real_feed, real_item};
-  use crate::assert_content_type;
+  use crate::utils::test_helpers::{real_user, real_feed, real_item};
+  use crate::assert_ok_activity_json;
 
   use crate::models::Feed;
 
@@ -459,8 +459,7 @@ mod test {
 
     let name = feed.name;
 
-    assert_eq!(res.status(), actix_web::http::StatusCode::OK);
-    assert_content_type!(res, ACTIVITY_JSON);
+    assert_ok_activity_json!(res);
 
     let bytes = actix_web::body::to_bytes(res.into_body()).await.unwrap();
     let body = std::str::from_utf8(&bytes).unwrap();
@@ -482,8 +481,8 @@ mod test {
     let res = server.call(req).await.unwrap();
 
     let name = feed.name;
-    assert_eq!(res.status(), actix_web::http::StatusCode::OK);
-    assert_content_type!(res, ACTIVITY_JSON);
+
+    assert_ok_activity_json!(res);
 
     let bytes = actix_web::body::to_bytes(res.into_body()).await.unwrap();
     let body = std::str::from_utf8(&bytes).unwrap();
@@ -506,8 +505,7 @@ mod test {
 
     let name = feed.name;
 
-    assert_eq!(res.status(), actix_web::http::StatusCode::OK);
-    assert_content_type!(res, ACTIVITY_JSON);
+    assert_ok_activity_json!(res);
 
     let bytes = actix_web::body::to_bytes(res.into_body()).await.unwrap();
     assert!(std::str::from_utf8(&bytes).unwrap().contains(&name));
@@ -592,8 +590,7 @@ mod test {
     let req = test::TestRequest::with_uri(&feed.followers_paged_url(2)).to_request();
     let res = server.call(req).await.unwrap();
 
-    assert_eq!(res.status(), actix_web::http::StatusCode::OK);
-    assert_content_type!(res, ACTIVITY_JSON);
+    assert_ok_activity_json!(res);
 
     let bytes = actix_web::body::to_bytes(res.into_body()).await.unwrap();
     let body = std::str::from_utf8(&bytes).unwrap();

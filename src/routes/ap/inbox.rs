@@ -83,7 +83,7 @@ pub async fn user_inbox(
 
 
   let feed_lookup = Feed::find_by_name(&username.to_string(), db).await;
-
+  
   let result = match feed_lookup {
     Ok(feed_lookup) => {
       match feed_lookup {
