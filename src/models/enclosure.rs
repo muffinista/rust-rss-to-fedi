@@ -23,12 +23,6 @@ pub struct Enclosure {
   pub updated_at: chrono::DateTime::<Utc>
 }
 
-impl PartialEq for Enclosure {
-  fn eq(&self, other: &Self) -> bool {
-    self.id == other.id || (self.item_id == other.item_id && self.url == other.url)
-  }
-}
-
 impl Enclosure {
   pub async fn find(id: i32, pool: &PgPool) -> Result<Enclosure, sqlx::Error> {
     sqlx::query_as!(Enclosure, "SELECT * FROM enclosures WHERE id = $1", id)

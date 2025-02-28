@@ -243,18 +243,6 @@ impl Actor {
   }
 
   ///
-  /// Delete the specified actor
-  ///
-  pub async fn delete(url: &String, pool: &PgPool) -> Result<(), sqlx::Error> {
-    sqlx::query!("DELETE FROM actors WHERE url = $1", url)
-      .execute(pool)
-      .await?;
-    
-    Ok(())
-  }
-
-
-  ///
   /// generate a full username address for the actor, ie @username@domain
   ///
   pub fn full_username(&self) -> String {
@@ -279,11 +267,13 @@ impl Actor {
 #[cfg(test)]
 mod test {
   use sqlx::postgres::PgPool;
+use url::Url;
   use std::fs;
 
   use crate::constants::ACTIVITY_JSON;
   use crate::models::actor::Actor;
-  use crate::utils::test_helpers::real_actor;
+  use crate::models::BlockedDomain;
+use crate::utils::test_helpers::real_actor;
 
   #[sqlx::test]
   async fn test_find_or_fetch(pool: PgPool) -> Result<(), String> {
@@ -311,6 +301,22 @@ mod test {
   }
 
   #[sqlx::test]
+  async fn test_find_or_fetch_on_blocklist(pool: PgPool) -> Result<(), String> {
+    // we could do this without a server by just faking a hostname...
+    let server = mockito::Server::new_async().await;
+    let host = Url::parse(&server.url()).unwrap().host().unwrap().to_string();
+    BlockedDomain::create(&host, &pool).await.unwrap();
+
+    let url = format!("{}/users/muffinista", &server.url()).to_string();
+
+    // m.assert_async().await;
+
+    assert!(Actor::find_or_fetch(&url, &pool).await.unwrap().is_none());
+
+    Ok(())
+  }
+
+  #[sqlx::test]
   async fn test_find(pool: PgPool) -> Result<(), String> {
     let _actor:Actor = real_actor(&pool).await.unwrap();
 
@@ -318,6 +324,19 @@ mod test {
     assert!(Actor::find("https://foo.com/users/user/inbox", &pool).await.unwrap().is_some());
     assert!(Actor::find("public_key_id", &pool).await.unwrap().is_some());
     assert!(Actor::find("random_string", &pool).await.unwrap().is_none());
+
+    Ok(())
+  }
+
+  #[sqlx::test]
+  async fn test_log_error(pool: PgPool) -> Result<(), String> {
+    let actor:Actor = real_actor(&pool).await.unwrap();
+
+    let _ = Actor::log_error(&actor.url, &pool).await;
+    let _ = Actor::log_error(&actor.url, &pool).await;
+
+    let errored_actor = Actor::find(&actor.url, &pool).await.unwrap().expect("missing actor????");
+    assert_eq!(2, errored_actor.error_count);
 
     Ok(())
   }
