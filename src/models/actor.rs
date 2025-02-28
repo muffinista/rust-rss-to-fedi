@@ -40,11 +40,6 @@ pub struct Actor {
   pub error_count:i32
 }
 
-// impl PartialEq for Actor {
-//   fn eq(&self, other: &Self) -> bool {
-//     self.url == other.url
-//   }
-// }
 
 impl Actor {
   ///
