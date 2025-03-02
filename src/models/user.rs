@@ -236,7 +236,7 @@ impl User {
   ///
   pub async fn apply_actor(&self, actor: &Actor, pool: &PgPool) -> Result<(), sqlx::Error> {
     let query = sqlx::query!(
-      "UPDATE users SET username = $1 WHERE id = $2", actor.username, self.id)
+      "UPDATE users SET username = $1, actor_url = $2 WHERE id = $3", actor.username, actor.url, self.id)
       .execute(pool)
       .await;
       

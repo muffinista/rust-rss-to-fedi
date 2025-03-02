@@ -25,6 +25,7 @@ use openssl::hash::MessageDigest;
 use openssl::pkey::PKey;
 use openssl::sign::Signer;
 
+
 use chrono::Utc;
 use uuid::Uuid;
 
@@ -64,6 +65,19 @@ macro_rules! assert_ok_activity_json {
   }
 }
 
+#[macro_export]
+macro_rules! assert_activity_pub_to {
+  ($expected:expr, $res:expr) => {
+    assert_eq!($expected, $res.to().unwrap().as_one().unwrap().as_xsd_any_uri().unwrap().as_str());
+  }
+}
+
+#[macro_export]
+macro_rules! assert_activity_pub_cc {
+  ($expected:expr, $res:expr) => {
+    assert_eq!($expected, $res.cc().unwrap().as_many().unwrap().first().unwrap().as_xsd_any_uri().unwrap().as_str());
+  }
+}
 
 pub fn sign_test_request(req: &mut actix_http::Request, body: &str, actor_id: &str, private_key: &str) {
   let sig_headers = vec![String::from(crate::constants::REQUEST_TARGET), String::from("host"), String::from("date"), String::from("digest")];
@@ -276,11 +290,13 @@ pub async fn real_item_with_enclosure(feed: &Feed, pool: &PgPool) -> sqlx::Resul
   let content_type = "audio/mpeg";
   let size = 123456;
 
+  let description = Some(String::from("A thing"));
+
   sqlx::query!("INSERT INTO enclosures 
-    (item_id, url, content_type, size, created_at, updated_at)
-    VALUES($1, $2, $3, $4, $5, $6)
+    (item_id, url, content_type, size, description, created_at, updated_at)
+    VALUES($1, $2, $3, $4, $5, $6, $7)
     RETURNING id",
-      item.id, url, content_type, size, now, now)
+      item.id, url, content_type, size, description, now, now)
     .fetch_one(pool)
     .await?;
 

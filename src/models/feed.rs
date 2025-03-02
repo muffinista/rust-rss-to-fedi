@@ -1545,7 +1545,7 @@ mod test {
 
     assert_eq!(feed.is_admin(), false);
 
-    feed.admin = true    ;
+    feed.admin = true;
     assert_eq!(feed.is_admin(), true);
 
     Ok(())

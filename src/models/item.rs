@@ -46,6 +46,9 @@ use std::env;
 use activitystreams::mime::Mime;
 
 
+const AS_PUBLIC: &str = "https://www.w3.org/ns/activitystreams#Public";
+
+
 ///
 /// Model for an item, which is the equivalent of an entry in an rss feed
 ///
@@ -279,7 +282,7 @@ impl Item {
       // and cc'd to followers
       "public" => { 
         note
-          .set_to(iri!("https://www.w3.org/ns/activitystreams#Public")) 
+          .set_to(iri!(AS_PUBLIC)) 
           .add_cc(iri!(feed.followers_url()))
       },
 
@@ -291,7 +294,7 @@ impl Item {
       _ => { 
         note
           .set_to(iri!(feed.followers_url()))
-          .add_cc(iri!("https://www.w3.org/ns/activitystreams#Public"))
+          .add_cc(iri!(AS_PUBLIC))
       },
     };
 
@@ -370,7 +373,7 @@ impl Item {
       // and cc'd to followers
       "public" => { 
         action
-          .set_to(iri!("https://www.w3.org/ns/activitystreams#Public")) 
+          .set_to(iri!(AS_PUBLIC)) 
           .add_cc(iri!(feed.followers_url()))
       },
 
@@ -384,7 +387,7 @@ impl Item {
       _ => { 
         action
           .set_to(iri!(feed.followers_url()))
-          .add_cc(iri!("https://www.w3.org/ns/activitystreams#Public"))
+          .add_cc(iri!(AS_PUBLIC))
       },
     };
 
@@ -519,10 +522,16 @@ mod test {
   use crate::models::Item;
   use crate::models::Actor;
   use crate::utils::test_helpers::{real_item, real_feed, fake_item, real_item_with_enclosure, test_tera};
+  use crate::assert_activity_pub_to;
+  use crate::assert_activity_pub_cc;
+  use crate::models::item::AS_PUBLIC;
+
+  use activitystreams::object::ObjectExt;
 
   use crate::utils::queue::create_queue;
 
   use serde_json::Value;
+
 
   #[sqlx::test]
   async fn test_find(pool: PgPool) -> sqlx::Result<()> {
@@ -637,7 +646,7 @@ mod test {
         let s = serde_json::to_string(&result).unwrap();
 
         let v: Value = serde_json::from_str(&s).unwrap();
-        assert_eq!(v["to"], "https://www.w3.org/ns/activitystreams#Public");
+        assert_eq!(v["to"], AS_PUBLIC);
         assert!(v["cc"][0].to_string().contains("/followers"));
         assert!(s.contains(r#"contentMap":{"en":"<a href=\"http://google.com\">Hello!</a><br />\n\n<p>Hey!</p>"#));
 
@@ -661,7 +670,7 @@ mod test {
        
         let v: Value = serde_json::from_str(&s).unwrap();
         assert!(v["to"].to_string().contains("/followers"));
-        assert_eq!(v["cc"][0], "https://www.w3.org/ns/activitystreams#Public");
+        assert_eq!(v["cc"][0], AS_PUBLIC);
         assert!(s.contains(r#"contentMap":{"en":"<a href=\"http://google.com\">Hello!</a><br />\n\n<p>Hey!</p>"#));
 
         Ok(())
@@ -736,6 +745,47 @@ mod test {
   }
 
   #[sqlx::test]
+  async fn test_to_activity_pub_unlisted(pool: PgPool) -> Result<(), String> {
+    let mut feed: Feed = real_feed(&pool).await.unwrap();
+    let item: Item = real_item(&feed, &pool).await.unwrap();
+    let tera = test_tera();
+
+    feed.status_publicity = None;
+
+    let result = item.to_activity_pub(&feed, &pool, &tera).await;
+    match result {
+      Ok(result) => {
+        assert_activity_pub_to!(feed.followers_url(), result);
+        assert_activity_pub_cc!(AS_PUBLIC, result);
+
+        Ok(())
+      },
+      Err(why) => Err(why.to_string())
+    }
+  }
+
+  #[sqlx::test]
+  async fn test_to_activity_pub_content_warning(pool: PgPool) -> Result<(), String> {
+    let mut feed: Feed = real_feed(&pool).await.unwrap();
+    let item: Item = real_item(&feed, &pool).await.unwrap();
+    let tera = test_tera();
+
+    feed.content_warning = Some(String::from("testing"));
+
+    let result = item.to_activity_pub(&feed, &pool, &tera).await;
+    match result {
+      Ok(result) => {
+        let s = serde_json::to_string(&result).unwrap();
+        
+        assert!(s.contains("testing"));
+
+        Ok(())
+      },
+      Err(why) => Err(why.to_string())
+    }
+  }
+
+  #[sqlx::test]
   async fn test_delete(pool: PgPool) -> Result<(), String> {
     let feed: Feed = real_feed(&pool).await.unwrap();
     let item: Item = real_item_with_enclosure(&feed, &pool).await.unwrap();
@@ -779,8 +829,6 @@ mod test {
       .create_async()
       .await;
 
-
-
     let _follower = feed.add_follower(&pool, &actor).await;
     let mut queue = create_queue().await;
 
@@ -794,9 +842,18 @@ mod test {
     feed.status_publicity = Some("public".to_string());
     assert!(item.deliver(&feed, &pool, &tera, &mut queue).await.is_ok());
 
-    // skip for now @todo fix this
-    // feed.status_publicity = Some("direct".to_string());
-    // assert!(item.deliver(&feed, &pool, &mut queue).await.is_ok());
+
+    //
+    // test direct messages to feed owner
+    //
+    let feed_user = feed.user(&pool).await.unwrap();
+    let feed_actor = Actor::find(&actor, &pool).await.unwrap().unwrap();
+    let _ = feed_user.apply_actor(&feed_actor, &pool).await;
+
+    let mut feed = Feed::find(feed.id, &pool).await.unwrap();
+
+    feed.status_publicity = Some("direct".to_string());
+    assert!(item.deliver(&feed, &pool, &tera, &mut queue).await.is_ok());
 
     Ok(())
   }
@@ -840,6 +897,37 @@ mod test {
 
     Ok(())
   }
+
+  #[sqlx::test]
+  async fn test_cleanup(pool: PgPool) -> sqlx::Result<()> {
+      let feed: Feed = real_feed(&pool).await?;
+      let item: Item = real_item(&feed, &pool).await?;
+      let ts = chrono::Utc::now() - chrono::Duration::days(120);
+
+      let _ = sqlx::query!("UPDATE items set created_at = $1 WHERE id = $2", ts, item.id)
+        .execute(&pool)
+        .await;
+
+
+      let result = sqlx::query!("SELECT COUNT(1) AS tally FROM items")
+          .fetch_one(&pool)
+          .await
+      .unwrap();
+
+			assert!(result.tally.unwrap() == 1);
+
+			Item::cleanup(&pool, 1, 10000).await.unwrap();
+			
+			let post_result = sqlx::query!("SELECT COUNT(1) AS tally FROM items")
+					.fetch_one(&pool)
+					.await
+					.unwrap();
+			
+			assert!(post_result.tally.unwrap() == 0);
+      
+			Ok(())
+  }
+
 }
 
 
