@@ -17,7 +17,7 @@ rm -rf target/
 
 scripts/test
 
-grcov ../rust-activitypub/profile/ -s . --binary-path ../rust-activitypub/target/debug/ -t html --llvm --branch --ignore-not-existing -o ../rust-activitypub/target/debug/coverage/
-
+#grcov ../rust-activitypub/profile/ -s . --binary-path ../rust-activitypub/target/debug/ -t html --llvm --branch --ignore-not-existing -o ../rust-activitypub/target/debug/coverage/
+grcov . --binary-path ./target/debug/deps/ -s . -t html --branch --ignore-not-existing --ignore '../*' --ignore "/*" -o target/coverage/html
 
 # https://vladfilippov.com/rust-code-coverage-tools/

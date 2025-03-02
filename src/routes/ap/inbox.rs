@@ -6,7 +6,7 @@ use sqlx::postgres::PgPool;
 
 use crate::models::feed_error::AppError;
 
-use crate::models::Feed;
+use crate::models::{Feed, Message};
 use crate::models::feed::AcceptedActivity;
 
 use crate::utils::signature_check::{SignatureValidity, validate_request};
@@ -60,7 +60,7 @@ pub async fn user_inbox(
   let signature_validity = signature_validity.unwrap();
 
   // get the actor from headers and check if the signature is valid
-  let (_actor, _error) = if env::var("DISABLE_SIGNATURE_CHECKS").is_ok() {
+  let (_actor, error) = if env::var("DISABLE_SIGNATURE_CHECKS").is_ok() {
     (None, None)
   } else {   
     match signature_validity {
@@ -102,7 +102,7 @@ pub async fn user_inbox(
     Err(_why) => return Err(AppError::NotFound)
   };
 
-  // let _log_result = Message::log(&username.to_string(), &msg, actor.cloned(), error, result == actix_web::http::StatusCode::ACCEPTED, db).await;
+  let _log_result = Message::log(&username.to_string(), raw, None, error, result == actix_web::http::StatusCode::ACCEPTED, db).await;
 
   Ok(HttpResponse::build(result)
     .finish())

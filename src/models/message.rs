@@ -17,20 +17,8 @@ pub struct Message {
   pub updated_at: chrono::DateTime::<Utc>
 }
 
-impl PartialEq for Message {
-  fn eq(&self, other: &Self) -> bool {
-    self.id == other.id
-  }
-}
-
 impl Message {
-  pub async fn find(id: i32, pool: &PgPool) -> Result<Option<Message>, sqlx::Error> {
-    sqlx::query_as!(Message, "SELECT * FROM messages WHERE id = $1", id)
-      .fetch_optional(pool)
-      .await
-  }
-
-  pub async fn log(username: &String, text: &String, actor: Option<String>, error: Option<String>,  handled: bool, pool: &PgPool) -> Result<(), sqlx::Error> {
+  pub async fn log(username: &String, text: &str, actor: Option<&str>, error: Option<&str>,  handled: bool, pool: &PgPool) -> Result<(), sqlx::Error> {
     let now = Utc::now();
 
     sqlx::query!("INSERT INTO messages 
@@ -61,6 +49,24 @@ mod test {
 		use sqlx::postgres::PgPool;
 		use chrono::{Duration, Utc};
 		use crate::models::Message;
+
+    
+  #[sqlx::test]
+  async fn test_log(pool: PgPool) -> Result<(), String> {
+    let username = String::from("tester");
+
+    let result = Message::log(
+      &username,
+      "here is a test message",
+      Some("test actor"),
+      None,
+      true,
+      &pool
+    ).await;
+
+    assert!(result.is_ok());
+    Ok(())
+  }
 
   #[sqlx::test]
   async fn test_cleanup(pool: PgPool) -> Result<(), String> {

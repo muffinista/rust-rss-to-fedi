@@ -149,11 +149,8 @@ pub async fn validate_request(request: &HttpRequest, payload: &str) -> Result<Si
               } else {
                 Ok(SignatureValidity::Outdated(key_id))
               }
-
             }
-
           }
-    
         }
       }
     },
