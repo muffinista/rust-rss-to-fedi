@@ -55,8 +55,6 @@ impl<Inner> markers::Actor for CanBeSensitive<Inner> where Inner: markers::Actor
 ///
 /// Forward for base methods
 ///
-/// This allows us to access methods related to `context`, `id`, `kind`, `name`,
-/// `media_type`, and `preview` directly from the PublicKey struct
 impl<Inner> AsBase for CanBeSensitive<Inner>
 where
 Inner: AsBase,
@@ -126,7 +124,7 @@ impl<Inner> AsCanBeSensitive<Inner> for CanBeSensitive<Inner> {
 
 /// And now create helper methods
 pub trait CanBeSensitiveExt<Inner>: AsCanBeSensitive<Inner> {
-  /// Borrow the public key's ID
+  /// grab sensitive setting
   fn sensitive<'a>(&'a self) -> &'a bool
   where
   Inner: 'a,
@@ -134,7 +132,7 @@ pub trait CanBeSensitiveExt<Inner>: AsCanBeSensitive<Inner> {
     &self.can_be_sensitive_ref().sensitive
   }
   
-  /// Set the public key's ID
+  /// Set as sensitive
   fn set_sensitive(&mut self, val: bool) -> &mut Self {
     self.can_be_sensitive_mut().sensitive = val;
     self
@@ -142,6 +140,6 @@ pub trait CanBeSensitiveExt<Inner>: AsCanBeSensitive<Inner> {
 }
 
 
-/// Finally, we'll automatically implement PublicKeyExt for any type implementing AsPublicKey
+/// Finally, we'll automatically implement CanBeSensitiveExt for any type implementing AsCanBeSensitive
 impl<T, Inner> CanBeSensitiveExt<Inner> for T where T: AsCanBeSensitive<Inner> {}
 

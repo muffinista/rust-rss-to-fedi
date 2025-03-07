@@ -1,5 +1,5 @@
 use activitystreams::{
-  base::{AnyBase, AsBase, Base, Extends},
+  base::{AnyBase, Base, Extends},
   kind,
   markers,
   unparsed::*,
@@ -49,31 +49,31 @@ pub trait AsAttachment: markers::Base {
 /// This trait represents methods valid for any ActivityStreams Attachment.
 ///
 /// Documentation for the fields related to these methods can be found on the `Attachment` struct
-pub trait AttachmentExt: AsAttachment {
-  fn name<'a>(&'a self) -> &'a String
-  where
-    Self::Kind: 'a,
-  {
-    &self.attachment_ref().name //.as_ref()
-  }
+// pub trait AttachmentExt: AsAttachment {
+//   fn name<'a>(&'a self) -> &'a String
+//   where
+//     Self::Kind: 'a,
+//   {
+//     &self.attachment_ref().name //.as_ref()
+//   }
 
-  fn set_name(&mut self, name: &str) -> &mut Self {
-    self.attachment_mut().name = name.to_string();
-    self
-  }
+//   fn set_name(&mut self, name: &str) -> &mut Self {
+//     self.attachment_mut().name = name.to_string();
+//     self
+//   }
 
-  fn value<'a>(&'a self) -> &'a String
-  where
-    Self::Kind: 'a,
-  {
-    &self.attachment_ref().value //.as_ref()
-  }
+//   fn value<'a>(&'a self) -> &'a String
+//   where
+//     Self::Kind: 'a,
+//   {
+//     &self.attachment_ref().value //.as_ref()
+//   }
 
-  fn set_value(&mut self, value: &str) -> &mut Self {
-    self.attachment_mut().value = value.to_string();
-    self
-  }
-}
+//   fn set_value(&mut self, value: &str) -> &mut Self {
+//     self.attachment_mut().value = value.to_string();
+//     self
+//   }
+// }
 
 
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
@@ -139,59 +139,59 @@ impl<Kind> Extends for Attachment<Kind> {
 }
 
 
-impl<Kind> TryFrom<Base<Kind>> for Attachment<Kind>
-where
-  Kind: serde::de::DeserializeOwned,
-{
-  type Error = serde_json::Error;
+// impl<Kind> TryFrom<Base<Kind>> for Attachment<Kind>
+// where
+//   Kind: serde::de::DeserializeOwned,
+// {
+//   type Error = serde_json::Error;
 
-  fn try_from(base: Base<Kind>) -> Result<Self, Self::Error> {
-    Self::extending(base)
-  }
-}
+//   fn try_from(base: Base<Kind>) -> Result<Self, Self::Error> {
+//     Self::extending(base)
+//   }
+// }
 
-impl<Kind> TryFrom<Attachment<Kind>> for Base<Kind>
-where
-  Kind: serde::ser::Serialize,
-{
-  type Error = serde_json::Error;
+// impl<Kind> TryFrom<Attachment<Kind>> for Base<Kind>
+// where
+//   Kind: serde::ser::Serialize,
+// {
+//   type Error = serde_json::Error;
 
-  fn try_from(attachment: Attachment<Kind>) -> Result<Self, Self::Error> {
-    attachment.retracting()
-  }
-}
+//   fn try_from(attachment: Attachment<Kind>) -> Result<Self, Self::Error> {
+//     attachment.retracting()
+//   }
+// }
 
-impl<Kind> UnparsedMut for Attachment<Kind> {
-  fn unparsed_mut(&mut self) -> &mut Unparsed {
-    self.inner.unparsed_mut()
-  }
-}
+// impl<Kind> UnparsedMut for Attachment<Kind> {
+//   fn unparsed_mut(&mut self) -> &mut Unparsed {
+//     self.inner.unparsed_mut()
+//   }
+// }
 
-impl<Kind> AsBase for Attachment<Kind> {
-  type Kind = Kind;
+// impl<Kind> AsBase for Attachment<Kind> {
+//   type Kind = Kind;
 
-  fn base_ref(&self) -> &Base<Self::Kind> {
-    &self.inner
-  }
+//   fn base_ref(&self) -> &Base<Self::Kind> {
+//     &self.inner
+//   }
 
-  fn base_mut(&mut self) -> &mut Base<Self::Kind> {
-    &mut self.inner
-  }
-}
+//   fn base_mut(&mut self) -> &mut Base<Self::Kind> {
+//     &mut self.inner
+//   }
+// }
 
-impl<Kind> AsAttachment for Attachment<Kind> {
-  type Kind = Kind;
+// impl<Kind> AsAttachment for Attachment<Kind> {
+//   type Kind = Kind;
 
-  fn attachment_ref(&self) -> &Attachment<Self::Kind> {
-    self
-  }
+//   fn attachment_ref(&self) -> &Attachment<Self::Kind> {
+//     self
+//   }
 
-  fn attachment_mut(&mut self) -> &mut Attachment<Self::Kind> {
-    self
-  }
-}
+//   fn attachment_mut(&mut self) -> &mut Attachment<Self::Kind> {
+//     self
+//   }
+// }
 
-impl<T> AttachmentExt for T where T: AsAttachment {}
+// impl<T> AttachmentExt for T where T: AsAttachment {}
 
 
 pub type PropertyValue = Attachment<AttachmentType>;
@@ -200,13 +200,18 @@ pub type PropertyValue = Attachment<AttachmentType>;
 mod test {
   use super::PropertyValue;
   use activitystreams::base::ExtendsExt;
+  use serde_json::Value;
 
   #[test]
   fn test_property_value() {
     let pv = PropertyValue::new("Powered by", "https://feedsin.space/").into_any_base().expect("tf?");
+
+    // convert to generic json value for testing
     let s = serde_json::to_string(&pv).unwrap();
-    assert!(s.contains(r#""type":"PropertyValue""#));
-    assert!(s.contains(r#""value":"https://feedsin.space/""#));
-    assert!(s.contains(r#""name":"Powered by""#));
+
+    let v: Value = serde_json::from_str(&s).unwrap();
+    assert_eq!("PropertyValue", v["type"]);
+    assert_eq!("Powered by", v["name"]);
+    assert_eq!("https://feedsin.space/", v["value"]);
   }
 }

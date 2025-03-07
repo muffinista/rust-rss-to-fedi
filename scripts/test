@@ -6,5 +6,4 @@ if [ -z "$DATABASE_URL" ]; then
 fi
 
 DOMAIN_NAME=test.com cargo sqlx prepare
-
-ROCKET_SECRET_KEY=41V7EhqoBNEM4V40VXeNoxdEbD2R2tgHoiUeHxBPpEw= DISABLE_SIGNATURE_CHECKS=true DOMAIN_NAME=0.0.0.0:8000 cargo test "$@"
+cargo test "$@"

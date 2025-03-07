@@ -73,6 +73,8 @@ mod test {
   use crate::{assert_ok_activity_json, build_test_server};
   use crate::utils::test_helpers::real_feed;
 
+  use serde_json::Value;
+
   #[sqlx::test]
   async fn test_render_feed_outbox(pool: PgPool) -> sqlx::Result<()> {
     let feed = real_feed(&pool).await.unwrap();
@@ -81,7 +83,34 @@ mod test {
     let res = server.call(req).await.unwrap();
 
     assert_ok_activity_json!(res);
+    
+    let bytes = actix_web::body::to_bytes(res.into_body()).await.unwrap();
+    let body = std::str::from_utf8(&bytes).unwrap();
 
+    let v: Value = serde_json::from_str(&body).unwrap();
+    assert_eq!("OrderedCollection", v["type"]);
+    assert_eq!("https://www.w3.org/ns/activitystreams", v["@context"]);
+
+    Ok(())
+  }
+
+  #[sqlx::test]
+  async fn test_render_feed_outbox_paged(pool: PgPool) -> sqlx::Result<()> {
+    let feed = real_feed(&pool).await.unwrap();
+    let server = test::init_service(build_test_server!(pool)).await;
+    let req = test::TestRequest::with_uri(&format!("/feed/{}/outbox?page=1", feed.name)).to_request();
+    let res = server.call(req).await.unwrap();
+
+    assert_ok_activity_json!(res);
+
+    let bytes = actix_web::body::to_bytes(res.into_body()).await.unwrap();
+    let body = std::str::from_utf8(&bytes).unwrap();
+
+    let v: Value = serde_json::from_str(&body).unwrap();
+    assert_eq!("OrderedCollectionPage", v["type"]);
+    assert_eq!("https://www.w3.org/ns/activitystreams", v["@context"]);
+
+    
     Ok(())
   }
 }
