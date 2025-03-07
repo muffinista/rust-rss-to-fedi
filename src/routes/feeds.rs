@@ -390,7 +390,8 @@ mod test {
   use crate::models::Feed;
 
   use sqlx::postgres::PgPool;
-  
+  use serde_json::Value;
+
   #[sqlx::test]
   async fn test_show_feed(pool: PgPool) -> sqlx::Result<()> {
     let feed = real_feed(&pool).await.unwrap();
@@ -444,7 +445,6 @@ mod test {
   #[sqlx::test]
   async fn test_render_feed(pool: PgPool) -> sqlx::Result<()> {
     let feed = real_feed(&pool).await.unwrap();
-
 
     let server = test::init_service(build_test_server!(pool)).await;
     let content_type: mime::Mime = ACTIVITY_JSON.parse().unwrap();
@@ -547,6 +547,45 @@ mod test {
     Ok(())
   }
 
+
+  #[sqlx::test]
+  async fn test_test_feed_username_taken(pool: PgPool) -> sqlx::Result<()> {
+    let user = real_user(&pool).await.unwrap();
+    let feed = real_feed(&pool).await.unwrap();
+
+    let server = test::init_service(build_test_server!(pool)).await;
+
+    let req = test::TestRequest::with_uri(&format!("/user/auth/{}", &user.login_token)).to_request();
+    let res = server.call(req).await.unwrap();
+    assert_eq!(res.status(), actix_web::http::StatusCode::TEMPORARY_REDIRECT);
+
+    let session_cookies = res.response().cookies();
+
+    let url: String = "https://muffinlabs.com/".to_string();
+    let name: String = feed.name;
+
+    let json = crate::routes::feeds::FeedForm {
+      name: name,
+      url: url
+    };
+    let mut req = test::TestRequest::post().uri("/test-feed").set_json(json);
+    for cookie in session_cookies {
+      req = req.cookie(cookie.clone());
+    } 
+
+    let req = req.to_request();
+    let res = server.call(req).await.unwrap();
+    
+    assert_eq!(res.status(), actix_web::http::StatusCode::OK);
+    let bytes = actix_web::body::to_bytes(res.into_body()).await.unwrap();
+    let body = std::str::from_utf8(&bytes).unwrap();
+
+    assert!(body.contains(r#"{"src":"https://muffinlabs.com/","url":"https://muffinlabs.com/","error":"Sorry, that username is already taken"}"#));
+
+    Ok(())
+  }
+
+
   #[sqlx::test]
   async fn test_add_feed(pool: PgPool) -> sqlx::Result<()> {
     let count = Feed::count(&pool).await.unwrap();
@@ -586,6 +625,58 @@ mod test {
     Ok(())
   }
 
+  
+  #[sqlx::test]
+  async fn test_delete_feed(pool: PgPool) -> sqlx::Result<()> {
+    let user = real_user(&pool).await.unwrap();
+    let feed = real_feed(&pool).await.unwrap();
+
+    let count = Feed::count(&pool).await.unwrap();
+
+    let server = test::init_service(build_test_server!(pool)).await;
+
+    let req = test::TestRequest::with_uri(&format!("/user/auth/{}", &user.login_token)).to_request();
+    let res = server.call(req).await.unwrap();
+    assert_eq!(res.status(), actix_web::http::StatusCode::TEMPORARY_REDIRECT);
+
+    let session_cookies = res.response().cookies();
+
+    let mut req = test::TestRequest::delete().uri(&format!("/feed/{}/delete", feed.id));
+    for cookie in session_cookies {
+      req = req.cookie(cookie.clone());
+    } 
+
+    let req = req.to_request();
+    let res = server.call(req).await.unwrap();
+    
+    assert_eq!(res.status(), actix_web::http::StatusCode::TEMPORARY_REDIRECT);
+
+    let new_count = Feed::count(&pool).await.unwrap();
+
+    assert_eq!(count - 1, new_count);
+
+    Ok(())
+  }
+
+  #[sqlx::test]
+  async fn test_delete_feed_not_logged_in(pool: PgPool) -> sqlx::Result<()> {
+    let feed = real_feed(&pool).await.unwrap();
+
+    let count = Feed::count(&pool).await.unwrap();
+
+    let server = test::init_service(build_test_server!(pool)).await;
+
+    let req = test::TestRequest::delete().uri(&format!("/feed/{}/delete", feed.id)).to_request();
+    let res = server.call(req).await.unwrap();
+    
+    assert_eq!(actix_web::http::StatusCode::NOT_FOUND, res.status());
+
+    let new_count = Feed::count(&pool).await.unwrap();
+    assert_eq!(count, new_count);
+
+    Ok(())
+  }
+
 
   #[sqlx::test]
   async fn test_test_feed_not_logged_in(pool: PgPool) -> sqlx::Result<()> {
@@ -608,7 +699,39 @@ mod test {
   }
 
   #[sqlx::test]
-  async fn test_render_feed_followers(pool: PgPool) -> sqlx::Result<()> {
+  async fn test_render_feed_followers_unpaged(pool: PgPool) -> sqlx::Result<()> {
+    let feed = real_feed(&pool).await.unwrap();
+    let now = Utc::now();
+
+    for i in 1..35 {
+      let actor = format!("https://activitypub.pizza/users/colin{}", i);
+      sqlx::query!("INSERT INTO followers (feed_id, actor, created_at, updated_at) VALUES($1, $2, $3, $4)", feed.id, actor, now, now)
+        .execute(&pool)
+        .await
+        .unwrap();
+    }
+    
+    let server = test::init_service(build_test_server!(pool)).await;
+    let req = test::TestRequest::with_uri(&feed.followers_url()).to_request();
+    let res = server.call(req).await.unwrap();
+
+    assert_ok_activity_json!(res);
+
+    let bytes = actix_web::body::to_bytes(res.into_body()).await.unwrap();
+    let body = std::str::from_utf8(&bytes).unwrap();
+
+    let v: Value = serde_json::from_str(&body).unwrap();
+    assert_eq!("OrderedCollection", v["type"]);
+    assert_eq!("https://www.w3.org/ns/activitystreams", v["@context"]);
+    assert_eq!(34, v["totalItems"]);
+    assert_eq!(feed.followers_paged_url(1), v["first"]);
+    assert_eq!(feed.followers_paged_url(4), v["last"]);
+    
+    Ok(())
+  }
+
+  #[sqlx::test]
+  async fn test_render_feed_followers_paged(pool: PgPool) -> sqlx::Result<()> {
     let feed = real_feed(&pool).await.unwrap();
     let now = Utc::now();
 
@@ -628,18 +751,20 @@ mod test {
 
     let bytes = actix_web::body::to_bytes(res.into_body()).await.unwrap();
     let body = std::str::from_utf8(&bytes).unwrap();
- 
-    assert!(body.contains("OrderedCollectionPage"));
-    assert!(body.contains("/colin11"));
-    assert!(body.contains("/colin12"));
-    assert!(body.contains("/colin13"));
-
-    assert!(body.contains(&format!(r#"first":"{}"#, &feed.followers_paged_url(1))));
-    assert!(body.contains(&format!(r#"prev":"{}"#, &feed.followers_paged_url(1))));
-    assert!(body.contains(&format!(r#"next":"{}"#, &feed.followers_paged_url(3))));
-    assert!(body.contains(&format!(r#"last":"{}"#, &feed.followers_paged_url(4))));
-    assert!(body.contains(&format!(r#"current":"{}"#, &feed.followers_paged_url(2))));
     
+    let v: Value = serde_json::from_str(&body).unwrap();
+    assert_eq!("OrderedCollectionPage", v["type"]);
+    assert_eq!("https://www.w3.org/ns/activitystreams", v["@context"]);
+    assert_eq!(feed.followers_paged_url(1), v["first"]);
+    assert_eq!(feed.followers_paged_url(4), v["last"]);
+    assert_eq!(feed.followers_paged_url(3), v["next"]);
+    assert_eq!(feed.followers_paged_url(2), v["current"]);
+    assert_eq!(feed.followers_paged_url(1), v["prev"]);
+
+    assert!(v["items"][0].to_string().contains("/colin11"));
+    assert!(v["items"][1].to_string().contains("/colin12"));
+    assert!(v["items"][2].to_string().contains("/colin13"));
+
     Ok(())
   }
 }
