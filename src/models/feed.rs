@@ -188,7 +188,7 @@ impl Feed {
   }
 
   ///
-  /// Get a count of how many items we have for this feed
+  /// Get a count of how many feeds we have
   ///
   pub async fn count(pool: &PgPool)  -> Result<i32, sqlx::Error> {
     let result = sqlx::query!("SELECT COUNT(1) AS tally FROM feeds")

@@ -46,7 +46,6 @@ impl Actor {
   /// Query the DB for the actor with the given URL. If not found, fetch the data and cache it
   ///
   pub async fn find_or_fetch(url: &str, pool: &PgPool) -> Result<Option<Actor>, DeliveryError> {
-
     let mut clean_url = Url::parse(url).unwrap();
     clean_url.set_fragment(None);
 
@@ -294,8 +293,10 @@ mod test {
 
     m.assert_async().await;
 
-    assert_eq!(actor.url, url);
-    assert_eq!(actor.public_key_id, "https://botsin.space/users/muffinista#main-key");
+    let expected_public_key_id = format!("{:}/users/muffinista#main-key", server.url()); 
+
+    assert_eq!(url, actor.url);
+    assert_eq!(expected_public_key_id, actor.public_key_id);
 
     Ok(())
   }

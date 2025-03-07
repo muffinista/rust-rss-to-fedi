@@ -6,6 +6,7 @@ use serde_json::json;
 use serde_json::Value;
 use sqlx::postgres::PgPool;
 
+use crate::constants::ACTIVITY_JSON;
 use crate::models::User;
 use crate::models::Feed;
 use crate::models::Follower;
@@ -144,13 +145,13 @@ pub fn fake_user() -> User {
 }
 
 pub async fn real_user(pool: &PgPool) -> sqlx::Result<User> {
-  let user:User = User::find_or_create_by_actor_url(&"https:://muffin.pizza/users/test".to_string(), &pool).await?;
+  let user:User = User::find_or_create_by_actor_url(&"https://muffin.pizza/users/test".to_string(), &pool).await?;
   
   Ok(user)
 }
 
 pub async fn real_admin_user(pool: &PgPool) -> sqlx::Result<User> {
-  let user:User = User::find_or_create_by_actor_url(&"https:://muffin.pizza/users/test".to_string(), &pool).await?;
+  let user:User = User::find_or_create_by_actor_url(&"https://muffin.pizza/users/test".to_string(), &pool).await?;
 
   sqlx::query!("UPDATE users SET admin = true WHERE id = $1", user.id)
     .execute(pool)
@@ -332,4 +333,21 @@ pub fn mock_ap_action(object_server: &mut ServerGuard, path: &str, body: &str) -
     .with_header("Accept", crate::constants::ACTIVITY_JSON)
     .with_body(body)
     .create_async()
+}
+
+pub async fn stubbed_user_with_actor(pool: &PgPool, object_server: &mut ServerGuard) -> sqlx::Result<User> {
+  let inbox_url = format!("{:}/users/muffinista/inbox", object_server.url()); 
+  let path = "fixtures/muffinista.json";
+  let data = std::fs::read_to_string(path).unwrap().replace("SERVER_URL", &object_server.url());
+
+  let _ = object_server.mock("GET", "/users/muffinista/inbox")
+    .with_status(200)
+    .with_header("Accept", ACTIVITY_JSON)
+    .with_body(data)
+    .create_async()
+    .await;
+
+  let user: User = User::find_or_create_by_actor_url(&inbox_url, &pool).await?;
+  
+  Ok(user)
 }

@@ -105,8 +105,9 @@ pub async fn add_feed(session: Session, db: web::Data<PgPool>, form: web::Form<F
         match feed {
           Ok(feed) => {
             let _ = request_feed_update(&feed).await;
-      
+
             let notify = user.send_link_to_feed(&feed, db, tmpl).await;
+
             match notify {
               Ok(_notify) => log::debug!("user notified!"),
               Err(why) => log::info!("something went wrong with notification: {why:?}")
@@ -383,7 +384,7 @@ mod test {
   use chrono::Utc;
 
   use crate::{build_test_server, constants::ACTIVITY_JSON};
-  use crate::utils::test_helpers::{real_user, real_feed, real_item};
+  use crate::utils::test_helpers::{real_feed, real_item, real_user, stubbed_user_with_actor};
   use crate::assert_ok_activity_json;
 
   use crate::models::Feed;
@@ -542,6 +543,45 @@ mod test {
     let body = std::str::from_utf8(&bytes).unwrap();
 
     assert!(body.contains(r#"{"src":"https://muffinlabs.com/","url":"https://muffinlabs.com/atom.xml","error":null}"#));
+
+    Ok(())
+  }
+
+  #[sqlx::test]
+  async fn test_add_feed(pool: PgPool) -> sqlx::Result<()> {
+    let count = Feed::count(&pool).await.unwrap();
+
+    let mut object_server = mockito::Server::new_async().await;
+    let user = stubbed_user_with_actor(&pool, &mut object_server).await.unwrap();
+
+    let server = test::init_service(build_test_server!(pool)).await;
+
+    let req = test::TestRequest::with_uri(&format!("/user/auth/{}", &user.login_token)).to_request();
+    let res = server.call(req).await.unwrap();
+    assert_eq!(res.status(), actix_web::http::StatusCode::TEMPORARY_REDIRECT);
+
+    let session_cookies = res.response().cookies();
+
+    let url: String = "https://muffinlabs.com/".to_string();
+    let name: String = "testfeed".to_string();
+
+    let form = crate::routes::feeds::FeedForm {
+      name: name,
+      url: url
+    };
+    let mut req = test::TestRequest::post().uri("/feed").set_form(form);
+    for cookie in session_cookies {
+      req = req.cookie(cookie.clone());
+    } 
+
+    let req = req.to_request();
+    let res = server.call(req).await.unwrap();
+    
+    assert_eq!(res.status(), actix_web::http::StatusCode::TEMPORARY_REDIRECT);
+
+    let new_count = Feed::count(&pool).await.unwrap();
+
+    assert_eq!(count + 1, new_count);
 
     Ok(())
   }

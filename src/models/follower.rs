@@ -68,7 +68,9 @@ mod test {
 
     m.assert_async().await;
 
-    assert!(result.expect("Failed to find inbox") == "https://botsin.space/users/muffinista/inbox");
+    let expected_inbox_url = format!("{:}/users/muffinista/inbox", server.url()); 
+
+    assert!(expected_inbox_url == result.expect("Failed to find inbox"));
     Ok(())
   }
 
