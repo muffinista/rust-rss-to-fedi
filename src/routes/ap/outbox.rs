@@ -8,7 +8,7 @@ use crate::models::AppError;
 use crate::models::Feed;
 use crate::routes::PageQuery;
 use crate::constants::ACTIVITY_JSON;
-
+use crate::activity_json_response;
 
 ///  The outbox is discovered through the outbox property of an actor's profile.
 ///  The outbox MUST be an OrderedCollection.
@@ -42,14 +42,14 @@ pub async fn render_feed_outbox(
             Some(page) => {
               let result = feed.outbox_paged(page, db, tmpl).await;
               match result {
-                Ok(result) => Ok(HttpResponse::build(StatusCode::OK).content_type(ACTIVITY_JSON).body(serde_json::to_string(&result).unwrap())),
+                Ok(result) => Ok(activity_json_response!(serde_json::to_string(&result).unwrap())),
                 Err(_why) => Err(AppError::InternalError)
               }
             },
             None => {
               let result = feed.outbox(db).await;
               match result {
-                Ok(result) => Ok(HttpResponse::build(StatusCode::OK).content_type(ACTIVITY_JSON).body(serde_json::to_string(&result).unwrap())),
+                Ok(result) => Ok(activity_json_response!(serde_json::to_string(&result).unwrap())),
                 Err(_why) => Err(AppError::InternalError)
               }
             }

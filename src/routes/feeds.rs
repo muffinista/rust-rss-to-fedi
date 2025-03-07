@@ -23,7 +23,7 @@ use crate::utils::queue::create_queue;
 use crate::utils::templates;
 use crate::tasks::RefreshFeed;
 use crate::constants::ACTIVITY_JSON;
-
+use crate::activity_json_response;
 
 #[derive(Deserialize, Serialize)]
 pub struct FeedForm {
@@ -52,12 +52,6 @@ pub struct FeedLookup {
 #[derive(Deserialize)]
 struct PageQuery {
   page: Option<i32>,
-}
-
-
-pub fn activity_json() -> actix_web::http::header::ContentType {
-  let content_type: activitystreams::mime::Mime = ACTIVITY_JSON.parse().unwrap();
-  actix_web::http::header::ContentType(content_type)
 }
 
 
@@ -296,7 +290,7 @@ pub async fn show_feed(
 async fn render_json_feed(feed: &Feed, tera: &tera::Tera, db:&sqlx::Pool<sqlx::Postgres>) -> Result<HttpResponse, AppError> {
   let ap = feed.to_activity_pub(tera, db).await;
   match ap {
-    Ok(ap) => Ok(HttpResponse::build(StatusCode::OK).content_type(ACTIVITY_JSON).body(ap)),
+    Ok(ap) => Ok(activity_json_response!(ap)),
     Err(why) => {
       log::info!("{:?}", why);
       Err(AppError::NotFound)
@@ -362,14 +356,14 @@ pub async fn render_feed_followers(path: web::Path<String>, query: web::Query<Pa
     Some(page) => {
       let result = feed.followers_paged(page, db).await;
       match result {
-        Ok(result) => Ok(HttpResponse::build(StatusCode::OK).content_type(ACTIVITY_JSON).body(serde_json::to_string(&result).unwrap())),
+        Ok(result) => Ok(activity_json_response!(serde_json::to_string(&result).unwrap())),
         Err(_why) => Err(AppError::NotFound)
       }
     },
     None => {
       let result = feed.followers(db).await;
       match result {
-        Ok(result) => Ok(HttpResponse::build(StatusCode::OK).content_type(ACTIVITY_JSON).body(serde_json::to_string(&result).unwrap())),
+        Ok(result) => Ok(activity_json_response!(serde_json::to_string(&result).unwrap())),
         Err(_why) => Err(AppError::NotFound)
       }
     }

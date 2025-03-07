@@ -13,6 +13,14 @@ static BASE_USER_AGENT: &str = concat!(
   env!("CARGO_PKG_VERSION"),
 );
 
+#[macro_export]
+macro_rules! activity_json_response {
+  ($body:expr) => {
+    HttpResponse::build(StatusCode::OK).content_type(ACTIVITY_JSON).body($body)
+  }
+}
+
+
 ///
 /// Generate a user agent for the current version of the code and the running instance
 ///
