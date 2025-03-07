@@ -71,4 +71,24 @@ mod test {
     assert!(result.expect("Failed to find inbox") == "https://botsin.space/users/muffinista/inbox");
     Ok(())
   }
+
+  #[sqlx::test]
+  async fn test_find_inbox_404(pool: PgPool) -> Result<(), String> {
+    let mut server = mockito::Server::new_async().await;
+    let feed: Feed = fake_feed();
+    let follower: Follower = fake_follower(&feed, &server);
+
+    let m = server.mock("GET", "/users/muffinista")
+      .with_status(404)
+      .with_header("Accept", ACTIVITY_JSON)
+      .create_async()
+      .await;
+
+    let result = follower.find_inbox(&pool).await;
+
+    m.assert_async().await;
+
+    assert!(result.is_err());
+    Ok(())
+  }
 }

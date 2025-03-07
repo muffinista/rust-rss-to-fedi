@@ -8,7 +8,7 @@ use sqlx::postgres::PgPool;
 
 use webfinger::*;
 
-use crate::models::feed_error::AppError;
+use crate::models::AppError;
 use crate::models::Feed;
 use crate::constants::ACTIVITY_JSON;
 

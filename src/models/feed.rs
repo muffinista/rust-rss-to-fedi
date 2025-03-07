@@ -505,7 +505,7 @@ impl Feed {
   ///
   /// load the contents of the feed
   ///
-  pub async fn load(&self) -> Result<String, reqwest::Error> {
+  pub async fn load(&self) -> Result<String, FeedError> {
     let client = reqwest::Client::new();
     let heads = generate_request_headers();
     let response = client
@@ -516,13 +516,22 @@ impl Feed {
 
     match response {
       Ok(response) => {
-        let body = response
+        if response.status().is_success() {
+          let body = response
           .text()
-          .await?;
+          .await;
+
+          if body.is_ok() {
+            Ok(body.unwrap())
+          } else {
+            Err(FeedError { message: body.err().expect("weird").to_string() })
+          }
     
-        Ok(body)  
+        } else {
+          Err(FeedError { message: String::from("404") })
+        }
       },
-      Err(err) => Err(err)
+      Err(err) => Err(FeedError { message: err.to_string() })
     }
   }
 
@@ -1393,7 +1402,8 @@ mod test {
   use crate::models::Enclosure;
   use crate::models::Actor;
 
-  use crate::utils::test_helpers::{fake_user, fake_feed, real_feed, real_user, real_item, real_actor, test_tera};
+  use crate::models::User;
+use crate::utils::test_helpers::{fake_user, fake_feed, real_feed, real_user, real_item, real_actor, test_tera};
 
 
   #[sqlx::test]
@@ -1450,6 +1460,39 @@ mod test {
   }
 
   #[sqlx::test]
+  async fn test_for_item(pool: PgPool) -> Result<(), String> {
+    let feed: Feed = real_feed(&pool).await.unwrap();
+    let item: Item = real_item(&feed, &pool).await.unwrap();
+    let feed2 = Feed::for_item(item.id, &pool).await.unwrap();
+    
+    assert_eq!(feed, feed2);
+
+    Ok(())
+  }
+
+  #[sqlx::test]
+  async fn test_find_by_user_and_name(pool: PgPool) -> Result<(), String> {
+    let feed: Feed = real_feed(&pool).await.unwrap();
+    let user: User = User::find(feed.user_id, &pool).await.unwrap();
+    let feed2: Feed = Feed::find_by_user_and_name(&user, &feed.name, &pool).await.unwrap().unwrap();
+    
+    assert_eq!(feed, feed2);
+
+    Ok(())
+  }
+  
+  #[sqlx::test]
+  async fn test_load_by_name(pool: PgPool) -> Result<(), String> {
+    let feed: Feed = real_feed(&pool).await.unwrap();
+    let feed2: Feed = Feed::load_by_name(&feed.name, &pool).await.unwrap();
+    
+    assert_eq!(feed, feed2);
+
+    Ok(())
+  }
+  
+
+  #[sqlx::test]
   async fn test_stale(pool: PgPool) -> sqlx::Result<()> {
     let _feed: Feed = real_feed(&pool).await?;
     let feed2: Feed = real_feed(&pool).await?;
@@ -1500,6 +1543,28 @@ mod test {
     let feeds = Feed::for_user(&user, &pool).await?; 
     assert_eq!(feeds.len(), 0);
     
+    Ok(())
+  }
+
+  
+  #[sqlx::test]
+  async fn test_admin_delete(pool: PgPool) -> sqlx::Result<()> {
+    let feed:Feed = real_feed(&pool).await?;
+
+    let deleted_feed = Feed::admin_delete(feed.id, &pool).await?;
+    assert_eq!(feed, deleted_feed);
+      
+    Ok(())
+  }
+
+  
+  #[sqlx::test]
+  async fn test_language() -> sqlx::Result<()> {
+    let mut feed:Feed = fake_feed();
+    feed.language = None;
+
+    assert_eq!("en", feed.language());
+
     Ok(())
   }
 
@@ -1866,7 +1931,7 @@ mod test {
   }}
     "#);
 
-    let act:AcceptedActivity = serde_json::from_str(&json).unwrap();
+    let act: AcceptedActivity = serde_json::from_str(&json).unwrap();
 
     let path = "fixtures/helper.json";
     let data = fs::read_to_string(path).unwrap().replace("SERVER_URL", &server.url());
@@ -2148,4 +2213,50 @@ mod test {
     }
   }
  
+  #[sqlx::test]
+  async fn test_load(pool: PgPool) -> Result<(), DeliveryError> {
+    let mut feed: Feed = real_feed(&pool).await?;
+    let mut server = mockito::Server::new_async().await;
+
+    let path = "fixtures/test_feed_to_entries.xml";
+    let data = fs::read_to_string(path).unwrap().replace("SERVER_URL", &server.url());
+
+    let url = format!("{}/test.xml", &server.url()).to_string();
+    feed.url = url;
+
+    let m = server.mock("GET", "/test.xml")
+      .with_status(200)
+      .with_body(&data)
+      .create_async()
+      .await;
+
+
+    let output = feed.load().await.unwrap();
+    m.assert_async().await;
+    assert_eq!(&output, &data);    
+
+    Ok(())
+  }
+
+  #[sqlx::test]
+  async fn test_load_404(pool: PgPool) -> Result<(), DeliveryError> {
+    let mut feed: Feed = real_feed(&pool).await?;
+    let mut server = mockito::Server::new_async().await;
+
+    let url = format!("{}/test.xml", &server.url()).to_string();
+    feed.url = url;
+
+    let m = server.mock("GET", "/test.xml")
+      .with_status(404)
+      .create_async()
+      .await;
+
+
+    let result = feed.load().await;
+    m.assert_async().await;
+    assert!(result.is_err());    
+
+    Ok(())
+  }
+
 }

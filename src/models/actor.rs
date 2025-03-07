@@ -267,13 +267,13 @@ impl Actor {
 #[cfg(test)]
 mod test {
   use sqlx::postgres::PgPool;
-use url::Url;
+  use url::Url;
   use std::fs;
 
   use crate::constants::ACTIVITY_JSON;
   use crate::models::actor::Actor;
   use crate::models::BlockedDomain;
-use crate::utils::test_helpers::real_actor;
+  use crate::utils::test_helpers::real_actor;
 
   #[sqlx::test]
   async fn test_find_or_fetch(pool: PgPool) -> Result<(), String> {
@@ -301,6 +301,28 @@ use crate::utils::test_helpers::real_actor;
   }
 
   #[sqlx::test]
+  async fn test_find_or_fetch_404(pool: PgPool) -> Result<(), String> {
+    let mut server = mockito::Server::new_async().await;
+    let path = "fixtures/muffinista.json";
+    let data = fs::read_to_string(path).unwrap().replace("SERVER_URL", &server.url());
+
+    let _m = server.mock("GET", "/users/muffinista")
+      .with_status(200)
+      .with_header("Accept", ACTIVITY_JSON)
+      .with_body(data)
+      .create_async()
+      .await;
+
+    let url = format!("{}/users/otheruser", &server.url()).to_string();
+
+    let actor = Actor::find_or_fetch(&url, &pool).await;
+
+    assert!(actor.is_err());
+
+    Ok(())
+  }
+
+  #[sqlx::test]
   async fn test_find_or_fetch_on_blocklist(pool: PgPool) -> Result<(), String> {
     // we could do this without a server by just faking a hostname...
     let server = mockito::Server::new_async().await;
@@ -308,8 +330,6 @@ use crate::utils::test_helpers::real_actor;
     BlockedDomain::create(&host, &pool).await.unwrap();
 
     let url = format!("{}/users/muffinista", &server.url()).to_string();
-
-    // m.assert_async().await;
 
     assert!(Actor::find_or_fetch(&url, &pool).await.unwrap().is_none());
 
@@ -365,6 +385,29 @@ use crate::utils::test_helpers::real_actor;
 
     let exists = Actor::exists_by_url(&url, &pool).await?;
     assert!(exists);
+
+    Ok(())
+  }
+
+
+  #[sqlx::test]
+  async fn test_fetch_404(pool: PgPool) -> Result<(), sqlx::Error> {
+    let mut server = mockito::Server::new_async().await;
+    let path = "fixtures/muffinista.json";
+    let data = fs::read_to_string(path).unwrap().replace("SERVER_URL", &server.url());
+
+    let _m = server.mock("GET", "/users/muffinista")
+      .with_status(200)
+      .with_header("Accept", ACTIVITY_JSON)
+      .with_body(data)
+      .create_async()
+      .await;
+
+    let url = format!("{}/users/other-user", &server.url()).to_string();
+
+    let actor = Actor::fetch(&url, &pool).await;
+
+    assert!(actor.is_err());
 
     Ok(())
   }

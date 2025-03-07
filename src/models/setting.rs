@@ -69,7 +69,48 @@ mod test {
   use crate::models::Setting;
 
   #[sqlx::test]
-  async fn test_value_or(pool: PgPool) -> Result<(), String> {
+  async fn test_setting_find_and_update(pool: PgPool) -> Result<(), String> {
+    let name = "signups".to_string();
+    let result = Setting::find(&name, &pool).await.unwrap();
+    assert!(result.is_none());
+
+    let value = String::from("foo");
+    let result = Setting::update(&name, &value, &pool).await;
+    assert!(result.is_ok());
+
+    let result = Setting::find(&name, &pool).await.unwrap().unwrap();
+    assert_eq!(value, result.value);
+
+    let value = String::from("foo2");
+    let result = Setting::update(&name, &value, &pool).await;
+    assert!(result.is_ok());
+
+    let result = Setting::find(&name, &pool).await.unwrap().unwrap();
+    assert_eq!(value, result.value);
+
+    Ok(())
+  }
+
+  
+  #[sqlx::test]
+  async fn test_setting_exists(pool: PgPool) -> Result<(), String> {
+    let name = "signups".to_string();
+    let result = Setting::exists(&name, &pool).await.unwrap();
+    assert!(!result);
+
+    let value = String::from("foo2");
+    let result = Setting::update(&name, &value, &pool).await;
+    assert!(result.is_ok());
+
+    let result = Setting::exists(&name, &pool).await.unwrap();
+    assert!(result);
+
+    Ok(())
+  }
+
+
+  #[sqlx::test]
+  async fn test_setting_value_or(pool: PgPool) -> Result<(), String> {
     let name = "signups".to_string();
     let result = Setting::value_or(&name, &"true".to_string(), &pool).await.unwrap();
     assert_eq!(result, "true");

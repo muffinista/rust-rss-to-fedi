@@ -12,17 +12,20 @@ export LLVM_PROFILE_FILE="profile/rustypub-%p-%m.profraw"
 
 cargo +nightly test
 
-rm -rf target/
+# rm -rf target/
 mkdir -p target/coverage
 
 scripts/test
 
+echo "Running grcov"
 
 grcov . \
   --binary-path ./target/debug/deps/ \
   -s . \
   -t html \
   --branch \
+  --ignore "target/*" \
+  --ignore "db/*" \
   --ignore-not-existing \
   --ignore '../*' \
   --ignore "/*" \

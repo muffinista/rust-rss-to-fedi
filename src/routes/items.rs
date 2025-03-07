@@ -3,7 +3,7 @@ use actix_web::{get, web};
 
 use sqlx::postgres::PgPool;
 
-use crate::models::feed_error::AppError;
+use crate::models::AppError;
 use crate::models::Feed;
 use crate::models::Item;
 

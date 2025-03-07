@@ -1,7 +1,7 @@
 use actix_web::{get, web, Responder};
 use sqlx::postgres::PgPool;
 use std::path::Path;
-use crate::models::feed_error::AppError;
+use crate::models::AppError;
 use crate::models::Enclosure;
 
 

@@ -1,0 +1,14 @@
+{
+    "id": "ACTOR_ID",
+    "type": "Person",
+    "owner": "SERVER_URL/actor",
+    "inbox": "SERVER_URL/actor/inbox",
+    "outbox": "SERVER_URL/actor/inbox",
+    "preferredUsername": "actor",
+    "name": "actor mcactor",
+    "publicKey": {
+        "id": "ACTOR_ID#main-key",
+        "owner": "SERVER_URL/actor",
+        "publicKeyPem": "PUBLIC_KEY"
+    }
+}
