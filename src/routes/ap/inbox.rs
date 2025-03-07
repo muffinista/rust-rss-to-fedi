@@ -4,7 +4,7 @@ use actix_web::{post, web, Responder, HttpResponse};
 
 use sqlx::postgres::PgPool;
 
-use crate::models::AppError;
+use crate::errors::AppError;
 
 use crate::models::{Feed, Message};
 use crate::models::feed::AcceptedActivity;

@@ -13,7 +13,7 @@ use reqwest::header::HeaderValue;
 use sqlx::postgres::PgPool;
 
 use crate:: {
-  error::DeliveryError,
+  errors::DeliveryError,
   utils::http::*,
   models:: Feed,
   constants::ACTIVITY_JSON

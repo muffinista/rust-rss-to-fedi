@@ -7,8 +7,8 @@ use crate:: {
   models:: {
     Actor,
     Feed,
-    AppError,
   },
+  errors::AppError,
   services::mailer::deliver_to_inbox,
   DeliveryError
 };

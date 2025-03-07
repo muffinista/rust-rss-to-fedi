@@ -50,7 +50,7 @@ use crate::models::User;
 use crate::models::Item;
 use crate::models::Follower;
 use crate::models::SensitiveNote;
-use crate::models::FeedError;
+use crate::errors::FeedError;
 
 use crate::utils::keys::*;
 use crate::utils::path_to_url;

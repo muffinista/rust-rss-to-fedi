@@ -3,7 +3,7 @@ use actix_web::{get, web, web::Json, Responder};
 use sqlx::postgres::PgPool;
 use serde_json::json;
 
-use crate::models::AppError;
+use crate::errors::AppError;
 use crate::models::NodeInfo;
 use std::env;
 

@@ -8,8 +8,8 @@ pub mod tasks;
 
 pub mod activitystreams;
 
-pub mod error;
-pub use error::DeliveryError;
+pub mod errors;
+pub use errors::DeliveryError;
 
 const PER_PAGE:i32 = 10i32;
 

@@ -2,7 +2,7 @@ use std::env;
 
 use actix_web::{get, Responder};
 
-use crate::models::AppError;
+use crate::errors::AppError;
 
 
 #[get("/.well-known/host-meta")]

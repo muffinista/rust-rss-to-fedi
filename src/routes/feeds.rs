@@ -11,7 +11,7 @@ use fang::AsyncQueueable;
 
 use sqlx::postgres::PgPool;
 
-use crate::models::AppError;
+use crate::errors::AppError;
 use crate::models::User;
 use crate::models::Feed;
 use crate::models::Item;

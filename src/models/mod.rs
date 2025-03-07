@@ -1,8 +1,6 @@
 pub mod actor;
-pub mod app_error;
 pub mod blocked_domain;
 pub mod enclosure;
-pub mod feed_error;
 pub mod feed;
 pub mod follower;
 pub mod item;
@@ -13,10 +11,8 @@ pub mod setting;
 pub mod user;
 
 pub use actor::Actor;
-pub use app_error::AppError;
 pub use blocked_domain::BlockedDomain;
 pub use enclosure::Enclosure;
-pub use feed_error::FeedError;
 pub use feed::Feed;
 pub use follower::Follower;
 pub use item::Item;
