@@ -44,6 +44,7 @@ env_logger = "~0.11.0"
 log = "~0.4.17"
 clap = { version = "~4.5.30", features = ["derive"] }
 glob = "~0.3.2"
+actix-files = "0.6.6"
 
 [dependencies.derive_more]
 # You can specify the types of derives that you need for less time spent

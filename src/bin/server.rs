@@ -2,6 +2,7 @@
 
 use actix_session::{storage::CookieSessionStore, SessionMiddleware};
 use actix_web::{web, App, HttpServer};
+use actix_files::Files;
 
 use std::env;
 
@@ -24,6 +25,7 @@ pub async fn main() -> std::io::Result<()> {
   // Then we can instantiate our controllers.
   HttpServer::new(move || {
     App::new()
+      .service(Files::new("/assets", "./assets").prefer_utf8(true))
       .wrap(SessionMiddleware::new(CookieSessionStore::default(), secret_key.clone()))
       .app_data(web::Data::new(pool.clone()))
       .app_data(web::Data::new(tera.clone()))
