@@ -1,7 +1,7 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
 use actix_session::{storage::CookieSessionStore, SessionMiddleware};
-use actix_web::{web, App, HttpServer};
+use actix_web::{web, App, HttpServer, middleware::Logger};
 use actix_files::Files;
 
 use std::env;
@@ -27,6 +27,7 @@ pub async fn main() -> std::io::Result<()> {
     App::new()
       .service(Files::new("/assets", "./assets").prefer_utf8(true))
       .wrap(SessionMiddleware::new(CookieSessionStore::default(), secret_key.clone()))
+      .wrap(Logger::default())
       .app_data(web::Data::new(pool.clone()))
       .app_data(web::Data::new(tera.clone()))
       .configure(|cfg| rustypub::routes::configure::apply(cfg))
