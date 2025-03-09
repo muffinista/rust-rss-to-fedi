@@ -520,10 +520,10 @@ impl Feed {
           .text()
           .await;
 
-          if body.is_ok() {
-            Ok(body.unwrap())
+          if let Ok(body) = body {
+            Ok(body)
           } else {
-            Err(FeedError { message: body.err().expect("weird").to_string() })
+            Err(FeedError { message: body.expect_err("weird").to_string() })
           }
     
         } else {

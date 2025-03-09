@@ -158,6 +158,12 @@ impl<T, Inner> AsContentMapExt<Inner> for T where T: AsContentMap<Inner> {}
 
 pub type ContentMapNote = ContentMap<ApObject<Note>>;
 
+impl Default for ContentMapNote {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ContentMapNote {
   pub fn new() -> ContentMapNote {
     ContentMapNote {

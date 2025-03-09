@@ -282,7 +282,7 @@ pub async fn show_feed(
   let json_content_type = HeaderValue::from_str(&ContentType::json().to_string()).unwrap();
   let content_type = request.head().headers().get("content-type").unwrap_or(&json_content_type);
 
-  if content_type.to_str().unwrap().contains(&crate::constants::TEXT_HTML) {
+  if content_type.to_str().unwrap().contains(crate::constants::TEXT_HTML) {
     let user = User::from_session(&session, db).await?;
     render_html_feed(&user, &feed, tmpl, db).await
   } else {
