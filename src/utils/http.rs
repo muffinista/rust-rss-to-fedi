@@ -20,6 +20,13 @@ macro_rules! activity_json_response {
   }
 }
 
+#[macro_export]
+macro_rules! html_response {
+  ($body:expr) => {
+    HttpResponse::build(StatusCode::OK).content_type(TEXT_HTML).body($body)
+  }
+}
+
 
 ///
 /// Generate a user agent for the current version of the code and the running instance

@@ -14,17 +14,13 @@ use crate::models::Feed;
 use crate::models::Item;
 use crate::models::Setting;
 
+use crate::routes::PageQuery;
 use crate::utils::templates;
 use crate::PER_PAGE;
 
 #[derive(Deserialize)]
 pub struct AdminSettingsForm {
   signups_enabled: String
-}
-
-#[derive(Deserialize)]
-struct PageQuery {
-  page: Option<i32>,
 }
 
 

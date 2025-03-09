@@ -1,4 +1,5 @@
 use actix_web::{get, web, Responder, HttpResponse};
+use actix_web::http::StatusCode;
 use actix_session::Session;
 
 use std::env;
@@ -6,10 +7,12 @@ use std::env;
 use sqlx::postgres::PgPool;
 
 use crate::errors::AppError;
+use crate::html_response;
 use crate::models::User;
 use crate::models::Feed;
 use crate::models::Setting;
 
+use crate::constants::TEXT_HTML;
 use crate::routes::PageQuery;
 use crate::utils::templates;
 use crate::PER_PAGE;
@@ -48,7 +51,7 @@ pub async fn index(session: Session,  query: web::Query<PageQuery>, tmpl: web::D
   };
 
   match body {
-    Ok(body) => Ok(HttpResponse::build(actix_web::http::StatusCode::OK).body(body)),
+    Ok(body) => Ok(html_response!(body)),
     Err(why) => {
       log::debug!("{:?}", why);
       Err(AppError::InternalError)

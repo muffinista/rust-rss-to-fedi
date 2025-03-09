@@ -6,9 +6,10 @@ use sqlx::postgres::PgPool;
 
 use crate::errors::AppError;
 use crate::models::Feed;
-use crate::routes::PageQuery;
 use crate::constants::ACTIVITY_JSON;
 use crate::activity_json_response;
+use crate::routes::PageQuery;
+
 
 ///  The outbox is discovered through the outbox property of an actor's profile.
 ///  The outbox MUST be an OrderedCollection.

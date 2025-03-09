@@ -23,7 +23,9 @@ use crate::utils::queue::create_queue;
 use crate::utils::templates;
 use crate::tasks::RefreshFeed;
 use crate::constants::ACTIVITY_JSON;
+use crate::constants::TEXT_HTML;
 use crate::activity_json_response;
+use crate::html_response;
 
 #[derive(Deserialize, Serialize)]
 pub struct FeedForm {
@@ -249,8 +251,8 @@ pub async fn delete_feed(session: Session, path: web::Path<i32>, db: web::Data<P
     Ok(_feed) => {
       Ok(crate::utils::redirect_to("/"))
     },
-    Err(why) => {
-      print!("{why}");
+    Err(_why) => {
+      // print!("{why}");
       Err(AppError::NotFound)
     }
   }
@@ -277,10 +279,10 @@ pub async fn show_feed(
     return Err(AppError::NotFound)
   };
 
-  let json_content_type = HeaderValue::from_static("application/json");
+  let json_content_type = HeaderValue::from_str(&ContentType::json().to_string()).unwrap();
   let content_type = request.head().headers().get("content-type").unwrap_or(&json_content_type);
 
-  if content_type.to_str().unwrap().contains("text/html") {
+  if content_type.to_str().unwrap().contains(&crate::constants::TEXT_HTML) {
     let user = User::from_session(&session, db).await?;
     render_html_feed(&user, &feed, tmpl, db).await
   } else {
@@ -332,7 +334,7 @@ async fn render_html_feed(user: &Option<User>, feed: &Feed, tmpl: &tera::Tera, d
     
       let body = templates::render("feed.html.tera", tmpl, &context)?;
 
-      Ok(HttpResponse::build(StatusCode::OK).content_type("text/html").body(body))
+      Ok(html_response!(body))
     },
     Err(_why) => Err(AppError::NotFound)
   }  
@@ -428,8 +430,6 @@ mod test {
     let server = test::init_service(build_test_server!(pool)).await;
     let req = test::TestRequest::with_uri(&feed.ap_url()).insert_header(header::ContentType::html()).to_request();
     let res = server.call(req).await.unwrap();
-
-    // let req = client.get(uri!(super::show_feed(&feed.name, None::<i32>))).header(Header::new("Accept", "text/html"));
 
     assert_eq!(res.status(), actix_web::http::StatusCode::OK);
     

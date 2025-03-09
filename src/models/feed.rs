@@ -64,7 +64,6 @@ use crate::traits::property_value::{
   PropertyValue
 };
 
-
 use crate::PER_PAGE;
 
 use crate::traits::sensitive::CanBeSensitiveExt;

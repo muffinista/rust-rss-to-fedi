@@ -61,7 +61,7 @@ pub async fn lookup_webfinger(req: HttpRequest, db: web::Data<PgPool>) -> Result
       ],
     }).unwrap();
 
-    Ok(HttpResponse::build(StatusCode::OK).content_type("application/jrd+json").body(results))
+    Ok(HttpResponse::build(StatusCode::OK).content_type(crate::constants::WEBFINGER_CONTENT_TYPE).body(results))
   }
   else {
     Err(AppError::NotFound)

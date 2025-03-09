@@ -22,7 +22,7 @@ pub async fn show_enclosure(path: web::Path<(String, i32, String)>, db: web::Dat
     return Err(AppError::NotFound)
   }
 
-  let id:i32 = id.unwrap();
+  let id: i32 = id.unwrap();
 
   let enclosure = Enclosure::find_by_feed_and_item_and_id(&username, item_id, id, db).await;
 
