@@ -16,8 +16,11 @@ pub async fn main() -> std::io::Result<()> {
 
   let pool = db_pool().await;
 
+  let assets_dir = env::var("ASSETS_PATH").unwrap_or(String::from("./assets"));
+  let templates_dir = env::var("TEMPLATES_PATH").unwrap_or(String::from("templates"));
+
   let tera =
-    tera::Tera::new("templates/**/*").expect("Parsing error while loading template folder");
+    tera::Tera::new(&format!("{templates_dir:}/**/*")).expect("Parsing error while loading template folder");
   let secret_key = rustypub::routes::configure::get_secret_key();
 
   // Start the web application.
@@ -25,7 +28,7 @@ pub async fn main() -> std::io::Result<()> {
   // Then we can instantiate our controllers.
   HttpServer::new(move || {
     App::new()
-      .service(Files::new("/assets", "./assets").prefer_utf8(true))
+      .service(Files::new("/assets", &assets_dir).prefer_utf8(true))
       .wrap(SessionMiddleware::new(CookieSessionStore::default(), secret_key.clone()))
       .wrap(Logger::default())
       .app_data(web::Data::new(pool.clone()))

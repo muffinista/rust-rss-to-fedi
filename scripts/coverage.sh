@@ -21,11 +21,13 @@ echo "Running grcov"
 
 grcov . \
   --binary-path ./target/debug/deps/ \
-  -s . \
+  -s ./src \
   -t html \
   --branch \
+  --keep-only "src" \
   --ignore "target/*" \
   --ignore "db/*" \
+  --ignore "./db/*" \
   --ignore-not-existing \
   --ignore '../*' \
   --ignore "/*" \

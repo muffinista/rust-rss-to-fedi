@@ -40,8 +40,10 @@ async fn main() -> Result<(), DeliveryError> {
 
   let dest_url = args.dest_url;
 
+  let templates_dir = env::var("TEMPLATES_PATH").unwrap_or(String::from("templates"));
+
   let tera =
-    tera::Tera::new("templates/**/*").expect("Parsing error while loading template folder");
+    tera::Tera::new(&format!("{templates_dir:}/**/*")).expect("Parsing error while loading template folder");
 
   let feed = Feed::for_admin(&pool).await?;
 

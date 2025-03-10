@@ -52,8 +52,11 @@ async fn main() -> Result<(), DeliveryError> {
 
   let item = Item::find(item_id, &pool).await?;
   let feed = Feed::for_item(item_id, &pool).await?;
+
+  let templates_dir = env::var("TEMPLATES_PATH").unwrap_or(String::from("templates"));
+
   let tera =
-    tera::Tera::new("templates/**/*").expect("Parsing error while loading template folder");
+    tera::Tera::new(&format!("{templates_dir:}/**/*")).expect("Parsing error while loading template folder");
 
   let mut message = item.to_activity_pub(&feed, &pool, &tera).await.unwrap();
 
