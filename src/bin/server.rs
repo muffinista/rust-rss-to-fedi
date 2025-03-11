@@ -14,10 +14,14 @@ pub async fn main() -> std::io::Result<()> {
 
   let _domain_name = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
 
-  let pool = db_pool().await;
-
   let assets_dir = env::var("ASSETS_PATH").unwrap_or(String::from("./assets"));
   let templates_dir = env::var("TEMPLATES_PATH").unwrap_or(String::from("templates"));
+  let bind_address = env::var("BIND_ADDRESS").unwrap_or(String::from("0.0.0.0"));
+  let bind_port = env::var("BIND_PORT").unwrap_or(String::from("8080"));
+
+  let bind_port: u16 = bind_port.parse::<u16>().expect("Base BIND_PORT value!");  
+
+  let pool = db_pool().await;
 
   let tera =
     tera::Tera::new(&format!("{templates_dir:}/**/*")).expect("Parsing error while loading template folder");
@@ -35,7 +39,7 @@ pub async fn main() -> std::io::Result<()> {
       .app_data(web::Data::new(tera.clone()))
       .configure(|cfg| rustypub::routes::configure::apply(cfg))
     })
-    .bind(("0.0.0.0", 8080))?
+    .bind((bind_address, bind_port))?
     .run()
     .await
     // .bind(config.get_app_url())?;
