@@ -35,7 +35,7 @@ pub async fn main() -> std::io::Result<()> {
       .app_data(web::Data::new(tera.clone()))
       .configure(|cfg| rustypub::routes::configure::apply(cfg))
     })
-    .bind(("127.0.0.1", 8080))?
+    .bind(("0.0.0.0", 8080))?
     .run()
     .await
     // .bind(config.get_app_url())?;
