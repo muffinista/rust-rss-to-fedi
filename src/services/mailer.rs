@@ -49,6 +49,9 @@ pub async fn admin_fetch_object(url: &str, pool: &PgPool) -> Result<Option<Strin
 /// Sign a GET request for the given URL
 /// 
 async fn signed_request_for(url: &str, key_id: &str, private_key: &str) -> Result<Request, DeliveryError> {
+  log::debug!("fetch with key: {key_id:}");
+  log::debug!("fetch with key: {private_key:}");
+
   let config: http_signature_normalization_reqwest::Config<DefaultSpawner> = Config::default().mastodon_compat();
   let private_key = PKey::private_key_from_pem(private_key.as_bytes())?;
   let mut signer = Signer::new(MessageDigest::sha256(), &private_key)?;

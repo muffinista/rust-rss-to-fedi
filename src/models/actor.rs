@@ -170,6 +170,7 @@ impl Actor {
             match resp {
               Ok(resp) => {
                 if resp.is_none() {
+                  log::debug!("404 on pulling the user :(");
                   return Err(DeliveryError::Error(String::from("User not found")))
                 }
         
