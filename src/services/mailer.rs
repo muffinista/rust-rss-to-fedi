@@ -121,6 +121,11 @@ pub async fn deliver_to_inbox<T: Serialize + ?Sized>(inbox: &Url, key_id: &str, 
     HeaderValue::from_str(ACTIVITY_JSON).unwrap(),
   );
 
+  heads.insert(
+    "Accept", 
+    HeaderValue::from_str(ACTIVITY_JSON).unwrap()
+  );
+
   let request_builder = client
     .post(inbox.to_string())
     .headers(heads)
