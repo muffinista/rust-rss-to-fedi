@@ -79,7 +79,7 @@ async fn main() -> Result<(), DeliveryError> {
       println!("{msg}");
 
       let dest_url = &Url::parse(&inbox).unwrap();
-      let result = deliver_to_inbox(dest_url, &feed.ap_url(), &feed.private_key, &message).await;
+      let result = deliver_to_inbox(dest_url, &feed.public_key_id(), &feed.private_key, &message).await;
     
       match result {
         Ok(_result) => {

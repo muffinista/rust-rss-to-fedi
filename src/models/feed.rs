@@ -705,6 +705,13 @@ impl Feed {
   }
 
   ///
+  /// Return URL to use in ActivityPub output for this feed
+  ///
+  pub fn public_key_id(&self) -> String {
+    path_to_url(&format!("/feed/{}#main-key", self.name))
+  }
+
+  ///
   /// Return inbox URL to use in ActivityPub output for this feed
   ///
   pub fn inbox_url(&self) -> String {
@@ -812,7 +819,7 @@ impl Feed {
       ),
       PublicKey {
         public_key: PublicKeyInner {
-          id: iri!(format!("{feed_url}#main-key")),
+          id: iri!(self.public_key_id()),
           owner: iri!(self.ap_url()),
           public_key_pem: self.public_key.to_owned(),
         },
@@ -918,7 +925,7 @@ impl Feed {
     accept.set_context(context());
 
     // deliver to the user
-    let result = deliver_to_inbox(&Url::parse(&inbox)?, &self.ap_url(), &self.private_key, &accept).await;
+    let result = deliver_to_inbox(&Url::parse(&inbox)?, &self.public_key_id(), &self.private_key, &accept).await;
 
     if result.is_err() {
       Actor::log_error(&inbox, pool).await?;
@@ -990,10 +997,8 @@ impl Feed {
         let msg = serde_json::to_string(&message).unwrap();
         log::debug!("{msg}");
     
-        let my_url = self.ap_url();
-
         // send the message!
-        let result = deliver_to_inbox(&Url::parse(&dest_actor.inbox_url)?, &my_url, &self.private_key, &message).await;
+        let result = deliver_to_inbox(&Url::parse(&dest_actor.inbox_url)?, &self.public_key_id(), &self.private_key, &message).await;
     
         if result.is_err() {
           Actor::log_error(&dest_actor.inbox_url, pool).await?;

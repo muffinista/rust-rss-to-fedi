@@ -272,12 +272,11 @@ impl User {
         let msg = serde_json::to_string(&message).unwrap();
         log::debug!("{msg}");
     
-        let feed_ap_url = feed.ap_url();
         let inbox = &Url::parse(&dest_actor.inbox_url)?;
     
         let result = deliver_to_inbox(
           inbox,
-          &feed_ap_url,
+          &feed.public_key_id(),
           &feed.private_key,
           &message).await;
     

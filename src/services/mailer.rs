@@ -40,7 +40,7 @@ pub async fn admin_fetch_object(url: &str, pool: &PgPool) -> Result<Option<Strin
   if admin_feed.is_some() {
     let admin_feed = admin_feed.as_ref().unwrap();
     log::debug!("Just FYI, my public key is: {:}", admin_feed.public_key);
-    crate::services::mailer::fetch_object(url, Some(&admin_feed.ap_url()), Some(&admin_feed.private_key)).await
+    crate::services::mailer::fetch_object(url, Some(&admin_feed.public_key_id()), Some(&admin_feed.private_key)).await
   } else {
     crate::services::mailer::fetch_object(url, None, None).await
   }
@@ -129,7 +129,7 @@ pub async fn deliver_to_inbox<T: Serialize + ?Sized>(inbox: &Url, key_id: &str, 
 
   let request = sign_request(
     request_builder,
-    format!("{key_id}#main-key"),
+    String::from(key_id),
     private_key.to_string(),
     payload
   )

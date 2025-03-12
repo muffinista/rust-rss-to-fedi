@@ -72,10 +72,8 @@ async fn main() -> Result<(), DeliveryError> {
       let msg = serde_json::to_string(&message).unwrap();
       println!("{msg}");
     
-      let my_url = feed.ap_url();
-    
       // send the message!
-      let result = deliver_to_inbox(&Url::parse(inbox)?, &my_url, &feed.private_key, &message).await;
+      let result = deliver_to_inbox(&Url::parse(inbox)?, &feed.public_key_id(), &feed.private_key, &message).await;
     
       match result {
         Ok(result) => println!("sent! {result:?}"),

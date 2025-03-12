@@ -46,7 +46,7 @@ impl AsyncRunnable for DeliverMessage {
         // is serializable to reqwest, since right now we can't manage deserializable objects
         // with fang
         let message_object:Value = serde_json::from_str(&self.message).unwrap();
-        let result = deliver_to_inbox(dest_url, &feed.ap_url(), &feed.private_key, &message_object).await;
+        let result = deliver_to_inbox(dest_url, &feed.public_key_id(), &feed.private_key, &message_object).await;
 
         if result.is_err() {
           let _ = Actor::log_error(&dest_url.to_string(), &pool).await;
