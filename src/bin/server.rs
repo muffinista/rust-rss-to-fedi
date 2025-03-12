@@ -6,7 +6,7 @@ use actix_files::Files;
 
 use std::env;
 
-use rustypub::utils::pool::db_pool;
+use rustypub::{models::{Feed, User}, utils::pool::db_pool};
 
 #[actix_web::main]
 pub async fn main() -> std::io::Result<()> {
@@ -22,6 +22,21 @@ pub async fn main() -> std::io::Result<()> {
   let bind_port: u16 = bind_port.parse::<u16>().expect("Base BIND_PORT value!");  
 
   let pool = db_pool().await;
+
+  if User::for_admin(&pool).await.unwrap().is_none() {
+    println!("Setting up admin user!");
+    let u = User::create_by_actor_url(&String::from("fake"), &pool).await;
+    match u {
+      Ok(u) => {
+        let f = Feed::create(&u, &String::from("fake"), &String::from("admin"), &pool).await.unwrap();
+        let _result = f.mark_admin(&pool).await;
+      },
+      Err(why) => {
+        println!("{:?}", why);
+        panic!("weird that failed");
+      }
+    }
+  }
 
   let tera =
     tera::Tera::new(&format!("{templates_dir:}/**/*")).expect("Parsing error while loading template folder");
