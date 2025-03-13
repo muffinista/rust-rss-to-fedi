@@ -171,6 +171,8 @@ async fn sign_request(
   let config: http_signature_normalization_reqwest::Config<DefaultSpawner> = Config::default().mastodon_compat();
   let digest = Sha256::new();
 
+  log::info!("PAYLOAD: {:}", String::from_utf8(payload).unwrap());
+
   request_builder
     .signature_with_digest(
       config,
