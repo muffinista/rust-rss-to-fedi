@@ -59,9 +59,10 @@ async fn signed_request_for(url: &str, key_id: &str, private_key: &str) -> Resul
 
   reqwest::Client::new()
     .get(url)
-    .header("Accept", ACTIVITY_JSON)
-    .header("User-Agent", user_agent())
+    .header("accept", ACTIVITY_JSON)
+    .header("user-agent", user_agent())
     .signature(&config, key_id, move |signing_string| {
+      log::debug!("SIGNING STRING: {:}", signing_string);
       signer.update(signing_string.as_bytes())?;
       
       Ok(general_purpose::STANDARD.encode(signer.sign_to_vec()?)) as Result<_, DeliveryError>
@@ -81,8 +82,8 @@ pub async fn fetch_object(url: &str, key_id: Option<&str>, private_key: Option<&
   } else {
     client
       .get(url)
-      .header("Accept", ACTIVITY_JSON)
-      .header("User-Agent", user_agent())
+      .header("accept", ACTIVITY_JSON)
+      .header("user-agent", user_agent())
       .send()
       .await
   };
@@ -171,7 +172,7 @@ async fn sign_request(
   let config: http_signature_normalization_reqwest::Config<DefaultSpawner> = Config::default().mastodon_compat();
   let digest = Sha256::new();
 
-  log::info!("PAYLOAD: {:}", String::from_utf8(payload).unwrap());
+  log::debug!("PAYLOAD: {:}", String::from_utf8(payload.clone()).unwrap());
 
   request_builder
     .signature_with_digest(

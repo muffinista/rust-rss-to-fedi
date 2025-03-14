@@ -1,9 +1,10 @@
 use std::env;
 
 use actix_web::http::StatusCode;
-use actix_web::{HttpRequest, HttpResponse};
+use actix_web::HttpResponse;
 use actix_web::{get, web, Responder};
 
+use serde::Deserialize;
 use sqlx::postgres::PgPool;
 
 use webfinger::*;
@@ -13,15 +14,24 @@ use crate::models::Feed;
 use crate::constants::ACTIVITY_JSON;
 
 
+#[derive(Deserialize)]
+struct WebFingerQuery {
+  resource: String,
+}
+
+
+
 ///
 /// Respond to webfinger requests
 ///
 #[get("/.well-known/webfinger")]
-pub async fn lookup_webfinger(req: HttpRequest, db: web::Data<PgPool>) -> Result<impl Responder, AppError> {
-  let resource = req.query_string();
+pub async fn lookup_webfinger(db: web::Data<PgPool>, query: web::Query<WebFingerQuery>) -> Result<impl Responder, AppError> {
+  let resource = &query.resource;
   let db = db.as_ref();
   let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
-  
+
+  log::debug!("webfinger query string: {resource:}");
+
   // https://github.com/Plume-org/webfinger/blob/main/src/async_resolver.rs
   let mut parsed_query = resource.splitn(2, ':');
   let _res_prefix = Prefix::from(parsed_query.next().ok_or(AppError::NotFound)?);
@@ -31,6 +41,7 @@ pub async fn lookup_webfinger(req: HttpRequest, db: web::Data<PgPool>) -> Result
   let user = parsed_res.next().ok_or(AppError::NotFound)?;
   let domain = parsed_res.next().ok_or(AppError::NotFound)?;
 
+  log::debug!("webfinger: {user:} {domain:}");
   if domain != instance_domain {
     return Err(AppError::NotFound)
   }
@@ -84,7 +95,7 @@ mod test {
   #[sqlx::test]
   async fn test_lookup_webfinger_404(pool: PgPool) {
     let server = test::init_service(build_test_server!(pool)).await;
-    let req = test::TestRequest::with_uri("/.well-known/webfinger?acct:foo@bar.com").to_request();
+    let req = test::TestRequest::with_uri("/.well-known/webfinger?resource=acct:foo@bar.com").to_request();
     let res = server.call(req).await.unwrap();
     assert_eq!(res.status(), actix_web::http::StatusCode::NOT_FOUND);
   }
@@ -96,7 +107,7 @@ mod test {
     let feed = real_feed(&pool).await.unwrap();
     
     let server = test::init_service(build_test_server!(pool)).await;
-    let req = test::TestRequest::with_uri(&format!("/.well-known/webfinger?acct:{}@{}", &feed.name, instance_domain)).to_request();
+    let req = test::TestRequest::with_uri(&format!("/.well-known/webfinger?resource=acct:{}@{}", &feed.name, instance_domain)).to_request();
     let res = server.call(req).await.unwrap();
     assert!(res.status().is_success());
 
