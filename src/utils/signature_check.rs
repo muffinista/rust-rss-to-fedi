@@ -55,6 +55,9 @@ pub async fn validate_request(request: &HttpRequest, payload: &str) -> Result<Si
     return Ok(SignatureValidity::Absent);
   }
 
+  log::debug!("validate_request: payload {payload:}");
+
+
   let date = request.headers().get(DATE_HEADER);
   let sig = request.headers().get(SIGNATURE_HEADER).unwrap();
 
@@ -120,20 +123,20 @@ pub async fn validate_request(request: &HttpRequest, payload: &str) -> Result<Si
           Ok(SignatureValidity::InvalidSignature(key_id))
         } else {
 
-          if env::var("DISABLE_DIGEST_CHECKS").is_err() {
-            if !header_data.contains_key("digest") {
-              // signature is valid, but body content is not verified
-              return Ok(SignatureValidity::ValidNoDigest(key_id));
-            }
+          // if env::var("DISABLE_DIGEST_CHECKS").is_err() {
+          //   if !header_data.contains_key("digest") {
+          //     // signature is valid, but body content is not verified
+          //     return Ok(SignatureValidity::ValidNoDigest(key_id));
+          //   }
       
-            let digest = header_data.get("digest").expect("missing digest??");          
-            let expected_digest = crate::utils::string_to_digest_string(payload);
+          //   let digest = header_data.get("digest").expect("missing digest??");          
+          //   let expected_digest = crate::utils::string_to_digest_string(payload);
   
-            if *digest != expected_digest {
-              log::debug!("validate_request: invalid digest! {digest:} {expected_digest:}");
-              return Ok(SignatureValidity::Invalid);
-            }  
-          }
+          //   if *digest != expected_digest {
+          //     log::debug!("validate_request: invalid digest! {digest:} {expected_digest:}");
+          //     return Ok(SignatureValidity::Invalid);
+          //   }  
+          // }
     
           if date.is_none() {
             log::debug!("validate_request: no date!");

@@ -2,6 +2,7 @@
 use actix_web::HttpRequest;
 use actix_web::{post, web, Responder, HttpResponse};
 
+use http_signature_normalization_actix::prelude::DigestVerified;
 use sqlx::postgres::PgPool;
 
 use crate::errors::AppError;
@@ -35,6 +36,7 @@ const ACTOR_OUTDATED: &str = "Outdated";
 /// digest: Option<SignatureValidity>, 
 #[post("/feed/{username}/inbox")]
 pub async fn user_inbox(
+  _: DigestVerified,
   request: HttpRequest,
   body: web::Bytes,
   path: web::Path<String>,

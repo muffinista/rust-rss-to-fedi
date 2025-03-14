@@ -68,6 +68,11 @@ version = "0.12.0"
 default-features = false
 features = ["sha-2", "digest", "middleware", "default-spawner"]
 
+[dependencies.http-signature-normalization-actix]
+version = "0.11.1"
+default-features = false
+features = ["server", "ring", "sha-2"]
+
 
 # https://cosmichorror.dev/posts/speeding-up-sqlx-compile-times/
 [profile.dev.package.sqlx-macros]

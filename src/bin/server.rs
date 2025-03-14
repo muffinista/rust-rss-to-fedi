@@ -7,6 +7,8 @@ use actix_files::Files;
 use std::env;
 
 use rustypub::{models::{Feed, User}, utils::pool::db_pool};
+use http_signature_normalization_actix::digest::ring::Sha256;
+use http_signature_normalization_actix::digest::middleware::VerifyDigest;
 
 #[actix_web::main]
 pub async fn main() -> std::io::Result<()> {
@@ -47,6 +49,7 @@ pub async fn main() -> std::io::Result<()> {
   // Then we can instantiate our controllers.
   HttpServer::new(move || {
     App::new()
+      .wrap(VerifyDigest::new(Sha256::new()).optional())
       .service(Files::new("/assets", &assets_dir).prefer_utf8(true))
       .wrap(SessionMiddleware::new(CookieSessionStore::default(), secret_key.clone()))
       .wrap(Logger::default())
