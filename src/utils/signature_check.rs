@@ -51,7 +51,7 @@ fn headers_to_hash(headers: &HeaderMap) -> HashMap<String, String> {
 
 pub async fn validate_request(request: &HttpRequest, payload: &str) -> Result<SignatureValidity, DeliveryError> {
   if !request.headers().contains_key(SIGNATURE_HEADER) {
-    // log::info!("no header!");
+    log::debug!("validate_request: no signature header!");
     return Ok(SignatureValidity::Absent);
   }
 
@@ -79,7 +79,7 @@ pub async fn validate_request(request: &HttpRequest, payload: &str) -> Result<Si
 
   if signature.is_none() || header_list.is_none() {
     // missing part of the header
-    // log::info!("missing signature/header!");
+    log::debug!("validate_request: missing signature/header!");
     return Ok(SignatureValidity::Invalid)
   } 
   
@@ -107,7 +107,7 @@ pub async fn validate_request(request: &HttpRequest, payload: &str) -> Result<Si
   match sender {
     Ok(sender) => {
       if sender.is_none() {
-        // log::info!("unable to find sender!");
+        log::debug!("validate_request: unable to find sender!");        
         Ok(SignatureValidity::InvalidActor(key_id))
       } else {
         let sender = sender.expect("Unable to load sender data!");
@@ -116,7 +116,7 @@ pub async fn validate_request(request: &HttpRequest, payload: &str) -> Result<Si
           .verify_signature(&signature_verification_payload, &general_purpose::STANDARD.decode(signature).unwrap_or_default())
           .unwrap_or(false)
         {
-          // log::info!("unable to verify signature!");
+          log::debug!("validate_request: unable to verify signature!");
           Ok(SignatureValidity::InvalidSignature(key_id))
         } else {
 
@@ -130,15 +130,18 @@ pub async fn validate_request(request: &HttpRequest, payload: &str) -> Result<Si
             let expected_digest = crate::utils::string_to_digest_string(payload);
   
             if *digest != expected_digest {
+              log::debug!("validate_request: invalid digest! {digest:} {expected_digest:}");
               return Ok(SignatureValidity::Invalid);
             }  
           }
     
           if date.is_none() {
+            log::debug!("validate_request: no date!");
             Ok(SignatureValidity::Outdated(key_id))
           } else {
             let date = NaiveDateTime::parse_from_str(date.unwrap().to_str().expect("Invalid date?"), "%a, %d %h %Y %T GMT");
             if date.is_err() {
+              log::debug!("validate_request: outdated err!");
               Ok(SignatureValidity::Outdated(key_id))
             } else {
               let diff = Utc::now().naive_utc() - date.unwrap();
@@ -147,6 +150,7 @@ pub async fn validate_request(request: &HttpRequest, payload: &str) -> Result<Si
               if diff < future && diff > past {
                 Ok(SignatureValidity::Valid(key_id))
               } else {
+                log::debug!("validate_request: outdated");
                 Ok(SignatureValidity::Outdated(key_id))
               }
             }
@@ -154,8 +158,8 @@ pub async fn validate_request(request: &HttpRequest, payload: &str) -> Result<Si
         }
       }
     },
-    Err(_why) => {
-      // log::info!("fetch failure? {why:?}");
+    Err(why) => {
+      log::debug!("validate_request: fetch failure? {why:?}");
       Ok(SignatureValidity::Invalid)
     }
   }
