@@ -995,7 +995,7 @@ impl Feed {
         // generate a login message for this user
         let message = self.generate_login_message(Some(activity), &dest_actor, pool, tera).await?;
         let msg = serde_json::to_string(&message).unwrap();
-        log::debug!("{msg}");
+        log::debug!("send login: {msg:}");
     
         // send the message!
         let result = deliver_to_inbox(&Url::parse(&dest_actor.inbox_url)?, &self.public_key_id(), &self.private_key, &message).await;
