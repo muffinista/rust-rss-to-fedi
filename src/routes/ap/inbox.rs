@@ -54,6 +54,7 @@ pub async fn user_inbox(
   let signature_validity = validate_request(&request, raw).await;
 
   if signature_validity.is_err() && env::var("DISABLE_SIGNATURE_CHECKS").is_err() {
+    log::debug!("inbox: error with signature validation");
     return Err(AppError::NotFound)
   }
 
@@ -78,6 +79,7 @@ pub async fn user_inbox(
   if env::var("DISABLE_SIGNATURE_CHECKS").is_ok() {
     log::info!("Skipping signature check because DISABLE_SIGNATURE_CHECKS is set");
   } else if !signature_validity.is_secure() {
+    log::debug!("inbox: insecure signature?");
     return Err(AppError::NotFound)
   }
 
@@ -92,11 +94,15 @@ pub async fn user_inbox(
           match handle {
             Ok(_handle) => actix_web::http::StatusCode::ACCEPTED,
             Err(_why) => {
+              log::debug!("feed {username:} activity error!");
               actix_web::http::StatusCode::NOT_FOUND
             }
           }
         },
-        None => return Err(AppError::NotFound)
+        None => {
+          log::debug!("feed {username:} not found!");
+          return Err(AppError::NotFound)
+        }
       }
     },
     Err(_why) => return Err(AppError::NotFound)
