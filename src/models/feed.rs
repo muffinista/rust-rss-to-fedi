@@ -1071,9 +1071,9 @@ impl Feed {
       .set_attributed_to(iri!(my_url))
       .set_content(body)
       .set_url(iri!(my_url))
-      .set_id(iri!(format!("{my_url}/{uniq_hash}")))
+      .set_id(iri!(format!("{my_url}/{uniq_hash}/note")))
       .set_to(iri!(dest_actor.url))
-      // .set_tag(mention.into_any_base()?)
+      .set_tag(mention.into_any_base()?)
       .set_published(ts);
 
     if source_id.is_some() {
@@ -1093,9 +1093,7 @@ impl Feed {
       .add_context("as:sensitive".to_string())
       .set_id(iri!(format!("{my_url}/{uniq_hash}")))
       .set_to(iri!(dest_actor.url))
-      .set_tag(mention.into_any_base()?)
       .set_published(ts);
-
 
     Ok(action) 
   }
