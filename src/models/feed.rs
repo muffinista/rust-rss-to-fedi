@@ -715,7 +715,14 @@ impl Feed {
   /// Return inbox URL to use in ActivityPub output for this feed
   ///
   pub fn inbox_url(&self) -> String {
-    path_to_url(&format!("/feed/{}/inbox", self.name))
+    path_to_url(&self.inbox_path())
+  }
+
+  ///
+  /// Return inbox path fragment
+  ///
+  pub fn inbox_path(&self) -> String {
+    format!("/feed/{}/inbox", self.name)
   }
 
   ///

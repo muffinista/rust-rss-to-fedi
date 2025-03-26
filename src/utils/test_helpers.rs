@@ -30,6 +30,7 @@ use openssl::sign::Signer;
 use chrono::Utc;
 use uuid::Uuid;
 
+
 #[macro_export]
 macro_rules! build_test_server {
   ($pool:expr) => {{
@@ -84,12 +85,13 @@ pub fn sign_test_request(req: &mut actix_http::Request, body: &str, actor_id: &s
   let sig_headers = vec![String::from(crate::constants::REQUEST_TARGET), String::from("host"), String::from("date"), String::from("digest")];
   let path_and_query = req.path();
   let method = req.method();
-  let request_target = format!("{} https://test.com{}", method.to_string().to_lowercase(), path_and_query);
+  let host = req.uri().host().unwrap().clone();
+  let request_target = format!("{} https://{}{}", method.to_string().to_lowercase(), host, path_and_query);
   
   let date = fmt_http_date(SystemTime::now());
   let mut values: HashMap<String, String> = HashMap::<String, String>::new();
   values.insert(String::from(crate::constants::REQUEST_TARGET), request_target);
-  values.insert(String::from("host"), String::from("muffin.industries"));
+  values.insert(String::from("host"), String::from(host));
   values.insert(String::from("date"), date.clone());
 
   let digest = crate::utils::string_to_digest_string(body);
@@ -114,7 +116,8 @@ pub fn sign_test_request(req: &mut actix_http::Request, body: &str, actor_id: &s
       key_id, signature_value);
 
 
-  req.headers_mut().append(actix_web::http::header::HeaderName::from_lowercase(b"host").unwrap(), HeaderValue::from_str(&"muffin.industries").unwrap());
+      let x = HeaderValue::from_str(&host).unwrap();
+  req.headers_mut().append(actix_web::http::header::HeaderName::from_lowercase(b"host").unwrap(), x);
   req.headers_mut().append(actix_web::http::header::HeaderName::from_lowercase(b"date").unwrap(), HeaderValue::from_str(&date).unwrap());
   req.headers_mut().append(actix_web::http::header::HeaderName::from_lowercase(b"digest").unwrap(), HeaderValue::from_str(&digest).unwrap());
   req.headers_mut().append(actix_web::http::header::HeaderName::from_lowercase(b"signature").unwrap(), HeaderValue::from_str(&final_signature).unwrap());

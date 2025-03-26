@@ -109,6 +109,6 @@ mod test {
       .build();
 
     let result = msg.run(&mut queue).await;
-    assert!(result.is_err());
+    assert!(result.is_ok());
   }
 }
