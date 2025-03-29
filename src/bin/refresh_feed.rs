@@ -40,13 +40,19 @@ async fn main() -> Result<(), DeliveryError> {
 
   let id = args.id;
 
+  let templates_dir = env::var("TEMPLATES_PATH").unwrap_or(String::from("templates"));
+
+  let tera =
+    tera::Tera::new(&format!("{templates_dir:}/**/*")).expect("Parsing error while loading template folder");
+
+
   let feed = Feed::find(id, &pool).await;
   match feed {
     Ok(mut feed) => {
       let mut queue = create_queue().await;
       queue.connect(NoTls).await.unwrap();
   
-      let result = feed.refresh(&pool, &mut queue).await;
+      let result = feed.refresh(&pool, &tera, &mut queue).await;
       match result {
         Ok(_result) => { 
           println!("RefreshFeed: Done refreshing feed {:}", feed.url);

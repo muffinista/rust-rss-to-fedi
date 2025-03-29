@@ -17,19 +17,7 @@ pub struct Follower {
   pub updated_at: chrono::DateTime::<Utc>
 }
 
-impl PartialEq for Follower {
-  fn eq(&self, other: &Self) -> bool {
-    self.id == other.id
-  }
-}
-
 impl Follower {
-  pub async fn find(id: i32, pool: &PgPool) -> Result<Option<Follower>, sqlx::Error> {
-    sqlx::query_as!(Follower, "SELECT * FROM followers WHERE id = $1", id)
-      .fetch_optional(pool)
-      .await
-  }
-
   ///
   /// Ping the actor's profile data to get their inbox
   ///
@@ -53,6 +41,8 @@ impl Follower {
 mod test {
   use std::fs;
   use sqlx::postgres::PgPool;
+
+  use crate::constants::ACTIVITY_JSON;
   use crate::models::Feed;
   use crate::models::Follower;
   use crate::utils::test_helpers::{fake_feed, fake_follower};
@@ -69,7 +59,7 @@ mod test {
 
     let m = server.mock("GET", "/users/muffinista")
       .with_status(200)
-      .with_header("Accept", "application/activity+json")
+      .with_header("Accept", ACTIVITY_JSON)
       .with_body(data)
       .create_async()
       .await;
@@ -78,7 +68,29 @@ mod test {
 
     m.assert_async().await;
 
-    assert!(result.expect("Failed to find inbox") == "https://botsin.space/users/muffinista/inbox");
+    let expected_inbox_url = format!("{:}/users/muffinista/inbox", server.url()); 
+
+    assert!(expected_inbox_url == result.expect("Failed to find inbox"));
+    Ok(())
+  }
+
+  #[sqlx::test]
+  async fn test_find_inbox_404(pool: PgPool) -> Result<(), String> {
+    let mut server = mockito::Server::new_async().await;
+    let feed: Feed = fake_feed();
+    let follower: Follower = fake_follower(&feed, &server);
+
+    let m = server.mock("GET", "/users/muffinista")
+      .with_status(404)
+      .with_header("Accept", ACTIVITY_JSON)
+      .create_async()
+      .await;
+
+    let result = follower.find_inbox(&pool).await;
+
+    m.assert_async().await;
+
+    assert!(result.is_err());
     Ok(())
   }
 }

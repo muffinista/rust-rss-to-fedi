@@ -13,9 +13,10 @@ use reqwest::header::HeaderValue;
 use sqlx::postgres::PgPool;
 
 use crate:: {
-  error::DeliveryError,
+  errors::DeliveryError,
   utils::http::*,
-  models:: Feed
+  models:: Feed,
+  constants::ACTIVITY_JSON
 };
 
 use openssl::{
@@ -31,15 +32,41 @@ use base64::{Engine as _, engine::general_purpose};
 
 use serde::Serialize;
 
+/// Sign a request for the given URL with the admin account credentials. This is
+/// used to fetch actor information from remote hosts
 pub async fn admin_fetch_object(url: &str, pool: &PgPool) -> Result<Option<String>, DeliveryError> {
   let admin_feed = Feed::for_admin(pool).await?;
 
   if admin_feed.is_some() {
     let admin_feed = admin_feed.as_ref().unwrap();
-    crate::services::mailer::fetch_object(url, Some(&admin_feed.ap_url()), Some(&admin_feed.private_key)).await
+    log::debug!("Just FYI, my public key is: {:}", admin_feed.public_key);
+    crate::services::mailer::fetch_object(url, Some(&admin_feed.public_key_id()), Some(&admin_feed.private_key)).await
   } else {
     crate::services::mailer::fetch_object(url, None, None).await
   }
+}
+
+///
+/// Sign a GET request for the given URL
+/// 
+async fn signed_request_for(url: &str, key_id: &str, private_key: &str) -> Result<Request, DeliveryError> {
+  log::debug!("fetch with key: {key_id:}");
+  log::debug!("fetch with key: {private_key:}");
+
+  let config: http_signature_normalization_reqwest::Config<DefaultSpawner> = Config::default().mastodon_compat();
+  let private_key = PKey::private_key_from_pem(private_key.as_bytes())?;
+  let mut signer = Signer::new(MessageDigest::sha256(), &private_key)?;
+
+  reqwest::Client::new()
+    .get(url)
+    .header("accept", ACTIVITY_JSON)
+    .header("user-agent", user_agent())
+    .signature(&config, key_id, move |signing_string| {
+      log::debug!("SIGNING STRING: {:}", signing_string);
+      signer.update(signing_string.as_bytes())?;
+      
+      Ok(general_purpose::STANDARD.encode(signer.sign_to_vec()?)) as Result<_, DeliveryError>
+    }).await
 }
 
 ///
@@ -47,30 +74,16 @@ pub async fn admin_fetch_object(url: &str, pool: &PgPool) -> Result<Option<Strin
 ///
 pub async fn fetch_object(url: &str, key_id: Option<&str>, private_key: Option<&str>) -> Result<Option<String>, DeliveryError> {
   let client = reqwest::Client::new();
-  let config: http_signature_normalization_reqwest::Config<DefaultSpawner> = Config::default().mastodon_compat();
 
   let response = if key_id.is_some() && private_key.is_some() {
-    let key_id = key_id.unwrap();
-    let private_key = private_key.unwrap();
-    let private_key = PKey::private_key_from_pem(private_key.as_bytes())?;
-    let mut signer = Signer::new(MessageDigest::sha256(), &private_key)?;
-
-    let request = client
-      .get(url)
-      .header("Accept", "application/activity+json")
-      .header("User-Agent", user_agent())
-      .signature(&config, key_id, move |signing_string| {
-        signer.update(signing_string.as_bytes())?;
-        
-        Ok(general_purpose::STANDARD.encode(signer.sign_to_vec()?)) as Result<_, DeliveryError>
-      }).await?;
+    let request = signed_request_for(url, key_id.unwrap(), private_key.unwrap()).await?;
   
     client.execute(request).await
   } else {
     client
       .get(url)
-      .header("Accept", "application/activity+json")
-      .header("User-Agent", user_agent())
+      .header("accept", ACTIVITY_JSON)
+      .header("user-agent", user_agent())
       .send()
       .await
   };
@@ -80,7 +93,6 @@ pub async fn fetch_object(url: &str, key_id: Option<&str>, private_key: Option<&
       if !response.status().is_success() {
         return Ok(None)
       }
-
 
       let body = response
         .text()
@@ -103,12 +115,16 @@ pub async fn deliver_to_inbox<T: Serialize + ?Sized>(inbox: &Url, key_id: &str, 
   let payload = serde_json::to_vec(json).unwrap();
 
   log::info!("deliver to {inbox:}");
-  println!("deliver to {inbox:}");
 
   // ensure we're sending proper content-type
   heads.insert(
     "Content-Type",
-    HeaderValue::from_str("application/activity+json").unwrap(),
+    HeaderValue::from_str(ACTIVITY_JSON).unwrap(),
+  );
+
+  heads.insert(
+    "Accept", 
+    HeaderValue::from_str(ACTIVITY_JSON).unwrap()
   );
 
   let request_builder = client
@@ -119,7 +135,7 @@ pub async fn deliver_to_inbox<T: Serialize + ?Sized>(inbox: &Url, key_id: &str, 
 
   let request = sign_request(
     request_builder,
-    format!("{key_id}#main-key"),
+    String::from(key_id),
     private_key.to_string(),
     payload
   )
@@ -145,7 +161,7 @@ pub async fn deliver_to_inbox<T: Serialize + ?Sized>(inbox: &Url, key_id: &str, 
   }
 }
 
-pub async fn sign_request(
+async fn sign_request(
   request_builder: RequestBuilder,
   key_id: String,
   private_key: String,
@@ -155,6 +171,8 @@ pub async fn sign_request(
   // https://docs.rs/http-signature-normalization-reqwest/0.7.1/http_signature_normalization_reqwest/struct.Config.html#method.mastodon_compat
   let config: http_signature_normalization_reqwest::Config<DefaultSpawner> = Config::default().mastodon_compat();
   let digest = Sha256::new();
+
+  log::debug!("PAYLOAD: {:}", String::from_utf8(payload.clone()).unwrap());
 
   request_builder
     .signature_with_digest(

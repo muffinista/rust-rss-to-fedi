@@ -12,12 +12,25 @@ export LLVM_PROFILE_FILE="profile/rustypub-%p-%m.profraw"
 
 cargo +nightly test
 
-
-rm -rf target/
+# rm -rf target/
+mkdir -p target/coverage
 
 scripts/test
 
-grcov ../rust-activitypub/profile/ -s . --binary-path ../rust-activitypub/target/debug/ -t html --llvm --branch --ignore-not-existing -o ../rust-activitypub/target/debug/coverage/
+echo "Running grcov"
 
+grcov . \
+  --binary-path ./target/debug/deps/ \
+  -s ./src \
+  -t html \
+  --branch \
+  --keep-only "src" \
+  --ignore "target/*" \
+  --ignore "db/*" \
+  --ignore "./db/*" \
+  --ignore-not-existing \
+  --ignore '../*' \
+  --ignore "/*" \
+  -o target/coverage/html
 
 # https://vladfilippov.com/rust-code-coverage-tools/

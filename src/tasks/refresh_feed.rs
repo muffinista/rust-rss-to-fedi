@@ -27,11 +27,13 @@ impl RefreshFeed {
 impl AsyncRunnable for RefreshFeed {
   async fn run(&self, queue: &mut dyn AsyncQueueable) -> Result<(), FangError> {
     let pool = db_pool().await;
+    let tera =
+    tera::Tera::new("templates/**/*").expect("Parsing error while loading template folder");
 
     let feed = Feed::find(self.id, &pool).await;
     match feed {
       Ok(mut feed) => {
-        let result = feed.refresh(&pool, queue).await;
+        let result = feed.refresh(&pool, &tera, queue).await;
         match result {
           Ok(_result) => { 
             log::info!("RefreshFeed: Done refreshing feed {:}", feed.url);
@@ -67,3 +69,87 @@ impl AsyncRunnable for RefreshFeed {
     true
   }
 }
+
+
+// #[cfg(test)]
+// mod test {
+//   use fang::asynk::async_queue::AsyncQueue;
+//   use fang::AsyncRunnable;
+//   use fang::NoTls;
+
+//   use std::env;
+
+//   use crate::tasks::RefreshFeed;
+//   use crate::utils::pool::db_pool;
+//   use crate::utils::test_helpers::real_feed;
+
+
+//   #[sqlx::test]
+//   async fn test_refresh_feed_run_success() {
+//     let pool = db_pool().await;
+//     let db_uri = env::var("DATABASE_URL").expect("DATABASE_URL is not set");
+//     let mut server = mockito::Server::new_async().await;
+//     let mut feed = real_feed(&pool).await.unwrap();
+
+//     let url = format!("{}/rss.xml", &server.url()).to_string();
+//     feed.url = url;
+//     feed.save(&pool).await.unwrap();
+
+//     let path = "fixtures/test_rss.xml";
+//     let data = std::fs::read_to_string(path).unwrap();
+
+//     let m = server.mock("GET", "/rss.xml")
+//       .with_status(200)
+//       .with_body(data)
+//       .create_async()
+//       .await;
+
+//     let msg = RefreshFeed {
+//       id: feed.id
+//     };
+
+//     let mut queue:AsyncQueue<NoTls> = AsyncQueue::builder()
+//       .uri(db_uri)
+//       .max_pool_size(1u32)
+//       .build();
+
+//     let result = msg.run(&mut queue).await;
+//     assert!(result.is_ok());
+
+//     m.assert_async().await;
+
+//   }
+
+
+//   #[sqlx::test]
+//   async fn test_refresh_feed_run_error() {
+//     let pool = db_pool().await;
+//     let db_uri = env::var("DATABASE_URL").expect("DATABASE_URL is not set");
+//     let mut server = mockito::Server::new_async().await;
+//     let mut feed = real_feed(&pool).await.unwrap();
+
+//     let url = format!("{}/rss.xml", &server.url()).to_string();
+//     feed.url = url;
+//     feed.save(&pool).await.unwrap();
+
+//     let m = server.mock("GET", "/rss.xml")
+//       .with_status(404)
+//       .create_async()
+//       .await;
+
+//     let msg = RefreshFeed {
+//       id: feed.id
+//     };
+
+//     let mut queue:AsyncQueue<NoTls> = AsyncQueue::builder()
+//       .uri(db_uri)
+//       .max_pool_size(1u32)
+//       .build();
+
+//     let result = msg.run(&mut queue).await;
+//     assert!(!result.is_ok());
+
+//     m.assert_async().await;
+
+//   }
+// }

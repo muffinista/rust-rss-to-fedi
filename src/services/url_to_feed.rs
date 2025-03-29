@@ -30,8 +30,6 @@ pub async fn url_to_feed_url(url:&String) -> Result<Option<String>, DeliveryErro
   let client = http_client()?;
   let heads = generate_request_headers();
 
-  // let client = reqwest::Client::new();
-  // let heads = generate_request_headers();
   let res = client
     .get(url)
     .headers(heads)

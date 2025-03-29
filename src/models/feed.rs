@@ -1,4 +1,4 @@
-use rocket::uri;
+use tera::Context;
 use url::Url;
 
 use rand::{thread_rng, Rng};
@@ -29,7 +29,7 @@ use feed_rs::parser;
 
 use chrono::{Duration, Utc, TimeZone};
 
-use crate::utils::templates::{Context, render};
+use crate::utils::templates::render;
 
 use std::{
   env,
@@ -50,7 +50,7 @@ use crate::models::User;
 use crate::models::Item;
 use crate::models::Follower;
 use crate::models::SensitiveNote;
-use crate::models::FeedError;
+use crate::errors::FeedError;
 
 use crate::utils::keys::*;
 use crate::utils::path_to_url;
@@ -63,11 +63,6 @@ use crate::traits::property_value::{
   to_profile_value_link,
   PropertyValue
 };
-
-use crate::routes::feeds::*;
-use crate::routes::ap::inbox::*;
-use crate::routes::ap::outbox::*;
-use crate::routes::login::*;
 
 use crate::PER_PAGE;
 
@@ -192,7 +187,7 @@ impl Feed {
   }
 
   ///
-  /// Get a count of how many items we have for this feed
+  /// Get a count of how many feeds we have
   ///
   pub async fn count(pool: &PgPool)  -> Result<i32, sqlx::Error> {
     let result = sqlx::query!("SELECT COUNT(1) AS tally FROM feeds")
@@ -509,7 +504,7 @@ impl Feed {
   ///
   /// load the contents of the feed
   ///
-  pub async fn load(&self) -> Result<String, reqwest::Error> {
+  pub async fn load(&self) -> Result<String, FeedError> {
     let client = reqwest::Client::new();
     let heads = generate_request_headers();
     let response = client
@@ -520,13 +515,22 @@ impl Feed {
 
     match response {
       Ok(response) => {
-        let body = response
+        if response.status().is_success() {
+          let body = response
           .text()
-          .await?;
+          .await;
+
+          if let Ok(body) = body {
+            Ok(body)
+          } else {
+            Err(FeedError { message: body.expect_err("weird").to_string() })
+          }
     
-        Ok(body)  
+        } else {
+          Err(FeedError { message: String::from("404") })
+        }
       },
-      Err(err) => Err(err)
+      Err(err) => Err(FeedError { message: err.to_string() })
     }
   }
 
@@ -568,7 +572,7 @@ impl Feed {
   ///
   /// grab new data for this feed, and deliver any new entries to followers
   ///
-  pub async fn refresh(&mut self, pool: &PgPool, queue: &mut dyn AsyncQueueable) -> Result<(), DeliveryError> {
+  pub async fn refresh(&mut self, pool: &PgPool, tera: &tera::Tera, queue: &mut dyn AsyncQueueable) -> Result<(), DeliveryError> {
     // skip processing for admin accounts
     if self.is_admin() {
       self.mark_fresh(pool).await?;
@@ -579,14 +583,13 @@ impl Feed {
       log::info!("Feed {} {} has too many errors {}, skipping", self.id, self.url, self.error_count);
       Ok(())
     } else {
-
       let items = self.parse(pool).await;
       match items {
         Ok(items) => {
           if !items.is_empty() {
             log::info!("delivering {} items", items.len());
             for item in items {
-              item.deliver(self, pool, queue).await?;
+              item.deliver(self, pool, tera, queue).await?;
             }  
           }
   
@@ -697,21 +700,67 @@ impl Feed {
   /// Return URL to use in ActivityPub output for this feed
   ///
   pub fn ap_url(&self) -> String {
-    path_to_url(&uri!(render_feed(&self.name)))
+    path_to_url(&format!("/feed/{}", self.name))
+  }
+
+  ///
+  /// Return URL to use in ActivityPub output for this feed
+  ///
+  pub fn public_key_id(&self) -> String {
+    path_to_url(&format!("/feed/{}#main-key", self.name))
+  }
+
+  ///
+  /// Return inbox URL to use in ActivityPub output for this feed
+  ///
+  pub fn inbox_url(&self) -> String {
+    path_to_url(&self.inbox_path())
+  }
+
+  ///
+  /// Return inbox path fragment
+  ///
+  pub fn inbox_path(&self) -> String {
+    format!("/feed/{}/inbox", self.name)
+  }
+
+  ///
+  /// Return outbox URL to use in ActivityPub output for this feed
+  ///
+  pub fn outbox_url(&self) -> String {
+    path_to_url(&format!("/feed/{}/outbox", self.name))
+  }
+
+  ///
+  /// Return outbox URL to use in ActivityPub output for this feed
+  ///
+  pub fn outbox_paged_url(&self, page: i32) -> String {
+    path_to_url(&format!("/feed/{}/outbox?page={}", self.name, page))
   }
 
   ///
   /// Return URL to use in HTML output for this feed
   ///
   pub fn permalink_url(&self) -> String {
-    path_to_url(&uri!(show_feed(&self.name, None::<i32>)))
+    path_to_url(&format!("/feed/{}", self.name))
+
+    // path_to_url(&uri!(show_feed(&self.name, None::<i32>)))
   }
 
   ///
   /// URL for the followers route
   ///
   pub fn followers_url(&self) -> String {
-    path_to_url(&uri!(render_feed_followers(&self.name, None::<i32>)))
+    path_to_url(&format!("/feed/{}/followers", self.name))
+//    path_to_url(&uri!(render_feed_followers(&self.name, None::<i32>)))
+  }
+
+  ///
+  /// URL for the paged followers route
+  ///
+  pub fn followers_paged_url(&self, page:i32) -> String {
+    path_to_url(&format!("/feed/{}/followers?page={}", self.name, page))
+//    path_to_url(&uri!(render_feed_followers(&self.name, None::<i32>)))
   }
 
   ///
@@ -731,7 +780,7 @@ impl Feed {
   }
 
 
-  pub async fn properties(&self, pool: &PgPool) -> Result<Vec<AnyBase>, DeliveryError> {
+  pub async fn properties(&self, tera: &tera::Tera, pool: &PgPool) -> Result<Vec<AnyBase>, DeliveryError> {
     let mut results: Vec<AnyBase> = Vec::new();
     let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
     let user = User::find(self.user_id, pool).await;
@@ -745,18 +794,18 @@ impl Feed {
 
     if self.site_url.is_some() {
       let guts = self.site_url.clone().unwrap();
-      let value = to_profile_value_link(guts.clone(), guts);
+      let value = to_profile_value_link(tera, guts.clone(), guts);
       results.push(PropertyValue::new("Homepage", &value).into_any_base().unwrap());
     }
 
     let actor_url = user.actor_url;
     if full_username.is_some() && actor_url.is_some() {
-      let value = to_profile_value_link(actor_url.unwrap(), full_username.unwrap());
+      let value = to_profile_value_link(tera, actor_url.unwrap(), full_username.unwrap());
       results.push(PropertyValue::new("Generated by", &value).into_any_base().unwrap());
     }
 
 
-    let value = to_profile_value_link(format!("https://{instance_domain:}/"), instance_domain);
+    let value = to_profile_value_link(tera, format!("https://{instance_domain:}/"), instance_domain);
     results.push(PropertyValue::new("Powered by", &value).into_any_base().unwrap());
 
     Ok(results)
@@ -766,7 +815,7 @@ impl Feed {
   ///
   /// Generate valid ActivityPub data for this feed
   ///
-  pub async fn to_activity_pub(&self, pool: &PgPool) -> Result<String, DeliveryError> {
+  pub async fn to_activity_pub(&self, tera: &tera::Tera, pool: &PgPool) -> Result<String, DeliveryError> {
     let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
     let feed_url = self.ap_url();
     let mut svc = Ext1::new(
@@ -776,8 +825,8 @@ impl Feed {
       ),
       PublicKey {
         public_key: PublicKeyInner {
-          id: iri!(format!("{feed_url}#main-key")),
-          owner: iri!(path_to_url(&uri!(render_feed(&self.name)))),
+          id: iri!(self.public_key_id()),
+          owner: iri!(self.ap_url()),
           public_key_pem: self.public_key.to_owned(),
         },
       },
@@ -787,13 +836,13 @@ impl Feed {
       .set_context(context())
       .add_context(security())
       .add_context(schema_property_context()?)
-      .set_id(iri!(path_to_url(&uri!(render_feed(&self.name)))))
+      .set_id(iri!(self.ap_url()))
       .set_name(self.display_name().clone())
       .set_preferred_username(self.name.clone())
-      .set_inbox(iri!(path_to_url(&uri!(user_inbox(&self.name)))))
-      .set_outbox(iri!(path_to_url(&uri!(render_feed_outbox(&self.name, None::<i32>)))))
+      .set_inbox(iri!(self.inbox_url()))
+      .set_outbox(iri!(self.outbox_url()))
       .set_followers(iri!(self.followers_url()))
-      .set_many_attachments(self.properties(pool).await?);
+      .set_many_attachments(self.properties(tera, pool).await?);
     
     if self.is_admin() {
       svc.set_summary(format!("Admin account for {instance_domain}"));
@@ -882,7 +931,7 @@ impl Feed {
     accept.set_context(context());
 
     // deliver to the user
-    let result = deliver_to_inbox(&Url::parse(&inbox)?, &self.ap_url(), &self.private_key, &accept).await;
+    let result = deliver_to_inbox(&Url::parse(&inbox)?, &self.public_key_id(), &self.private_key, &accept).await;
 
     if result.is_err() {
       Actor::log_error(&inbox, pool).await?;
@@ -896,23 +945,30 @@ impl Feed {
   /// handle an incoming message. we mostly ignore these except a user can message the admin
   /// feed to login to the site to add/manage feeds
   ///
-  pub async fn incoming_message(&self, pool: &PgPool, actor_url: &str, activity: &AcceptedActivity) -> Result<(), DeliveryError> {
+  pub async fn incoming_message(&self, pool: &PgPool, tera: &tera::Tera, actor_url: &str, activity: &AcceptedActivity) -> Result<(), DeliveryError> {
+    // the underlying activitystream library will check that the URL exists/etc
+    // via BaseExt::check_authority. we can skip that if we want
+    let obj = if env::var("DISABLE_OBJECT_CHECKS").is_ok() {
+      activity.object_unchecked()
+    } else {
+      // pull the Note out of the Activity
+      let checked_obj = activity.object();
+      if checked_obj.is_err() {
+        return Err(DeliveryError::Error("Something went wrong".to_string()));
+      }
+      checked_obj.unwrap()
+    };
 
-    // pull the Note out of the Activity
-    let obj = activity.object();
-    if obj.is_err() {
-      return Err(DeliveryError::Error("Something went wrong".to_string()));
-    }
-    let obj = obj.unwrap();
     let note: Option<Note> = obj.as_one().unwrap().clone().extend().unwrap();
 
-    if ! note.is_some() {
+    if note.is_none() {
       return Ok(())
     }
+
     let note = note.unwrap();
     let content = note.content();
 
-    if ! content.is_some() {
+    if content.is_none() {
       return Ok(())
     }
     let content = content.unwrap();
@@ -943,14 +999,12 @@ impl Feed {
         let dest_actor = dest_actor.unwrap();
 
         // generate a login message for this user
-        let message = self.generate_login_message(Some(activity), &dest_actor, pool).await?;
+        let message = self.generate_login_message(Some(activity), &dest_actor, pool, tera).await?;
         let msg = serde_json::to_string(&message).unwrap();
-        log::debug!("{msg}");
+        log::debug!("send login: {msg:}");
     
-        let my_url = self.ap_url();
-
         // send the message!
-        let result = deliver_to_inbox(&Url::parse(&dest_actor.inbox_url)?, &my_url, &self.private_key, &message).await;
+        let result = deliver_to_inbox(&Url::parse(&dest_actor.inbox_url)?, &self.public_key_id(), &self.private_key, &message).await;
     
         if result.is_err() {
           Actor::log_error(&dest_actor.inbox_url, pool).await?;
@@ -972,7 +1026,7 @@ impl Feed {
   ///
   /// generate a login message to send to the user
   ///
-  pub async fn generate_login_message(&self, activity: Option<&AcceptedActivity>, dest_actor: &Actor, pool: &PgPool) -> Result<ApObject<Create>, DeliveryError> {
+  pub async fn generate_login_message(&self, activity: Option<&AcceptedActivity>, dest_actor: &Actor, pool: &PgPool, tera: &tera::Tera) -> Result<ApObject<Create>, DeliveryError> {
 
     let mut reply: SensitiveNote = SensitiveNote::new();
 
@@ -1004,7 +1058,7 @@ impl Feed {
     // update with actor information
     user.apply_actor(dest_actor, pool).await.unwrap();
 
-    let auth_url = path_to_url(&uri!(attempt_login(&user.login_token)));
+    let auth_url = path_to_url(&format!("/user/auth/{}", &user.login_token));
 
     let mut mention = Mention::new();
     mention
@@ -1015,7 +1069,7 @@ impl Feed {
     let mut template_context = Context::new();
     template_context.insert("link", &auth_url);
     
-    let body = render("email/send-login-status", &template_context).unwrap();
+    let body = render("email/send-login-status.text.tera", tera, &template_context).unwrap();
     let ts = OffsetDateTime::now_utc();
 
     reply
@@ -1023,7 +1077,7 @@ impl Feed {
       .set_attributed_to(iri!(my_url))
       .set_content(body)
       .set_url(iri!(my_url))
-      .set_id(iri!(format!("{my_url}/{uniq_hash}")))
+      .set_id(iri!(format!("{my_url}/{uniq_hash}/note")))
       .set_to(iri!(dest_actor.url))
       .set_tag(mention.into_any_base()?)
       .set_published(ts);
@@ -1047,7 +1101,6 @@ impl Feed {
       .set_to(iri!(dest_actor.url))
       .set_published(ts);
 
-
     Ok(action) 
   }
 
@@ -1067,9 +1120,10 @@ impl Feed {
   ///
   /// handle any incoming events
   ///
-  pub async fn handle_activity(&self, pool: &PgPool, activity: &AcceptedActivity)  -> Result<(), DeliveryError> {
+  pub async fn handle_activity(&self, pool: &PgPool, tera: &tera::Tera, activity: &AcceptedActivity)  -> Result<(), DeliveryError> {
     let s = serde_json::to_string(&activity).unwrap();
     log::debug!("{s:}");
+    
 
     let (actor, _object, act) = activity.clone().into_parts();
 
@@ -1079,7 +1133,7 @@ impl Feed {
       Some(AcceptedTypes::Follow) => self.follow(pool, &actor_id, activity).await,
       Some(AcceptedTypes::Undo) => self.unfollow(pool, &actor_id).await,
       Some(AcceptedTypes::Delete) => self.unfollow(pool, &actor_id).await,
-      Some(AcceptedTypes::Create) => self.incoming_message(pool, &actor_id, activity).await,
+      Some(AcceptedTypes::Create) => self.incoming_message(pool, tera, &actor_id, activity).await,
       // we don't need to handle this but if we receive it, just move on
       Some(AcceptedTypes::Accept) => Ok(()),
       None => Ok(()),
@@ -1092,7 +1146,7 @@ impl Feed {
   ///
   /// generate an AP message to this user with a link to this feed
   ///
-  pub async fn link_to_feed_message(&self, actor: &Actor) -> Result<ApObject<Create>, DeliveryError> {
+  pub async fn link_to_feed_message(&self, tera: &tera::Tera, actor: &Actor) -> Result<ApObject<Create>, DeliveryError> {
     let mut reply: SensitiveNote = SensitiveNote::new();
 
     let my_url = self.permalink_url();
@@ -1119,7 +1173,7 @@ impl Feed {
     template_context.insert("link", &self.permalink_url());
     template_context.insert("address", &self.address());
     
-    let body = render("email/send-creation-status", &template_context).unwrap();
+    let body = render("email/send-creation-status.text.tera", tera, &template_context).unwrap();
 
     reply
       .set_sensitive(true)
@@ -1188,11 +1242,11 @@ impl Feed {
     // and activitystreams might not be wired for it
     collection
       .set_context(context())
-      .set_id(iri!(path_to_url(&uri!(render_feed(&self.name)))))
+      .set_id(iri!(&self.ap_url()))
       .set_summary("A list of followers".to_string())
       .set_total_items(count as u64)
-      .set_first(iri!(path_to_url(&uri!(render_feed_followers(&self.name, Some(1))))))
-      .set_last(iri!(path_to_url(&uri!(render_feed_followers(&self.name, Some(total_pages))))));
+      .set_first(iri!(&self.followers_paged_url(1)))
+      .set_last(iri!(&self.followers_paged_url(total_pages)));
 
     Ok(collection)
   }
@@ -1208,17 +1262,17 @@ impl Feed {
     collection
       .set_context(context())
       .set_summary("A list of followers".to_string())
-      .set_part_of(iri!(path_to_url(&uri!(render_feed(&self.name)))))
-      .set_first(iri!(path_to_url(&uri!(render_feed_followers(&self.name, Some(1))))))
-      .set_last(iri!(path_to_url(&uri!(render_feed_followers(&self.name, Some(total_pages))))))
-      .set_current(iri!(path_to_url(&uri!(render_feed_followers(&self.name, Some(page))))));
-
+      .set_part_of(iri!(&self.ap_url()))
+      .set_first(iri!(&self.followers_paged_url(1)))
+      .set_last(iri!(&self.followers_paged_url(total_pages)))
+      .set_current(iri!(&self.followers_paged_url(page)));
+   
     if page > 1 {
-      collection.set_prev(iri!(path_to_url(&uri!(render_feed_followers(&self.name, Some(page - 1))))));
+      collection.set_prev(iri!(&self.followers_paged_url(page - 1)));
     }
 
     if page < total_pages {
-      collection.set_next(iri!(path_to_url(&uri!(render_feed_followers(&self.name, Some(page + 1))))));
+      collection.set_next(iri!(&self.followers_paged_url(page + 1)));
     }
 
     // return empty collection for invalid pages
@@ -1270,11 +1324,11 @@ impl Feed {
     // and activitystreams might not be wired for it
     collection
       .set_context(context())
-      .set_id(iri!(path_to_url(&uri!(render_feed(&self.name)))))
+      .set_id(iri!(&self.ap_url()))
       .set_summary("A list of outbox items".to_string())
       .set_total_items(count as u64)
-      .set_first(iri!(path_to_url(&uri!(render_feed_outbox(&self.name, Some(1))))))
-      .set_last(iri!(path_to_url(&uri!(render_feed_outbox(&self.name, Some(total_pages))))));
+      .set_first(iri!(self.outbox_paged_url(1)))
+      .set_last(iri!(self.outbox_paged_url(total_pages)));
 
     Ok(collection)
   }
@@ -1286,7 +1340,7 @@ impl Feed {
   ///
   /// generate actual AP page of follows 
   ///
-  pub async fn outbox_paged(&self, page: i32, pool: &PgPool)  -> Result<ApObject<OrderedCollectionPage>, DeliveryError>{
+  pub async fn outbox_paged(&self, page: i32, pool: &PgPool, tera: &tera::Tera)  -> Result<ApObject<OrderedCollectionPage>, DeliveryError>{
     let count = if self.show_statuses_in_outbox() {
       self.entries_count(pool).await?
     } else {
@@ -1299,17 +1353,17 @@ impl Feed {
     collection
       .set_context(context())
       .set_summary("A list of outbox items".to_string())
-      .set_part_of(iri!(path_to_url(&uri!(render_feed(&self.name)))))
-      .set_first(iri!(path_to_url(&uri!(render_feed_outbox(&self.name, Some(1))))))
-      .set_last(iri!(path_to_url(&uri!(render_feed_outbox(&self.name, Some(total_pages))))))
-      .set_current(iri!(path_to_url(&uri!(render_feed_outbox(&self.name, Some(page))))));
+      .set_part_of(iri!(&self.ap_url()))
+      .set_first(iri!(self.outbox_paged_url(1)))
+      .set_last(iri!(self.outbox_paged_url(total_pages)))
+      .set_current(iri!(self.outbox_paged_url(page)));
 
     if page > 1 {
-      collection.set_prev(iri!(path_to_url(&uri!(render_feed_outbox(&self.name, Some(page - 1))))));
+      collection.set_prev(iri!(self.outbox_paged_url(page - 1)));
     }
 
     if page < total_pages {
-      collection.set_next(iri!(path_to_url(&uri!(render_feed_outbox(&self.name, Some(page + 1))))));
+      collection.set_next(iri!(self.outbox_paged_url(page + 1)));
     }
 
     // return empty collection for invalid pages
@@ -1327,7 +1381,7 @@ impl Feed {
       match result {
         Ok(result) => {
           for item in result {
-            let output = item.to_activity_pub(self, pool).await.unwrap();
+            let output = item.to_activity_pub(self, pool, tera).await.unwrap();
             collection.add_item(output.into_any_base()?);    
           }
 
@@ -1345,10 +1399,11 @@ impl Feed {
 mod test {
   use std::fs;
   use sqlx::postgres::PgPool;
-  use rocket::uri;
   use feed_rs::parser;
   use chrono::Utc;
 
+
+  use crate::constants::ACTIVITY_JSON;
   use crate::models::Feed;
   use crate::models::feed::DeliveryError;
   use crate::models::feed::AcceptedActivity;
@@ -1356,11 +1411,8 @@ mod test {
   use crate::models::Enclosure;
   use crate::models::Actor;
 
-  use crate::utils::test_helpers::{fake_user, fake_feed, real_feed, real_user, real_item, real_actor};
-  use crate::utils::path_to_url;
-
-  use crate::routes::feeds::*;
-  use crate::routes::ap::outbox::*;
+  use crate::models::User;
+use crate::utils::test_helpers::{fake_user, fake_feed, real_feed, real_user, real_item, real_actor, test_tera};
 
 
   #[sqlx::test]
@@ -1417,6 +1469,39 @@ mod test {
   }
 
   #[sqlx::test]
+  async fn test_for_item(pool: PgPool) -> Result<(), String> {
+    let feed: Feed = real_feed(&pool).await.unwrap();
+    let item: Item = real_item(&feed, &pool).await.unwrap();
+    let feed2 = Feed::for_item(item.id, &pool).await.unwrap();
+    
+    assert_eq!(feed, feed2);
+
+    Ok(())
+  }
+
+  #[sqlx::test]
+  async fn test_find_by_user_and_name(pool: PgPool) -> Result<(), String> {
+    let feed: Feed = real_feed(&pool).await.unwrap();
+    let user: User = User::find(feed.user_id, &pool).await.unwrap();
+    let feed2: Feed = Feed::find_by_user_and_name(&user, &feed.name, &pool).await.unwrap().unwrap();
+    
+    assert_eq!(feed, feed2);
+
+    Ok(())
+  }
+  
+  #[sqlx::test]
+  async fn test_load_by_name(pool: PgPool) -> Result<(), String> {
+    let feed: Feed = real_feed(&pool).await.unwrap();
+    let feed2: Feed = Feed::load_by_name(&feed.name, &pool).await.unwrap();
+    
+    assert_eq!(feed, feed2);
+
+    Ok(())
+  }
+  
+
+  #[sqlx::test]
   async fn test_stale(pool: PgPool) -> sqlx::Result<()> {
     let _feed: Feed = real_feed(&pool).await?;
     let feed2: Feed = real_feed(&pool).await?;
@@ -1470,6 +1555,28 @@ mod test {
     Ok(())
   }
 
+  
+  #[sqlx::test]
+  async fn test_admin_delete(pool: PgPool) -> sqlx::Result<()> {
+    let feed:Feed = real_feed(&pool).await?;
+
+    let deleted_feed = Feed::admin_delete(feed.id, &pool).await?;
+    assert_eq!(feed, deleted_feed);
+      
+    Ok(())
+  }
+
+  
+  #[sqlx::test]
+  async fn test_language() -> sqlx::Result<()> {
+    let mut feed:Feed = fake_feed();
+    feed.language = None;
+
+    assert_eq!("en", feed.language());
+
+    Ok(())
+  }
+
   #[sqlx::test]
   async fn test_parse_atom_from_data(pool: PgPool) -> sqlx::Result<()> {
     use std::fs;
@@ -1512,7 +1619,7 @@ mod test {
 
     assert_eq!(feed.is_admin(), false);
 
-    feed.admin = true    ;
+    feed.admin = true;
     assert_eq!(feed.is_admin(), true);
 
     Ok(())
@@ -1631,8 +1738,9 @@ mod test {
 
     use serde_json::Value;
     let feed:Feed = fake_feed();
+    let tera = test_tera();
 
-    let output = feed.to_activity_pub(&pool).await.unwrap();
+    let output = feed.to_activity_pub(&tera, &pool).await.unwrap();
 
     let v: Value = serde_json::from_str(&output).unwrap();
     assert_eq!(v["name"], "testfeed");
@@ -1645,13 +1753,14 @@ mod test {
   fn test_admin_feed_to_activity_pub(pool: PgPool) -> Result<(), String> {
     use std::env;
     let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
+    let tera = test_tera();
 
     use serde_json::Value;
     let tmpfeed:Feed = real_feed(&pool).await.unwrap();
     tmpfeed.mark_admin(&pool).await.unwrap();
 
     let feed = Feed::find(tmpfeed.id, &pool).await.unwrap();
-    let output = feed.to_activity_pub(&pool).await.unwrap();
+    let output = feed.to_activity_pub(&tera, &pool).await.unwrap();
 
     let v: Value = serde_json::from_str(&output).unwrap();
     assert_eq!(v["summary"], format!("Admin account for {}", instance_domain));
@@ -1669,7 +1778,6 @@ mod test {
     let json = format!(r#"{{"id": "{}/1/2/3", "actor":"{}","object":{{ "id": "{}" }} ,"type":"Follow"}}"#, &server.url(), actor, actor).to_string();
     let act:AcceptedActivity = serde_json::from_str(&json).unwrap();
 
-
     let _m = server.mock("GET", "/users/colin")
       .with_status(200)
       .with_header("Accept", "application/ld+json")
@@ -1683,6 +1791,7 @@ mod test {
 
 
     let feed:Feed = real_feed(&pool).await.unwrap();
+    let tera = test_tera();
 
     let result = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = $1 AND actor = $2", feed.id, actor)
       .fetch_one(&pool)
@@ -1691,7 +1800,7 @@ mod test {
 
     assert!(result.tally.unwrap() == 0);
 
-    let activity_result = feed.handle_activity(&pool, &act).await;
+    let activity_result = feed.handle_activity(&pool, &tera, &act).await;
     match activity_result {
       Ok(_result) => {
 
@@ -1718,6 +1827,7 @@ mod test {
     
     let feed:Feed = real_feed(&pool).await.unwrap();
     let now = Utc::now();
+    let tera = test_tera();
 
     sqlx::query!("INSERT INTO followers (feed_id, actor, created_at, updated_at) VALUES($1, $2, $3, $4)", feed.id, actor, now, now)
       .execute(&pool)
@@ -1731,7 +1841,7 @@ mod test {
 
     assert!(result.tally.unwrap() == 1);
 
-    feed.handle_activity(&pool, &act).await.unwrap();
+    feed.handle_activity(&pool, &tera, &act).await.unwrap();
 
     let post_result = sqlx::query!("SELECT COUNT(1) AS tally FROM followers WHERE feed_id = $1 AND actor = $2", feed.id, actor)
       .fetch_one(&pool)
@@ -1830,14 +1940,14 @@ mod test {
   }}
     "#);
 
-    let act:AcceptedActivity = serde_json::from_str(&json).unwrap();
+    let act: AcceptedActivity = serde_json::from_str(&json).unwrap();
 
     let path = "fixtures/helper.json";
     let data = fs::read_to_string(path).unwrap().replace("SERVER_URL", &server.url());
 
     let _m = server.mock("GET", "/users/muffinista")
       .with_status(200)
-      .with_header("Accept", "application/activity+json")
+      .with_header("Accept", ACTIVITY_JSON)
       .with_body(data)
       .create_async()
       .await;
@@ -1849,8 +1959,9 @@ mod test {
 
 
     let feed:Feed = Feed::find(admin_feed.id, &pool).await.unwrap();
+    let tera = test_tera();
 
-    let activity_result = feed.handle_activity(&pool, &act).await;
+    let activity_result = feed.handle_activity(&pool, &tera, &act).await;
     match activity_result {
       Ok(_result) => {
         m2.assert();
@@ -1873,8 +1984,9 @@ mod test {
 
     let feed:Feed = real_feed(&pool).await.unwrap();
     let dest_actor:Actor = real_actor(&pool).await.unwrap();
+    let tera = test_tera();
 
-    let message = feed.generate_login_message(Some(&act), &dest_actor, &pool).await.unwrap();
+    let message = feed.generate_login_message(Some(&act), &dest_actor, &pool, &tera).await.unwrap();
 
     let s = serde_json::to_string(&message).unwrap();
 
@@ -1887,8 +1999,9 @@ mod test {
   async fn test_generate_login_message_no_activity(pool: PgPool) -> Result<(), String> {
     let feed:Feed = real_feed(&pool).await.unwrap();
     let dest_actor:Actor = real_actor(&pool).await.unwrap();
+    let tera = test_tera();
 
-    let message = feed.generate_login_message(None, &dest_actor, &pool).await.unwrap();
+    let message = feed.generate_login_message(None, &dest_actor, &pool, &tera).await.unwrap();
 
     let s = serde_json::to_string(&message).unwrap();
 
@@ -1901,15 +2014,13 @@ mod test {
   async fn test_link_to_feed_message(pool: PgPool) -> Result<(), String> {
     let actor = real_actor(&pool).await.unwrap();
     let feed: Feed = real_feed(&pool).await.unwrap();
+    let tera = test_tera();
 
-    let message = feed.link_to_feed_message(&actor).await.unwrap();
+    let message = feed.link_to_feed_message(&tera, &actor).await.unwrap();
 
     let s = serde_json::to_string(&message).unwrap();
-    println!("{:}", s);
 
     assert!(s.contains(r#"sensitive":true"#));
-
-
     Ok(())
   }
 
@@ -1931,7 +2042,6 @@ mod test {
     match result {
       Ok(result) => {
         let s = serde_json::to_string(&result).unwrap();
-        // println!("{:?}", s);
 
         assert!(s.contains("A list of followers"));
         Ok(())
@@ -1958,17 +2068,16 @@ mod test {
     match result {
       Ok(result) => {
         let s = serde_json::to_string(&result).unwrap();
-        // println!("{:?}", s);
         
         assert!(s.contains("OrderedCollectionPage"));
         assert!(s.contains("/colin11"));
         assert!(s.contains("/colin12"));
         assert!(s.contains("/colin13"));
-        assert!(s.contains(&format!(r#"first":"{}"#, path_to_url(&uri!(render_feed_followers(feed.name.clone(), Some(1)))))));
-        assert!(s.contains(&format!(r#"prev":"{}"#, path_to_url(&uri!(render_feed_followers(feed.name.clone(), Some(1)))))));      
-        assert!(s.contains(&format!(r#"next":"{}"#, path_to_url(&uri!(render_feed_followers(feed.name.clone(), Some(3)))))));
-        assert!(s.contains(&format!(r#"last":"{}"#, path_to_url(&uri!(render_feed_followers(feed.name.clone(), Some(4)))))));
-        assert!(s.contains(&format!(r#"current":"{}"#, path_to_url(&uri!(render_feed_followers(feed.name.clone(), Some(2)))))));
+        assert!(s.contains(&format!(r#"first":"{}"#, feed.followers_paged_url(1))));
+        assert!(s.contains(&format!(r#"prev":"{}"#, feed.followers_paged_url(1))));
+        assert!(s.contains(&format!(r#"next":"{}"#, feed.followers_paged_url(3))));
+        assert!(s.contains(&format!(r#"last":"{}"#, feed.followers_paged_url(4))));
+        assert!(s.contains(&format!(r#"current":"{}"#, feed.followers_paged_url(2))));
 
         Ok(())
       },
@@ -2056,7 +2165,9 @@ mod test {
       real_item(&feed, &pool).await?;
     }
 
-    let result = feed.outbox_paged(2, &pool).await;
+    let tera = test_tera();
+
+    let result = feed.outbox_paged(2, &pool, &tera).await;
     match result {
       Ok(result) => {
         let s = serde_json::to_string(&result).unwrap();
@@ -2065,11 +2176,12 @@ mod test {
         assert!(s.contains("/items/15"));
         assert!(s.contains("/items/16"));
         assert!(s.contains("/items/17"));
-        assert!(s.contains(&format!(r#"first":"{}"#, path_to_url(&uri!(render_feed_outbox(feed.name.clone(), Some(1)))))));
-        assert!(s.contains(&format!(r#"prev":"{}"#, path_to_url(&uri!(render_feed_outbox(feed.name.clone(), Some(1)))))));      
-        assert!(s.contains(&format!(r#"next":"{}"#, path_to_url(&uri!(render_feed_outbox(feed.name.clone(), Some(3)))))));
-        assert!(s.contains(&format!(r#"last":"{}"#, path_to_url(&uri!(render_feed_outbox(feed.name.clone(), Some(4)))))));
-        assert!(s.contains(&format!(r#"current":"{}"#, path_to_url(&uri!(render_feed_outbox(feed.name.clone(), Some(2)))))));
+
+        assert!(s.contains(&format!(r#"first":"{}"#, feed.outbox_paged_url(1))));
+        assert!(s.contains(&format!(r#"prev":"{}"#, feed.outbox_paged_url(1))));
+        assert!(s.contains(&format!(r#"next":"{}"#, feed.outbox_paged_url(3))));
+        assert!(s.contains(&format!(r#"last":"{}"#, feed.outbox_paged_url(4))));
+        assert!(s.contains(&format!(r#"current":"{}"#, feed.outbox_paged_url(2))));
 
         Ok(())
       },
@@ -2087,7 +2199,10 @@ mod test {
       real_item(&feed, &pool).await?;
     }
 
-    let result = feed.outbox_paged(2, &pool).await;
+    let tera = test_tera();
+
+
+    let result = feed.outbox_paged(2, &pool, &tera).await;
     match result {
       Ok(result) => {
         let s = serde_json::to_string(&result).unwrap();
@@ -2096,10 +2211,10 @@ mod test {
         assert!(!s.contains("/items/15"));
         assert!(!s.contains("/items/16"));
         assert!(!s.contains("/items/17"));
-        assert!(s.contains(&format!(r#"first":"{}"#, path_to_url(&uri!(render_feed_outbox(feed.name.clone(), Some(1)))))));
-        assert!(s.contains(&format!(r#"prev":"{}"#, path_to_url(&uri!(render_feed_outbox(feed.name.clone(), Some(1)))))));      
-        assert!(s.contains(&format!(r#"last":"{}"#, path_to_url(&uri!(render_feed_outbox(feed.name.clone(), Some(1)))))));
-        assert!(s.contains(&format!(r#"current":"{}"#, path_to_url(&uri!(render_feed_outbox(feed.name.clone(), Some(2)))))));
+        assert!(s.contains(&format!(r#"first":"{}"#, feed.outbox_paged_url(1))));
+        assert!(s.contains(&format!(r#"prev":"{}"#, feed.outbox_paged_url(1))));
+        assert!(s.contains(&format!(r#"last":"{}"#, feed.outbox_paged_url(1))));
+        assert!(s.contains(&format!(r#"current":"{}"#, feed.outbox_paged_url(2))));
 
         Ok(())
       },
@@ -2107,4 +2222,50 @@ mod test {
     }
   }
  
+  #[sqlx::test]
+  async fn test_load(pool: PgPool) -> Result<(), DeliveryError> {
+    let mut feed: Feed = real_feed(&pool).await?;
+    let mut server = mockito::Server::new_async().await;
+
+    let path = "fixtures/test_feed_to_entries.xml";
+    let data = fs::read_to_string(path).unwrap().replace("SERVER_URL", &server.url());
+
+    let url = format!("{}/test.xml", &server.url()).to_string();
+    feed.url = url;
+
+    let m = server.mock("GET", "/test.xml")
+      .with_status(200)
+      .with_body(&data)
+      .create_async()
+      .await;
+
+
+    let output = feed.load().await.unwrap();
+    m.assert_async().await;
+    assert_eq!(&output, &data);    
+
+    Ok(())
+  }
+
+  #[sqlx::test]
+  async fn test_load_404(pool: PgPool) -> Result<(), DeliveryError> {
+    let mut feed: Feed = real_feed(&pool).await?;
+    let mut server = mockito::Server::new_async().await;
+
+    let url = format!("{}/test.xml", &server.url()).to_string();
+    feed.url = url;
+
+    let m = server.mock("GET", "/test.xml")
+      .with_status(404)
+      .create_async()
+      .await;
+
+
+    let result = feed.load().await;
+    m.assert_async().await;
+    assert!(result.is_err());    
+
+    Ok(())
+  }
+
 }

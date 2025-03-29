@@ -2,7 +2,7 @@ use std::fmt;
 use fang::FangError;
 use http_signature_normalization_reqwest::SignError;
 
-use crate::models::FeedError;
+use crate::errors::FeedError;
 
 #[derive(Debug)]
 pub enum DeliveryError {

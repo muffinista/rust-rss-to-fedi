@@ -1,5 +1,12 @@
+use std::future::Future;
+
+use mockito::Mock;
+use mockito::ServerGuard;
+use serde_json::json;
+use serde_json::Value;
 use sqlx::postgres::PgPool;
 
+use crate::constants::ACTIVITY_JSON;
 use crate::models::User;
 use crate::models::Feed;
 use crate::models::Follower;
@@ -8,23 +15,120 @@ use crate::models::Actor;
 use crate::models::Enclosure;
 use crate::utils::keys::generate_key;
 
-use crate::server::build_server;
+use std::collections::HashMap;
+use std::time::SystemTime;
+
+use actix_web::http::header::HeaderValue;
+use base64::engine::general_purpose;
+use base64::Engine;
+use httpdate::fmt_http_date;
+use openssl::hash::MessageDigest;
+use openssl::pkey::PKey;
+use openssl::sign::Signer;
+
 
 use chrono::Utc;
 use uuid::Uuid;
 
-use rocket::uri;
-use rocket::{Rocket, Build};
 
-
-pub async fn build_test_server(pool: PgPool) -> Rocket<Build> {
-  build_server(pool).await
+#[macro_export]
+macro_rules! build_test_server {
+  ($pool:expr) => {{
+    let tera =
+      tera::Tera::new("templates/**/*").expect("Parsing error while loading template folder");
+    let secret_key = crate::routes::configure::get_secret_key();    
+    actix_web::App::new()
+      .wrap(SessionMiddleware::new(CookieSessionStore::default(), secret_key.clone()))
+      .app_data(actix_web::web::Data::new($pool.clone()))
+      .app_data(actix_web::web::Data::new(tera.clone()))
+      .configure(|cfg| crate::routes::configure::apply(cfg))
+  }}
 }
 
-pub async fn login_user(client: &rocket::local::asynchronous::Client, user: &User) {
-  // login the user
-  let post = client.get(uri!(crate::routes::login::attempt_login(&user.login_token)));
-  post.dispatch().await;
+#[macro_export]
+macro_rules! assert_content_type {
+  ($res:expr, $type:expr) => {
+    assert_eq!($type, $res.headers().get("content-type").expect("missing content type!"));
+  }
+}
+
+#[macro_export]
+macro_rules! assert_accepted {
+  ($res:expr) => {
+    assert_eq!(actix_web::http::StatusCode::ACCEPTED, $res.status());
+  }
+}
+
+#[macro_export]
+macro_rules! assert_ok_activity_json {
+  ($res:expr) => {
+    assert_eq!(actix_web::http::StatusCode::OK, $res.status());
+    assert_eq!(crate::constants::ACTIVITY_JSON, $res.headers().get("content-type").expect("missing content type!"));
+  }
+}
+
+#[macro_export]
+macro_rules! assert_activity_pub_to {
+  ($expected:expr, $res:expr) => {
+    assert_eq!($expected, $res.to().unwrap().as_one().unwrap().as_xsd_any_uri().unwrap().as_str());
+  }
+}
+
+#[macro_export]
+macro_rules! assert_activity_pub_cc {
+  ($expected:expr, $res:expr) => {
+    assert_eq!($expected, $res.cc().unwrap().as_many().unwrap().first().unwrap().as_xsd_any_uri().unwrap().as_str());
+  }
+}
+
+pub fn sign_test_request(req: &mut actix_http::Request, body: &str, actor_id: &str, private_key: &str) {
+  let sig_headers = vec![String::from(crate::constants::REQUEST_TARGET), String::from("host"), String::from("date"), String::from("digest")];
+  let path_and_query = req.path();
+  let method = req.method();
+  let host = req.uri().host().unwrap();
+  let request_target = format!("{} https://{}{}", method.to_string().to_lowercase(), host, path_and_query);
+  
+  let date = fmt_http_date(SystemTime::now());
+  let mut values: HashMap<String, String> = HashMap::<String, String>::new();
+  values.insert(String::from(crate::constants::REQUEST_TARGET), request_target);
+  values.insert(String::from("host"), String::from(host));
+  values.insert(String::from("date"), date.clone());
+
+  let digest = crate::utils::string_to_digest_string(body);
+  values.insert(String::from("digest"),  digest.clone());
+
+  let signing_string = sig_headers
+      .iter()
+      .map(|h| {
+        let v = values.get(h).unwrap();
+        format!("{}: {}", h, v)
+      })
+      .collect::<Vec<_>>()
+      .join("\n");
+
+  let private_key = PKey::private_key_from_pem(private_key.as_bytes()).unwrap();
+  let mut signer = Signer::new(MessageDigest::sha256(), &private_key).unwrap();
+  signer.update(signing_string.as_bytes()).unwrap();
+  let signature_value = general_purpose::STANDARD.encode(signer.sign_to_vec().unwrap());
+
+  let key_id= format!("{}#main-key", actor_id);
+  let final_signature = format!("keyId=\"{}\",headers=\"(request-target) host date digest\",signature=\"{}\"",
+      key_id, signature_value);
+
+
+      let x = HeaderValue::from_str(&host).unwrap();
+  req.headers_mut().append(actix_web::http::header::HeaderName::from_lowercase(b"host").unwrap(), x);
+  req.headers_mut().append(actix_web::http::header::HeaderName::from_lowercase(b"date").unwrap(), HeaderValue::from_str(&date).unwrap());
+  req.headers_mut().append(actix_web::http::header::HeaderName::from_lowercase(b"digest").unwrap(), HeaderValue::from_str(&digest).unwrap());
+  req.headers_mut().append(actix_web::http::header::HeaderName::from_lowercase(b"signature").unwrap(), HeaderValue::from_str(&final_signature).unwrap());
+  
+}
+
+pub fn deformat_json_string(json: &str) -> String {
+  // this is very silly, but by converting/de-converting back to a string, we ensure that we
+  // use consistent spacing/formatting/etc when doing digest tests
+  let json: Value = serde_json::from_str(&json).unwrap();
+  serde_json::to_string(&json).unwrap()
 }
 
 pub fn fake_user() -> User {
@@ -44,13 +148,13 @@ pub fn fake_user() -> User {
 }
 
 pub async fn real_user(pool: &PgPool) -> sqlx::Result<User> {
-  let user:User = User::find_or_create_by_actor_url(&"https:://muffin.pizza/users/test".to_string(), &pool).await?;
+  let user:User = User::find_or_create_by_actor_url(&"https://muffin.pizza/users/test".to_string(), &pool).await?;
   
   Ok(user)
 }
 
 pub async fn real_admin_user(pool: &PgPool) -> sqlx::Result<User> {
-  let user:User = User::find_or_create_by_actor_url(&"https:://muffin.pizza/users/test".to_string(), &pool).await?;
+  let user:User = User::find_or_create_by_actor_url(&"https://muffin.pizza/users/test".to_string(), &pool).await?;
 
   sqlx::query!("UPDATE users SET admin = true WHERE id = $1", user.id)
     .execute(pool)
@@ -59,7 +163,22 @@ pub async fn real_admin_user(pool: &PgPool) -> sqlx::Result<User> {
   Ok(user)
 }
 
-
+pub fn actor_json(actor_id: &str, server_url: &str, public_key: &str) -> serde_json::Value {
+  json!({
+    "id": actor_id,
+    "type": "Person",
+    "owner": format!("{}/actor", server_url),
+    "inbox": format!("{}/actor/inbox", server_url),
+    "outbox": format!("{}/actor/outbox", server_url),
+    "preferredUsername": "actor",
+    "name": "actor mcactor",
+    "publicKey": {
+        "id": format!("{}/actor#main-key", server_url),
+        "owner": format!("{}/actor", server_url),
+        "publicKeyPem": public_key
+    }
+  })
+}
 
 pub async fn real_actor(pool: &PgPool) -> sqlx::Result<Actor> {
   Actor::create(
@@ -78,11 +197,10 @@ pub async fn real_actor(pool: &PgPool) -> sqlx::Result<Actor> {
 pub async fn real_feed(pool: &PgPool) -> sqlx::Result<Feed> {
   let user = real_user(&pool).await.unwrap();
   
-  let url:String = "https://foo.com/rss.xml".to_string();
+  let url: String = "https://foo.com/rss.xml".to_string();
   let name = Uuid::new_v4().to_string();
 
   let feed = Feed::create(&user, &url, &name, &pool).await?;
-  
   Ok(feed)
 }
 
@@ -175,11 +293,13 @@ pub async fn real_item_with_enclosure(feed: &Feed, pool: &PgPool) -> sqlx::Resul
   let content_type = "audio/mpeg";
   let size = 123456;
 
+  let description = Some(String::from("A thing"));
+
   sqlx::query!("INSERT INTO enclosures 
-    (item_id, url, content_type, size, created_at, updated_at)
-    VALUES($1, $2, $3, $4, $5, $6)
+    (item_id, url, content_type, size, description, created_at, updated_at)
+    VALUES($1, $2, $3, $4, $5, $6, $7)
     RETURNING id",
-      item.id, url, content_type, size, now, now)
+      item.id, url, content_type, size, description, now, now)
     .fetch_one(pool)
     .await?;
 
@@ -205,3 +325,31 @@ pub async fn real_enclosure(item: &Item, pool: &PgPool) -> sqlx::Result<Enclosur
   Enclosure::find(enclosure_id, &pool).await
 }
 
+pub fn test_tera() -> tera::Tera {
+  tera::Tera::new("templates/**/*").expect("Parsing error while loading template folder")
+}
+
+pub fn mock_ap_action(object_server: &mut ServerGuard, path: &str, body: &str) -> impl Future<Output = Mock> {
+   object_server.mock("GET", path)
+    .with_status(200)
+    .with_header("Accept", crate::constants::ACTIVITY_JSON)
+    .with_body(body)
+    .create_async()
+}
+
+pub async fn stubbed_user_with_actor(pool: &PgPool, object_server: &mut ServerGuard) -> sqlx::Result<User> {
+  let inbox_url = format!("{:}/users/muffinista/inbox", object_server.url()); 
+  let path = "fixtures/muffinista.json";
+  let data = std::fs::read_to_string(path).unwrap().replace("SERVER_URL", &object_server.url());
+
+  let _ = object_server.mock("GET", "/users/muffinista/inbox")
+    .with_status(200)
+    .with_header("Accept", ACTIVITY_JSON)
+    .with_body(data)
+    .create_async()
+    .await;
+
+  let user: User = User::find_or_create_by_actor_url(&inbox_url, &pool).await?;
+  
+  Ok(user)
+}

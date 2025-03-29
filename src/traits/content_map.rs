@@ -141,11 +141,10 @@ pub trait AsContentMapExt<Inner>: AsContentMap<Inner> {
     &self.content_map_ref().contentMap
   }
   
-  /// Set the public key's ID
-  fn set_content_map(&mut self, val: ContentMapValues) -> &mut Self {
-    self.content_map_mut().contentMap = val;
-    self
-  }
+  // fn set_content_map(&mut self, val: ContentMapValues) -> &mut Self {
+  //   self.content_map_mut().contentMap = val;
+  //   self
+  // }
 
   fn set_content_language_and_value(&mut self, key: String, value: String) -> &mut Self {
     self.content_map_mut().contentMap.insert(key, value);
@@ -154,10 +153,16 @@ pub trait AsContentMapExt<Inner>: AsContentMap<Inner> {
 }
 
 
-/// Finally, we'll automatically implement PublicKeyExt for any type implementing AsPublicKey
+/// Finally, we'll automatically implement AsContentMapExt for any type implementing AsContentMap
 impl<T, Inner> AsContentMapExt<Inner> for T where T: AsContentMap<Inner> {}
 
 pub type ContentMapNote = ContentMap<ApObject<Note>>;
+
+impl Default for ContentMapNote {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl ContentMapNote {
   pub fn new() -> ContentMapNote {
@@ -168,8 +173,31 @@ impl ContentMapNote {
   }
 }
 
-impl Default for ContentMapNote {
-  fn default() -> Self {
-    Self::new()
+// impl Default for ContentMapNote {
+//   fn default() -> Self {
+//     Self::new()
+//   }
+// }
+
+
+#[cfg(test)]
+mod test {
+  use super::ContentMapNote;
+  use super::AsContentMapExt;
+  use serde_json::Value;
+
+  #[test]
+  fn test_content_map_note() {
+    let mut cm = ContentMapNote::new();
+    cm.set_content_language_and_value(String::from("en"), String::from("testing"));
+
+    // {"contentMap":{"en":"testing"},"inner":{"type":"Note"}}
+
+    // convert to generic json value for testing
+    let s = serde_json::to_string(&cm).unwrap();
+
+    // println!("{s:}");
+    let v: Value = serde_json::from_str(&s).unwrap();
+    assert_eq!("testing", v["contentMap"]["en"]);
   }
 }

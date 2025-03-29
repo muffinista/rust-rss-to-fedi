@@ -40,11 +40,6 @@ pub struct Actor {
   pub error_count:i32
 }
 
-impl PartialEq for Actor {
-  fn eq(&self, other: &Self) -> bool {
-    self.url == other.url
-  }
-}
 
 impl Actor {
   ///
@@ -166,7 +161,6 @@ impl Actor {
 
             log::debug!("FETCH ACTOR OWNER: {owner_url:}");
 
-
             // Remote servers federating with GoToSocial should extract the
             // public key from the publicKey field. Then, they should use the
             // owner field of the public key to further dereference the full
@@ -176,6 +170,7 @@ impl Actor {
             match resp {
               Ok(resp) => {
                 if resp.is_none() {
+                  log::debug!("404 on pulling the user :(");
                   return Err(DeliveryError::Error(String::from("User not found")))
                 }
         
@@ -197,7 +192,6 @@ impl Actor {
           };
 
           log::debug!("actor create: {inbox:}");
-          println!("actor create: {inbox:}");
           Actor::create(&data["id"].as_str().unwrap().to_string(),
                         &inbox,
                         &data["publicKey"]["id"].as_str().unwrap().to_string(),
@@ -249,18 +243,6 @@ impl Actor {
   }
 
   ///
-  /// Delete the specified actor
-  ///
-  pub async fn delete(url: &String, pool: &PgPool) -> Result<(), sqlx::Error> {
-    sqlx::query!("DELETE FROM actors WHERE url = $1", url)
-      .execute(pool)
-      .await?;
-    
-    Ok(())
-  }
-
-
-  ///
   /// generate a full username address for the actor, ie @username@domain
   ///
   pub fn full_username(&self) -> String {
@@ -285,9 +267,12 @@ impl Actor {
 #[cfg(test)]
 mod test {
   use sqlx::postgres::PgPool;
+  use url::Url;
   use std::fs;
 
+  use crate::constants::ACTIVITY_JSON;
   use crate::models::actor::Actor;
+  use crate::models::BlockedDomain;
   use crate::utils::test_helpers::real_actor;
 
   #[sqlx::test]
@@ -298,7 +283,7 @@ mod test {
 
     let m = server.mock("GET", "/users/muffinista")
       .with_status(200)
-      .with_header("Accept", "application/activity+json")
+      .with_header("Accept", ACTIVITY_JSON)
       .with_body(data)
       .create_async()
       .await;
@@ -309,8 +294,46 @@ mod test {
 
     m.assert_async().await;
 
-    assert_eq!(actor.url, url);
-    assert_eq!(actor.public_key_id, "https://botsin.space/users/muffinista#main-key");
+    let expected_public_key_id = format!("{:}/users/muffinista#main-key", server.url()); 
+
+    assert_eq!(url, actor.url);
+    assert_eq!(expected_public_key_id, actor.public_key_id);
+
+    Ok(())
+  }
+
+  #[sqlx::test]
+  async fn test_find_or_fetch_404(pool: PgPool) -> Result<(), String> {
+    let mut server = mockito::Server::new_async().await;
+    let path = "fixtures/muffinista.json";
+    let data = fs::read_to_string(path).unwrap().replace("SERVER_URL", &server.url());
+
+    let _m = server.mock("GET", "/users/muffinista")
+      .with_status(200)
+      .with_header("Accept", ACTIVITY_JSON)
+      .with_body(data)
+      .create_async()
+      .await;
+
+    let url = format!("{}/users/otheruser", &server.url()).to_string();
+
+    let actor = Actor::find_or_fetch(&url, &pool).await;
+
+    assert!(actor.is_err());
+
+    Ok(())
+  }
+
+  #[sqlx::test]
+  async fn test_find_or_fetch_on_blocklist(pool: PgPool) -> Result<(), String> {
+    // we could do this without a server by just faking a hostname...
+    let server = mockito::Server::new_async().await;
+    let host = Url::parse(&server.url()).unwrap().host().unwrap().to_string();
+    BlockedDomain::create(&host, &pool).await.unwrap();
+
+    let url = format!("{}/users/muffinista", &server.url()).to_string();
+
+    assert!(Actor::find_or_fetch(&url, &pool).await.unwrap().is_none());
 
     Ok(())
   }
@@ -328,6 +351,19 @@ mod test {
   }
 
   #[sqlx::test]
+  async fn test_log_error(pool: PgPool) -> Result<(), String> {
+    let actor:Actor = real_actor(&pool).await.unwrap();
+
+    let _ = Actor::log_error(&actor.url, &pool).await;
+    let _ = Actor::log_error(&actor.url, &pool).await;
+
+    let errored_actor = Actor::find(&actor.url, &pool).await.unwrap().expect("missing actor????");
+    assert_eq!(2, errored_actor.error_count);
+
+    Ok(())
+  }
+
+  #[sqlx::test]
   async fn test_fetch(pool: PgPool) -> Result<(), sqlx::Error> {
     let mut server = mockito::Server::new_async().await;
     let path = "fixtures/muffinista.json";
@@ -335,7 +371,7 @@ mod test {
 
     let m = server.mock("GET", "/users/muffinista")
       .with_status(200)
-      .with_header("Accept", "application/activity+json")
+      .with_header("Accept", ACTIVITY_JSON)
       .with_body(data)
       .create_async()
       .await;
@@ -355,6 +391,29 @@ mod test {
     Ok(())
   }
 
+
+  #[sqlx::test]
+  async fn test_fetch_404(pool: PgPool) -> Result<(), sqlx::Error> {
+    let mut server = mockito::Server::new_async().await;
+    let path = "fixtures/muffinista.json";
+    let data = fs::read_to_string(path).unwrap().replace("SERVER_URL", &server.url());
+
+    let _m = server.mock("GET", "/users/muffinista")
+      .with_status(200)
+      .with_header("Accept", ACTIVITY_JSON)
+      .with_body(data)
+      .create_async()
+      .await;
+
+    let url = format!("{}/users/other-user", &server.url()).to_string();
+
+    let actor = Actor::fetch(&url, &pool).await;
+
+    assert!(actor.is_err());
+
+    Ok(())
+  }
+
   #[sqlx::test]
   async fn test_fetch_no_inbox(pool: PgPool) -> Result<(), sqlx::Error> {
     let mut server = mockito::Server::new_async().await;
@@ -366,14 +425,14 @@ mod test {
 
     let m = server.mock("GET", "/users/muffinista/main-key")
       .with_status(200)
-      .with_header("Accept", "application/activity+json")
+      .with_header("Accept", ACTIVITY_JSON)
       .with_body(data)
       .create_async()
       .await;
 
     let m2 = server.mock("GET", "/users/muffinista")
       .with_status(200)
-      .with_header("Accept", "application/activity+json")
+      .with_header("Accept", ACTIVITY_JSON)
       .with_body(full_data)
       .create_async()
       .await;

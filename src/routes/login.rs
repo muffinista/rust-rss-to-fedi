@@ -1,27 +1,18 @@
-use rocket::{FromForm, get, post};
-use rocket::form::Form;
-use rocket::http::Status;
-use rocket::response::Redirect;
-use rocket::State;
-use rocket::http::{Cookie, CookieJar, SameSite};
-use rocket::uri;
-use rocket_dyn_templates::{Template, context};
+use actix_web::{get, web, Responder};
+use actix_session::Session;
 
 use sqlx::postgres::PgPool;
 
+use crate::{models::user::User, utils::redirect_to};
 
-use crate::models::user::User;
-
-#[derive(FromForm)]
-pub struct LoginForm {
-  pub email: String
-}
+const INDEX: &str = "/";
 
 
-#[get("/user/auth/<login_token>")]
-pub async fn attempt_login(db: &State<PgPool>, cookies: &CookieJar<'_>, login_token: &str) -> Result<Redirect, Status> {
-  let user = User::find_by_login(&login_token.to_string(), db).await;
-  
+#[get("/user/auth/{login_token}")]
+pub async fn attempt_login(session: Session, db: web::Data<PgPool>, path: web::Path<String>) -> Result<actix_web::HttpResponse,  actix_web::error::Error> {
+  let db = db.as_ref();
+  let login_token = path.into_inner();
+  let user = User::find_by_login(&login_token, db).await;
   match user {
     Ok(user) => {
       if user.is_some() {
@@ -29,53 +20,32 @@ pub async fn attempt_login(db: &State<PgPool>, cookies: &CookieJar<'_>, login_to
         let token = user.apply_access_token(db).await;
         match token {
           Ok(token) => {
-            let mut cookie = Cookie::new("access_token", token);
-            cookie.set_same_site(SameSite::Lax);
-            cookie.make_permanent();
-            cookies.add_private(cookie);
+            // @todo ensure this worked
+            let _result = session.insert("access_token", token);
 
-            let dest = uri!(crate::routes::index::index_logged_in(Some(1)));
-            Ok(Redirect::to(dest))
+            Ok(crate::utils::redirect_to("/"))
           },
           Err(why) => {
             log::info!("{why}");
-            Ok(Redirect::to("/"))
+            Ok(crate::utils::redirect_to(INDEX))
           }
         }
       }
       else {
-        Ok(Redirect::to("/"))
+        Ok(crate::utils::redirect_to(INDEX))
       } 
     },
     Err(why) => {
       log::info!("{why}");
-      Ok(Redirect::to("/"))
+      Ok(crate::utils::redirect_to(INDEX))
+
     }
   }
 }
+
 #[get("/user/logout")]
-pub async fn do_logout(cookies: &CookieJar<'_>) -> Result<Redirect, Status> {
-  cookies.remove_private(Cookie::from("access_token"));
-  Ok(Redirect::to("/"))
+pub async fn do_logout(session: Session) -> impl Responder {
+  session.purge();
+  redirect_to(INDEX)
 }
 
-#[post("/login", data = "<form>")]
-pub async fn do_login(db: &State<PgPool>, form: Form<LoginForm>) -> Result<Redirect, Status> {
-  let user = User::find_or_create_by_email(&form.email, db).await;
-  
-  match user {
-    Ok(_user) => {
-      let dest = uri!(login_result());
-      Ok(Redirect::to(dest))
-    },
-    Err(why) => {
-      print!("{why}");
-      Err(Status::NotFound)
-    }
-  }
-}
-
-#[get("/login/results")]
-pub async fn login_result() -> Template {
-  Template::render("login-after", context! { logged_in: false })
-}

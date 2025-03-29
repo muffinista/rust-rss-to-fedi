@@ -1,94 +1,108 @@
-use std::env;
-use rocket_dyn_templates::{Template, context};
+use actix_web::{get, web, Responder, HttpResponse};
+use actix_web::http::StatusCode;
+use actix_session::Session;
 
-use rocket::get;
-use rocket::State;
+use std::env;
 
 use sqlx::postgres::PgPool;
 
+use crate::errors::AppError;
+use crate::html_response;
 use crate::models::User;
 use crate::models::Feed;
 use crate::models::Setting;
 
+use crate::constants::TEXT_HTML;
+use crate::routes::PageQuery;
+use crate::utils::templates;
 use crate::PER_PAGE;
 
-#[get("/?<page>")]
-pub async fn index_logged_in(user: User, page: Option<i32>, db: &State<PgPool>) -> Template {
+#[get("/")]
+pub async fn index(session: Session,  query: web::Query<PageQuery>, tmpl: web::Data<tera::Tera>, db: web::Data<PgPool>) -> Result<impl Responder, AppError> {
+  let db = db.as_ref();
+  let tmpl = tmpl.as_ref();
   let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
-  let signups_enabled = Setting::value_or(&"signups_enabled".to_string(), &"true".to_string(), db).await.unwrap();
 
-  let page: i32 = page.unwrap_or(1);
+  let mut context = tera::Context::new();
+  context.insert("instance_domain", &instance_domain);
 
-  let feeds = Feed::paged_for_user(&user, page, db).await.unwrap();
-  let count = Feed::count_for_user(&user, db).await.unwrap();
+  let body = if let Some(user) = User::from_session(&session, db).await? {
+    let signups_enabled = Setting::value_or(&"signups_enabled".to_string(), &"true".to_string(), db).await.unwrap();
+    let page: i32 = query.page.unwrap_or(1);
+  
+    let feeds = Feed::paged_for_user(&user, page, db).await.unwrap();
+    let count = Feed::count_for_user(&user, db).await.unwrap();
+  
+    let total_pages:i32 = (count / PER_PAGE) + 1;
+  
+    context.insert("logged_in", &true);
+    context.insert("username", &user.full_username());
+    context.insert("feeds", &feeds);
+    context.insert("page", &page);
+    context.insert("total_pages", &total_pages);
+    context.insert("total", &count);
+    context.insert("signups_enabled", &(signups_enabled == "true"));
 
-  let total_pages:i32 = (count / PER_PAGE) + 1;
+    templates::render("home.html.tera", tmpl, &context)
+  } else {
+    context.insert("logged_in", &false);
 
-  Template::render("home", context! { 
-    logged_in: true,
-    username: user.full_username(),
-    feeds: feeds,
-    page: page,
-    total_pages: total_pages,
-    total: count,
-    instance_domain: instance_domain,
-    signups_enabled: signups_enabled == "true"
-  })
-}
+    templates::render("home.html.tera", tmpl, &context)
+  };
 
-#[get("/", rank = 2)]
-pub fn index() -> Template {
-  let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
-  Template::render("home", context! {
-    logged_in: false,
-    instance_domain: instance_domain
-  })
+  match body {
+    Ok(body) => Ok(html_response!(body)),
+    Err(why) => {
+      log::debug!("{:?}", why);
+      Err(AppError::InternalError)
+    }
+  }
 }
 
 #[cfg(test)]
 mod test {
-  use rocket::local::asynchronous::Client;
-  use rocket::http::Status;
-  use rocket::uri;
-  use rocket::{Rocket, Build};
+  use actix_session::{SessionMiddleware, storage::CookieSessionStore};
+  use actix_web::{test, dev::Service};
   use sqlx::postgres::PgPool;
   
-  use crate::utils::test_helpers::{build_test_server, real_user};
+  use crate::build_test_server;
+  use crate::utils::test_helpers::real_user;
 
 
   #[sqlx::test]
   async fn index_not_logged_in(pool: PgPool) {
-    let server:Rocket<Build> = build_test_server(pool).await;
-    let client = Client::tracked(server).await.unwrap();
+    let server = test::init_service(build_test_server!(pool)).await;
+    let req = test::TestRequest::with_uri("/").to_request();
+    let res = server.call(req).await.unwrap();
 
-    let req = client.get(uri!(super::index));
-    let response = req.dispatch().await;
+    assert_eq!(res.status(), actix_web::http::StatusCode::OK);
 
-    assert_eq!(response.status(), Status::Ok);
-    let output = response.into_string().await;
-    match output {
-      Some(output) => assert!(output.contains("To get started")),
-      None => panic!()
-    }
+    let bytes = actix_web::body::to_bytes(res.into_body()).await.unwrap();
+    assert!(std::str::from_utf8(&bytes).unwrap().contains("To get started"));
   }
 
   #[sqlx::test]
   async fn index_logged_in(pool: PgPool) {
     let user = real_user(&pool).await.unwrap();
+    let server = test::init_service(build_test_server!(pool)).await;
 
-    let server: Rocket<Build> = build_test_server(pool).await;
-    let client = Client::tracked(server).await.unwrap();
+    let req = test::TestRequest::with_uri(&format!("/user/auth/{}", &user.login_token)).to_request();
+    let res = server.call(req).await.unwrap();
+    assert_eq!(res.status(), actix_web::http::StatusCode::TEMPORARY_REDIRECT);
 
-    crate::utils::test_helpers::login_user(&client, &user).await;   
+    let session_cookies = res.response().cookies();
 
-    let req = client.get(uri!(super::index));
-    let response = req.dispatch().await;
+    let mut req = test::TestRequest::with_uri("/");
+    for cookie in session_cookies {
+      req = req.cookie(cookie.clone());
+    } 
 
-    assert_eq!(response.status(), Status::Ok);
-    let output = response.into_string().await;
-    match output {
-      Some(output) => assert!(output.contains("Add a new feed:")),
-      None => panic!()
-    }
+    let req = req.to_request();
+  
+    let res = server.call(req).await.unwrap();
+    assert_eq!(res.status(), actix_web::http::StatusCode::OK);
+
+    let bytes = actix_web::body::to_bytes(res.into_body()).await.unwrap();
+    assert!(std::str::from_utf8(&bytes).unwrap().contains("Add a new feed:"));
   }
 }

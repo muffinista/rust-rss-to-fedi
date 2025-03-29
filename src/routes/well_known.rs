@@ -1,9 +1,12 @@
 use std::env;
-use rocket::response::content;
-use rocket::get;
+
+use actix_web::{get, Responder};
+
+use crate::errors::AppError;
+
 
 #[get("/.well-known/host-meta")]
-pub async fn host_meta() -> content::RawXml<String> {
+pub async fn host_meta() -> Result<impl Responder, AppError> {
   let instance_domain = env::var("DOMAIN_NAME").expect("DOMAIN_NAME is not set");
 
   let output: String = format!(
@@ -12,33 +15,30 @@ pub async fn host_meta() -> content::RawXml<String> {
     <Link rel="lrdd" template="https://{instance_domain:}/.well-known/webfinger?resource={{uri}}"/>
   </XRD>"#);
 
-  content::RawXml(output)
+  Ok(output)
 }
 
 #[cfg(test)]
 mod test {
-  use rocket::local::asynchronous::Client;
-  use rocket::http::Status;
-  use rocket::uri;
-  use rocket::{Rocket, Build};
+  use actix_web::test;
+  use actix_session::{SessionMiddleware, storage::CookieSessionStore};
+
   use sqlx::postgres::PgPool;
   
-  use crate::utils::test_helpers::{build_test_server};
+  use crate::build_test_server;
 
 
   #[sqlx::test]
   async fn test_host_meta(pool: PgPool) {
-    let server:Rocket<Build> = build_test_server(pool).await;
-    let client = Client::tracked(server).await.unwrap();
+    let server = test::init_service(build_test_server!(pool)).await;
 
-    let req = client.get(uri!(super::host_meta));
-    let response = req.dispatch().await;
+    // Create request object
+    let req = test::TestRequest::with_uri("/.well-known/host-meta").to_request();
 
-    assert_eq!(response.status(), Status::Ok);
-    let output = response.into_string().await;
-    match output {
-      Some(output) => assert!(output.contains("well-known/webfinger")),
-      None => panic!()
-    }
+    let res = test::call_service(&server, req).await;
+    assert!(res.status().is_success());
+
+    let bytes = actix_web::body::to_bytes(res.into_body()).await.unwrap();
+    assert!(std::str::from_utf8(&bytes).unwrap().contains("well-known/webfinger"));
   }
 }

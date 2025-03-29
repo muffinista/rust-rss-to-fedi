@@ -6,8 +6,9 @@ use chrono::{Duration, Utc};
 use crate:: {
   models:: {
     Actor,
-    Feed
+    Feed,
   },
+  errors::AppError,
   services::mailer::deliver_to_inbox,
   DeliveryError
 };
@@ -57,14 +58,17 @@ impl User {
   }
 
 
-  // ///
-  // /// Find user by email
-  // ///
-  // pub async fn find_by_email(email: &String, pool: &PgPool) -> Result<Option<User>, sqlx::Error> {
-  //   sqlx::query_as!(User, "SELECT * FROM users WHERE email = $1", email)
-  //   .fetch_optional(pool)
-  //   .await
-  // }
+  pub async fn from_session(session: &actix_session::Session, pool: &PgPool) -> Result<Option<User>, AppError> {
+    if let Some(access_token) = session.get::<String>("access_token")? {
+      let user = User::find_by_access(&access_token, pool).await;
+      match user {
+        Ok(user) => Ok(user),
+        Err(_why) => Err(AppError::InternalError)
+      }
+    } else {
+      Ok(None)
+    }
+  }
   
   ///
   /// Find user by email
@@ -95,18 +99,19 @@ impl User {
       .await
   }
 
-  pub async fn reset_login_token(&self, pool: &PgPool) -> Result<String, sqlx::Error> {
-    let token = User::generate_login_token();
-    let query_check = sqlx::query!(
-      "UPDATE users SET login_token = $1 WHERE id = $2", token, self.id)
-      .execute(pool)
-      .await;
+  // this is uncalled but might be handy?
+  // pub async fn reset_login_token(&self, pool: &PgPool) -> Result<String, sqlx::Error> {
+  //   let token = User::generate_login_token();
+  //   let query_check = sqlx::query!(
+  //     "UPDATE users SET login_token = $1 WHERE id = $2", token, self.id)
+  //     .execute(pool)
+  //     .await;
       
-    match query_check {
-      Ok(_q) => Ok(token),
-      Err(why) => Err(why)
-    }
-  }
+  //   match query_check {
+  //     Ok(_q) => Ok(token),
+  //     Err(why) => Err(why)
+  //   }
+  // }
   
   pub fn needs_new_access_token(&self) -> bool {
     if self.access_token.is_none() {
@@ -115,7 +120,7 @@ impl User {
 
     let now = Utc::now();
     let diff = now.signed_duration_since(self.access_token_updated_at);
-    println!("Total time: {}", diff.num_minutes());
+    // println!("Total time: {}", diff.num_minutes());
 
     diff > Duration::hours(24)
   }
@@ -231,7 +236,7 @@ impl User {
   ///
   pub async fn apply_actor(&self, actor: &Actor, pool: &PgPool) -> Result<(), sqlx::Error> {
     let query = sqlx::query!(
-      "UPDATE users SET username = $1 WHERE id = $2", actor.username, self.id)
+      "UPDATE users SET username = $1, actor_url = $2 WHERE id = $3", actor.username, actor.url, self.id)
       .execute(pool)
       .await;
       
@@ -253,7 +258,7 @@ impl User {
   }
 
 
-  pub async fn send_link_to_feed(&self, feed: &Feed, pool: &PgPool) -> Result<(), DeliveryError> {
+  pub async fn send_link_to_feed(&self, feed: &Feed, pool: &PgPool, tera: &tera::Tera) -> Result<(), DeliveryError> {
     let dest_actor = Actor::find_or_fetch(self.actor_url.as_ref().expect("No actor url!"), pool).await;
 
     match dest_actor {
@@ -263,16 +268,15 @@ impl User {
         }
         let dest_actor = dest_actor.unwrap();
 
-        let message = feed.link_to_feed_message(&dest_actor).await?;
+        let message = feed.link_to_feed_message(tera, &dest_actor).await?;
         let msg = serde_json::to_string(&message).unwrap();
         log::debug!("{msg}");
     
-        let feed_ap_url = feed.ap_url();
         let inbox = &Url::parse(&dest_actor.inbox_url)?;
     
         let result = deliver_to_inbox(
           inbox,
-          &feed_ap_url,
+          &feed.public_key_id(),
           &feed.private_key,
           &message).await;
     
@@ -297,7 +301,7 @@ impl User {
 #[cfg(test)]
 mod test {
   use sqlx::postgres::PgPool;
-  use crate::models::User;
+  use crate::{models::{Actor, User}, utils::test_helpers::{real_actor, real_feed, real_user, test_tera}};
 
   #[sqlx::test]
   async fn test_find_or_create_by_email(pool: PgPool) -> sqlx::Result<()> {
@@ -349,4 +353,72 @@ mod test {
     
     Ok(())
   }
+
+  #[sqlx::test]
+  async fn test_apply_actor(pool: PgPool) -> sqlx::Result<()> {
+    let user = real_user(&pool).await?;
+    let actor: Actor = real_actor(&pool).await.unwrap();
+
+    let _ = user.apply_actor(&actor, &pool).await.unwrap();
+
+    let user2 = User::find(user.id, &pool).await.unwrap();
+
+    assert_eq!(actor.username, user2.username.unwrap());
+    assert_eq!(actor.url, user2.actor_url.unwrap());
+
+    Ok(())
+  }
+
+  
+  #[sqlx::test]
+  async fn test_full_username(pool: PgPool) -> sqlx::Result<()> {
+    let user = real_user(&pool).await?;
+
+    let _query = sqlx::query!(
+      "UPDATE users SET username = 'foobar', actor_url = 'https://fundomain.com/users/foobar' WHERE id = $1", user.id)
+      .execute(&pool)
+      .await;
+
+    let user = User::find(user.id, &pool).await.unwrap();
+    
+    assert_eq!("foobar@fundomain.com", user.full_username().unwrap());
+
+    Ok(())
+  }
+  
+  #[sqlx::test]
+  async fn test_send_link_to_feed(pool: PgPool) -> sqlx::Result<()> {
+    let mut server = mockito::Server::new_async().await;
+    let actor_url = format!("{}/users/muffinista/inbox", &server.url());
+
+    let tera = test_tera();
+    let feed = real_feed(&pool).await?;
+    let user = real_user(&pool).await?;
+
+    let actor: Actor = real_actor(&pool).await.unwrap();
+    let _query = sqlx::query!(
+      "UPDATE actors SET inbox_url = $1 WHERE inbox_url = $2", actor_url, actor.inbox_url)
+      .execute(&pool)
+      .await;
+
+    let actor = Actor::find(&actor_url, &pool).await?.unwrap();
+    let _ = user.apply_actor(&actor, &pool).await.unwrap();
+
+    let user = User::find(user.id, &pool).await?;
+    
+    // at this point, we should have a user pointing to our actor object
+
+    let m2 = server.mock("POST", "/users/muffinista/inbox")
+      .with_status(202)
+      .create_async()
+      .await;
+
+
+    let result = user.send_link_to_feed(&feed, &pool, &tera).await;
+    m2.assert_async().await;
+    assert!(result.is_ok());
+
+    Ok(())
+  }
+  
 }

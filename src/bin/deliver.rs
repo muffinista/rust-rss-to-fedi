@@ -53,14 +53,18 @@ async fn main() -> Result<(), DeliveryError> {
   let item = Item::find(item_id, &pool).await?;
   let feed = Feed::for_item(item_id, &pool).await?;
 
-  let mut message = item.to_activity_pub(&feed, &pool).await.unwrap();
+  let templates_dir = env::var("TEMPLATES_PATH").unwrap_or(String::from("templates"));
+
+  let tera =
+    tera::Tera::new(&format!("{templates_dir:}/**/*")).expect("Parsing error while loading template folder");
+
+  let mut message = item.to_activity_pub(&feed, &pool, &tera).await.unwrap();
 
   let dest_actor = Actor::find_or_fetch(&dest_url, &pool).await;
 
   match dest_actor {
     Ok(dest_actor) => {
       if dest_actor.is_none() {
-        println!("Actor not found");
         return Ok(());
       }
 
@@ -75,7 +79,7 @@ async fn main() -> Result<(), DeliveryError> {
       println!("{msg}");
 
       let dest_url = &Url::parse(&inbox).unwrap();
-      let result = deliver_to_inbox(dest_url, &feed.ap_url(), &feed.private_key, &message).await;
+      let result = deliver_to_inbox(dest_url, &feed.public_key_id(), &feed.private_key, &message).await;
     
       match result {
         Ok(_result) => {

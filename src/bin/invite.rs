@@ -40,6 +40,11 @@ async fn main() -> Result<(), DeliveryError> {
 
   let dest_url = args.dest_url;
 
+  let templates_dir = env::var("TEMPLATES_PATH").unwrap_or(String::from("templates"));
+
+  let tera =
+    tera::Tera::new(&format!("{templates_dir:}/**/*")).expect("Parsing error while loading template folder");
+
   let feed = Feed::for_admin(&pool).await?;
 
   let dest_actor = Actor::find_or_fetch(&dest_url, &pool).await;
@@ -62,15 +67,13 @@ async fn main() -> Result<(), DeliveryError> {
       let inbox = &dest_actor.inbox_url;
       println!("{dest_url:} -> {inbox:}");
 
-      let message = feed.generate_login_message(None, &dest_actor, &pool).await.unwrap();
+      let message = feed.generate_login_message(None, &dest_actor, &pool, &tera).await.unwrap();
 
       let msg = serde_json::to_string(&message).unwrap();
       println!("{msg}");
     
-      let my_url = feed.ap_url();
-    
       // send the message!
-      let result = deliver_to_inbox(&Url::parse(inbox)?, &my_url, &feed.private_key, &message).await;
+      let result = deliver_to_inbox(&Url::parse(inbox)?, &feed.public_key_id(), &feed.private_key, &message).await;
     
       match result {
         Ok(result) => println!("sent! {result:?}"),

@@ -30,7 +30,7 @@ fn connect_options() -> PgConnectOptions {
   PgConnectOptions::from_str(&db_uri)
     .expect("failed to parse DATABASE_URL")
     .disable_statement_logging()
-    //.log_statements(LevelFilter::Error)
+    .log_statements(LevelFilter::Error)
     .log_slow_statements(LevelFilter::Info, Duration::from_millis(200))
     .clone()
 }
@@ -39,7 +39,7 @@ pub async fn init_db_pool() -> Pool<Postgres> {
   PgPoolOptions::new()
     .max_connections(pool_size())
     .max_lifetime(Duration::from_secs(3600))
-    .idle_timeout(Duration::from_secs(60))
+    .idle_timeout(Duration::from_secs(10))
     .connect_with(connect_options())
     .await
     .expect("Failed to create pool")

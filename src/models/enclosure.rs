@@ -3,7 +3,7 @@ use sqlx::postgres::PgPool;
 
 use chrono::Utc;
 
-use crate::models::Item;
+use crate::{models::Item, utils::path_to_url};
 
 
 ///
@@ -21,12 +21,6 @@ pub struct Enclosure {
 
   pub created_at: chrono::DateTime::<Utc>,
   pub updated_at: chrono::DateTime::<Utc>
-}
-
-impl PartialEq for Enclosure {
-  fn eq(&self, other: &Self) -> bool {
-    self.id == other.id || (self.item_id == other.item_id && self.url == other.url)
-  }
 }
 
 impl Enclosure {
@@ -56,6 +50,10 @@ impl Enclosure {
 
   pub fn filename(&self) -> String {
     format!("{:}", self.id)   
+  }
+
+  pub fn url(&self, feed_name:&String) -> String {
+    path_to_url(&format!("/feed/{}/items/{}/enclosures/{}", feed_name, self.id, self.filename()))
   }
 }
 
