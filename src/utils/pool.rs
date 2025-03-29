@@ -30,7 +30,7 @@ fn connect_options() -> PgConnectOptions {
   PgConnectOptions::from_str(&db_uri)
     .expect("failed to parse DATABASE_URL")
     .disable_statement_logging()
-    //.log_statements(LevelFilter::Error)
+    .log_statements(LevelFilter::Error)
     .log_slow_statements(LevelFilter::Info, Duration::from_millis(200))
     .clone()
 }

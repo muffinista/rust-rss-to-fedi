@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env};
+use std::collections::HashMap;
 
 use actix_web::{
     http::header::HeaderMap, web, HttpRequest
@@ -121,23 +121,7 @@ pub async fn validate_request(request: &HttpRequest, payload: &str) -> Result<Si
         {
           log::debug!("validate_request: unable to verify signature!");
           Ok(SignatureValidity::InvalidSignature(key_id))
-        } else {
-
-          // if env::var("DISABLE_DIGEST_CHECKS").is_err() {
-          //   if !header_data.contains_key("digest") {
-          //     // signature is valid, but body content is not verified
-          //     return Ok(SignatureValidity::ValidNoDigest(key_id));
-          //   }
-      
-          //   let digest = header_data.get("digest").expect("missing digest??");          
-          //   let expected_digest = crate::utils::string_to_digest_string(payload);
-  
-          //   if *digest != expected_digest {
-          //     log::debug!("validate_request: invalid digest! {digest:} {expected_digest:}");
-          //     return Ok(SignatureValidity::Invalid);
-          //   }  
-          // }
-    
+        } else {    
           if date.is_none() {
             log::debug!("validate_request: no date!");
             Ok(SignatureValidity::Outdated(key_id))

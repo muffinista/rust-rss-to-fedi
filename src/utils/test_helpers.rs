@@ -85,7 +85,7 @@ pub fn sign_test_request(req: &mut actix_http::Request, body: &str, actor_id: &s
   let sig_headers = vec![String::from(crate::constants::REQUEST_TARGET), String::from("host"), String::from("date"), String::from("digest")];
   let path_and_query = req.path();
   let method = req.method();
-  let host = req.uri().host().unwrap().clone();
+  let host = req.uri().host().unwrap();
   let request_target = format!("{} https://{}{}", method.to_string().to_lowercase(), host, path_and_query);
   
   let date = fmt_http_date(SystemTime::now());
@@ -197,11 +197,10 @@ pub async fn real_actor(pool: &PgPool) -> sqlx::Result<Actor> {
 pub async fn real_feed(pool: &PgPool) -> sqlx::Result<Feed> {
   let user = real_user(&pool).await.unwrap();
   
-  let url:String = "https://foo.com/rss.xml".to_string();
+  let url: String = "https://foo.com/rss.xml".to_string();
   let name = Uuid::new_v4().to_string();
 
   let feed = Feed::create(&user, &url, &name, &pool).await?;
-  
   Ok(feed)
 }
 

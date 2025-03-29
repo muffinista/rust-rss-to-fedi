@@ -583,7 +583,6 @@ impl Feed {
       log::info!("Feed {} {} has too many errors {}, skipping", self.id, self.url, self.error_count);
       Ok(())
     } else {
-
       let items = self.parse(pool).await;
       match items {
         Ok(items) => {
