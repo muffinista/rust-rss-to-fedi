@@ -20,7 +20,7 @@ dotenvy = "~0.15"
 actix-web = "~4.10.0"
 actix-http = "~3.10.0"
 actix-session = { version = "0.10.1", features = ["cookie-session"] }
-sqlx = { version = "~0.8.2", features = ["chrono", "macros", "migrate", "postgres", "runtime-tokio-rustls"] }
+sqlx = { version = "~0.8.3", features = ["chrono", "macros", "migrate", "postgres", "runtime-tokio-rustls"] }
 serde = {version = "~1.0.214", features = ["derive"] }
 rand = { version = "~0.8.5" }
 feed-rs = "~2.3.1"
