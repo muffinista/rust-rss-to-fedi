@@ -1,3 +1,9 @@
+# This project has moved!
+
+It's now available at [https://codeberg.org/muffinista/feedsin-space](https://codeberg.org/muffinista/feedsin-space).
+
+
+
 This is the code for a service to host accounts on the fediverse that
 post messages from RSS feeds.
 
